@@ -5,220 +5,471 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>عَمِّر | AMMAR</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
 <style>
 *{box-sizing:border-box}
-body{font-family:Arial;background:#f3f5f7;margin:0;padding:20px;color:#222}
-main{max-width:480px;margin:30px auto;background:white;padding:24px;border-radius:14px;box-shadow:0 4px 18px #0000000c}
+body{font-family:Arial,sans-serif;background:#f3f5f7;margin:0;padding:20px;color:#222}
+main{max-width:480px;margin:30px auto;background:#fff;padding:24px;border-radius:14px;box-shadow:0 4px 18px #0000000c}
 h1{text-align:center;color:#176b57}
 h3{margin-top:25px}
 p{text-align:center;color:#666}
 input,textarea,button{width:100%;padding:13px;margin:9px 0;border:1px solid #ddd;border-radius:8px;font-size:16px}
-textarea{min-height:90px}
-button{background:#176b57;color:white;border:0;font-weight:bold;cursor:pointer}
+textarea{min-height:90px;resize:vertical}
+button{background:#176b57;color:#fff;border:0;font-weight:bold;cursor:pointer}
+button:disabled{opacity:.6;cursor:wait}
 #app,#reset{display:none}
 #message{text-align:center;margin-top:15px;line-height:1.7;overflow-wrap:anywhere}
 .link{display:block;text-align:center;color:#176b57;margin:14px;cursor:pointer;text-decoration:underline}
+.secondary{background:#777}
 </style>
 </head>
+
 <body>
 <main>
+
 <h1>عَمِّر | AMMAR</h1>
 <p>إدارة مشاريع ترميم وصيانة العقارات</p>
 
 <section id="login">
 <h3>تسجيل الدخول</h3>
-<input id="email" type="email" placeholder="البريد الإلكتروني">
-<input id="password" type="password" placeholder="كلمة المرور">
-<button type="button" onclick="login()">دخول</button>
+
+<input id="email" type="email"
+placeholder="البريد الإلكتروني" autocomplete="email">
+
+<input id="password" type="password"
+placeholder="كلمة المرور" autocomplete="current-password">
+
+<button id="loginButton" type="button" onclick="login()">دخول</button>
+
 <span class="link" onclick="forgotPassword()">نسيت كلمة المرور؟</span>
 </section>
 
 <section id="reset">
 <h3>تعيين كلمة مرور جديدة</h3>
-<input id="newPassword" type="password" placeholder="كلمة المرور الجديدة">
-<input id="confirmPassword" type="password" placeholder="تأكيد كلمة المرور">
-<button type="button" onclick="updatePassword()">حفظ كلمة المرور</button>
+<p>أدخل كلمة المرور الجديدة مرتين.</p>
+
+<input id="newPassword" type="password"
+placeholder="كلمة المرور الجديدة" autocomplete="new-password">
+
+<input id="confirmPassword" type="password"
+placeholder="تأكيد كلمة المرور" autocomplete="new-password">
+
+<button id="updateButton" type="button" onclick="updatePassword()">
+حفظ كلمة المرور
+</button>
 </section>
 
 <section id="app">
 <h3>إنشاء مشروع جديد</h3>
+
 <input id="title" placeholder="عنوان المشروع *">
+
 <textarea id="description" placeholder="وصف المشروع"></textarea>
+
 <input id="location" placeholder="موقع العقار">
+
 <input id="type" placeholder="نوع العقار">
+
 <input id="budget" placeholder="الميزانية">
-<button type="button" onclick="createProject()">إنشاء المشروع</button>
-<button type="button" onclick="logout()" style="background:#777">تسجيل الخروج</button>
+
+<button type="button" onclick="createProject()">
+إنشاء المشروع
+</button>
+
+<button type="button" class="secondary" onclick="logout()">
+تسجيل الخروج
+</button>
 </section>
 
-<div id="message" role="status"></div>
+<div id="message" role="status" aria-live="polite"></div>
+
 </main>
 
 <script>
-const SUPABASE_URL='https://uutwijowzewmvvrzsaww.supabase.co';
-const SUPABASE_KEY='sb_publishable_o-zC0NdMggZbPPY2l1REhA_w8Sbvjw_';
-const msg=document.getElementById('message');
+const SUPABASE_URL =
+'https://uutwijowzewmvvrzsaww.supabase.co';
 
-const client=window.supabase.createClient(
-SUPABASE_URL,SUPABASE_KEY
-);
+const SUPABASE_KEY =
+'sb_publishable_o-zC0NdMggZbPPY2l1REhA_w8Sbvjw_';
+
+const APP_URL =
+'https://ammar-app.vercel.app/';
+
+const msg = document.getElementById('message');
+
+let recoveryMode = false;
 
 function showMessage(text){
-msg.textContent=text;
+  msg.textContent = text;
+}
+
+function showOnly(sectionId){
+  ['login','reset','app'].forEach(id=>{
+    document.getElementById(id).style.display =
+      id === sectionId ? 'block' : 'none';
+  });
+}
+
+function showLogin(message){
+  recoveryMode = false;
+  showOnly('login');
+  document.getElementById('password').value = '';
+  if(message) showMessage(message);
 }
 
 function showApp(){
-document.getElementById('login').style.display='none';
-document.getElementById('reset').style.display='none';
-document.getElementById('app').style.display='block';
-showMessage('تم تسجيل الدخول بنجاح');
+  if(recoveryMode) return;
+  showOnly('app');
+  showMessage('تم تسجيل الدخول بنجاح');
 }
 
-function showLogin(){
-document.getElementById('app').style.display='none';
-document.getElementById('reset').style.display='none';
-document.getElementById('login').style.display='block';
+function showReset(){
+  recoveryMode = true;
+  showOnly('reset');
+  showMessage('أدخل كلمة المرور الجديدة');
 }
 
-async function login(){
-const email=document.getElementById('email').value.trim();
-const password=document.getElementById('password').value;
+if(!window.supabase || !window.supabase.createClient){
 
-if(!email||!password){
-showMessage('أدخل البريد وكلمة المرور');
-return;
+  showMessage('تعذر تحميل النظام. تحقق من اتصال الإنترنت.');
+
+}else{
+
+  const client = window.supabase.createClient(
+    SUPABASE_URL,
+    SUPABASE_KEY
+  );
+
+  client.auth.onAuthStateChange((event,session)=>{
+
+    if(event === 'PASSWORD_RECOVERY'){
+      showReset();
+
+    }else if(event === 'SIGNED_OUT'){
+      recoveryMode = false;
+      showLogin('تم تسجيل الخروج.');
+
+    }else if(event === 'SIGNED_IN' && session && !recoveryMode){
+      showApp();
+    }
+
+  });
+
+  async function initialize(){
+
+    try{
+
+      const hash = new URLSearchParams(
+        window.location.hash.replace(/^#/,'')
+      );
+
+      const query = new URLSearchParams(
+        window.location.search
+      );
+
+      const errorText =
+        hash.get('error_description') ||
+        query.get('error_description') ||
+        hash.get('error') ||
+        query.get('error');
+
+      if(errorText){
+        showLogin('تعذر إكمال رابط الاستعادة: '+errorText);
+        return;
+      }
+
+      if(
+        hash.get('type') === 'recovery' ||
+        query.get('type') === 'recovery'
+      ){
+        recoveryMode = true;
+        showOnly('reset');
+        showMessage('جارٍ التحقق من رابط الاستعادة...');
+      }
+
+      const {data,error} = await client.auth.getSession();
+
+      if(error){
+        showLogin('تعذر التحقق من الجلسة: '+error.message);
+        return;
+      }
+
+      if(recoveryMode){
+
+        showOnly('reset');
+
+        if(data.session){
+          showMessage('أدخل كلمة المرور الجديدة.');
+        }else{
+          showMessage(
+            'رابط الاستعادة غير صالح أو منتهي. اطلب رسالة جديدة من الموقع المنشور.'
+          );
+        }
+
+      }else if(data.session){
+
+        showApp();
+
+      }else{
+
+        showLogin();
+
+      }
+
+    }catch(error){
+
+      showLogin('حدث خطأ أثناء فتح التطبيق: '+error.message);
+
+    }
+  }
+
+  async function login(){
+
+    const email =
+      document.getElementById('email').value.trim();
+
+    const password =
+      document.getElementById('password').value;
+
+    const button =
+      document.getElementById('loginButton');
+
+    if(!email || !password){
+      showMessage('أدخل البريد الإلكتروني وكلمة المرور.');
+      return;
+    }
+
+    button.disabled = true;
+    showMessage('جارٍ تسجيل الدخول...');
+
+    try{
+
+      const {error} = await client.auth.signInWithPassword({
+        email,
+        password
+      });
+
+      if(error){
+        showMessage('تعذر تسجيل الدخول: '+error.message);
+        return;
+      }
+
+      recoveryMode = false;
+      showApp();
+
+    }catch(error){
+
+      showMessage('حدث خطأ أثناء تسجيل الدخول: '+error.message);
+
+    }finally{
+
+      button.disabled = false;
+
+    }
+  }
+
+  async function forgotPassword(){
+
+    const email =
+      document.getElementById('email').value.trim();
+
+    if(!email){
+      showMessage('أدخل بريدك الإلكتروني أولاً.');
+      return;
+    }
+
+    showMessage('جارٍ إرسال رابط الاستعادة...');
+
+    try{
+
+      const {error} = await client.auth.resetPasswordForEmail(
+        email,
+        {
+          redirectTo: APP_URL
+        }
+      );
+
+      if(error){
+        showMessage('تعذر إرسال الرابط: '+error.message);
+        return;
+      }
+
+      showMessage(
+        'إذا كان البريد مرتبطاً بحساب، فسيصلك رابط الاستعادة. افحص الوارد والرسائل غير المرغوب فيها.'
+      );
+
+    }catch(error){
+
+      showMessage('حدث خطأ أثناء إرسال الرابط: '+error.message);
+
+    }
+  }
+
+  async function updatePassword(){
+
+    const password =
+      document.getElementById('newPassword').value;
+
+    const confirmation =
+      document.getElementById('confirmPassword').value;
+
+    const button =
+      document.getElementById('updateButton');
+
+    if(password.length < 6){
+      showMessage('كلمة المرور يجب أن تكون 6 أحرف على الأقل.');
+      return;
+    }
+
+    if(password !== confirmation){
+      showMessage('كلمتا المرور غير متطابقتين.');
+      return;
+    }
+
+    button.disabled = true;
+    showMessage('جارٍ تحديث كلمة المرور...');
+
+    try{
+
+      const {data:sessionData,error:sessionError} =
+        await client.auth.getSession();
+
+      if(sessionError || !sessionData.session){
+        showMessage(
+          'رابط الاستعادة منتهي أو غير صالح. اطلب رابطاً جديداً.'
+        );
+        return;
+      }
+
+      const {error} = await client.auth.updateUser({
+        password:password
+      });
+
+      if(error){
+        showMessage('تعذر تغيير كلمة المرور: '+error.message);
+        return;
+      }
+
+      await client.auth.signOut();
+
+      recoveryMode = false;
+
+      showLogin(
+        'تم تغيير كلمة المرور بنجاح. سجل الدخول بكلمة المرور الجديدة.'
+      );
+
+      document.getElementById('newPassword').value = '';
+      document.getElementById('confirmPassword').value = '';
+
+    }catch(error){
+
+      showMessage('حدث خطأ أثناء تغيير كلمة المرور: '+error.message);
+
+    }finally{
+
+      button.disabled = false;
+
+    }
+  }
+
+  async function createProject(){
+
+    const title =
+      document.getElementById('title').value.trim();
+
+    if(!title){
+      showMessage('اكتب عنوان المشروع أولاً.');
+      return;
+    }
+
+    showMessage('جارٍ التحقق من الحساب...');
+
+    try{
+
+      const {data:userData,error:userError} =
+        await client.auth.getUser();
+
+      if(userError || !userData.user){
+        showLogin('انتهت الجلسة. سجل الدخول مرة أخرى.');
+        return;
+      }
+
+      const project = {
+
+        title:title,
+
+        client_id:userData.user.id,
+
+        description:
+          document.getElementById('description').value.trim() || null,
+
+        property_location:
+          document.getElementById('location').value.trim() || null,
+
+        property_type:
+          document.getElementById('type').value.trim() || null,
+
+        budget:
+          document.getElementById('budget').value.trim() || null
+
+      };
+
+      showMessage('جارٍ حفظ المشروع...');
+
+      const {error} = await client
+        .from('projects')
+        .insert(project);
+
+      if(error){
+        showMessage('فشل حفظ المشروع: '+error.message);
+        return;
+      }
+
+      showMessage('تم إنشاء المشروع بنجاح.');
+
+      document.querySelectorAll(
+        '#app input, #app textarea'
+      ).forEach(element=>{
+        element.value = '';
+      });
+
+    }catch(error){
+
+      showMessage('حدث خطأ أثناء إنشاء المشروع: '+error.message);
+
+    }
+  }
+
+  async function logout(){
+
+    try{
+
+      const {error} = await client.auth.signOut();
+
+      if(error){
+        showMessage('تعذر تسجيل الخروج: '+error.message);
+        return;
+      }
+
+      showLogin('تم تسجيل الخروج.');
+
+    }catch(error){
+
+      showMessage('حدث خطأ أثناء تسجيل الخروج: '+error.message);
+
+    }
+  }
+
+  window.login = login;
+  window.forgotPassword = forgotPassword;
+  window.updatePassword = updatePassword;
+  window.createProject = createProject;
+  window.logout = logout;
+
+  initialize();
+
 }
-
-showMessage('جارٍ تسجيل الدخول...');
-
-const {error}=await client.auth.signInWithPassword({
-email,password
-});
-
-if(error){
-showMessage('خطأ: '+error.message);
-return;
-}
-showApp();
-}
-
-async function forgotPassword(){
-const email=document.getElementById('email').value.trim();
-
-if(!email){
-showMessage('أدخل بريدك الإلكتروني أولاً');
-return;
-}
-
-showMessage('جارٍ إرسال رابط الاستعادة...');
-
-const {error}=await client.auth.resetPasswordForEmail(email,{
-redirectTo:window.location.origin
-});
-
-if(error){
-showMessage('تعذر الإرسال: '+error.message);
-return;
-}
-
-showMessage('تم إرسال رابط الاستعادة. افحص بريدك الإلكتروني وصندوق الرسائل غير المرغوب فيها.');
-}
-
-async function updatePassword(){
-const password=document.getElementById('newPassword').value;
-const confirm=document.getElementById('confirmPassword').value;
-
-if(password.length<6){
-showMessage('كلمة المرور يجب أن تكون 6 أحرف على الأقل');
-return;
-}
-
-if(password!==confirm){
-showMessage('كلمتا المرور غير متطابقتين');
-return;
-}
-
-showMessage('جارٍ تحديث كلمة المرور...');
-
-const {error}=await client.auth.updateUser({
-password:password
-});
-
-if(error){
-showMessage('تعذر تحديث كلمة المرور: '+error.message);
-return;
-}
-
-showMessage('تم تغيير كلمة المرور بنجاح. يمكنك تسجيل الدخول الآن.');
-document.getElementById('password').value='';
-showLogin();
-}
-
-async function createProject(){
-const title=document.getElementById('title').value.trim();
-
-if(!title){
-showMessage('اكتب عنوان المشروع أولاً');
-return;
-}
-
-const {data,error:userError}=await client.auth.getUser();
-
-if(userError||!data.user){
-showMessage('يرجى تسجيل الدخول أولاً');
-return;
-}
-
-const project={
-title,
-client_id:data.user.id,
-description:document.getElementById('description').value.trim()||null,
-property_location:document.getElementById('location').value.trim()||null,
-property_type:document.getElementById('type').value.trim()||null,
-budget:document.getElementById('budget').value.trim()||null
-};
-
-showMessage('جارٍ حفظ المشروع...');
-
-const {error}=await client.from('projects').insert(project);
-
-if(error){
-showMessage('فشل الحفظ: '+error.message);
-return;
-}
-
-showMessage('تم إنشاء المشروع بنجاح');
-
-document.querySelectorAll('#app input,#app textarea')
-.forEach(element=>element.value='');
-}
-
-async function logout(){
-await client.auth.signOut();
-showLogin();
-showMessage('تم تسجيل الخروج');
-}
-
-client.auth.onAuthStateChange((event,session)=>{
-if(event==='PASSWORD_RECOVERY'){
-document.getElementById('login').style.display='none';
-document.getElementById('app').style.display='none';
-document.getElementById('reset').style.display='block';
-showMessage('أدخل كلمة المرور الجديدة');
-}
-});
-
-client.auth.getSession().then(({data})=>{
-if(data.session){
-showApp();
-}
-});
-
-window.login=login;
-window.forgotPassword=forgotPassword;
-window.updatePassword=updatePassword;
-window.createProject=createProject;
-window.logout=logout;
 </script>
+
 </body>
 </html>
