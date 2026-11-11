@@ -4,91 +4,270 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>عَمِّر | AMMAR</title>
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
 <style>
-body{font-family:Arial;background:#f3f5f7;margin:0;padding:20px;color:#222}
-main{max-width:480px;margin:30px auto;background:white;padding:24px;border-radius:14px}
+*{box-sizing:border-box}
+body{
+  font-family:Arial,sans-serif;
+  background:#f3f5f7;
+  margin:0;
+  padding:20px;
+  color:#222;
+}
+main{
+  max-width:480px;
+  margin:30px auto;
+  background:white;
+  padding:24px;
+  border-radius:14px;
+  box-shadow:0 4px 18px #0000000c;
+}
 h1{text-align:center;color:#176b57}
-input,textarea,button{width:100%;box-sizing:border-box;padding:13px;margin:9px 0;border:1px solid #ddd;border-radius:8px;font-size:16px}
-button{background:#176b57;color:white;border:0;font-weight:bold}
+h3{margin-top:25px}
+p{text-align:center;color:#666}
+input,textarea,button{
+  width:100%;
+  padding:13px;
+  margin:9px 0;
+  border:1px solid #ddd;
+  border-radius:8px;
+  font-size:16px;
+}
+textarea{min-height:90px;resize:vertical}
+button{
+  background:#176b57;
+  color:white;
+  border:0;
+  font-weight:bold;
+  cursor:pointer;
+}
+button:disabled{opacity:.6}
 #app{display:none}
-#message{text-align:center;margin-top:15px}
+#message{
+  text-align:center;
+  margin-top:15px;
+  line-height:1.7;
+  overflow-wrap:anywhere;
+}
 </style>
 </head>
+
 <body>
 <main>
+
 <h1>عَمِّر | AMMAR</h1>
-<p style="text-align:center">إدارة مشاريع ترميم وصيانة العقارات</p>
+<p>إدارة مشاريع ترميم وصيانة العقارات</p>
 
 <section id="login">
 <h3>تسجيل الدخول</h3>
-<input id="email" type="email" placeholder="البريد الإلكتروني">
-<input id="password" type="password" placeholder="كلمة المرور">
-<button onclick="login()">دخول</button>
+
+<input id="email" type="email"
+placeholder="البريد الإلكتروني"
+autocomplete="email">
+
+<input id="password" type="password"
+placeholder="كلمة المرور"
+autocomplete="current-password">
+
+<button type="button" onclick="login()">دخول</button>
 </section>
 
 <section id="app">
 <h3>إنشاء مشروع جديد</h3>
+
 <input id="title" placeholder="عنوان المشروع *">
-<textarea id="description" placeholder="وصف المشروع"></textarea>
+
+<textarea id="description"
+placeholder="وصف المشروع"></textarea>
+
 <input id="location" placeholder="موقع العقار">
+
 <input id="type" placeholder="نوع العقار">
+
 <input id="budget" placeholder="الميزانية">
-<button onclick="createProject()">إنشاء المشروع</button>
-<button onclick="logout()" style="background:#777">تسجيل الخروج</button>
+
+<button type="button" onclick="createProject()">
+إنشاء المشروع
+</button>
+
+<button type="button" onclick="logout()"
+style="background:#777">
+تسجيل الخروج
+</button>
 </section>
 
-<div id="message"></div>
+<div id="message" role="status"></div>
+
 </main>
 
 <script>
-const client = supabase.createClient(
-'https://uutwijowzewmvvrzsaww.supabase.co',
-'sb_publishable_o-zC0NdMggZbPPY2l1REhA_w8Sbvjw_'
-);
+const SUPABASE_URL =
+'https://uutwijowzewmvvrzsaww.supabase.co';
+
+const SUPABASE_KEY =
+'sb_publishable_o-zC0NdMggZbPPY2l1REhA_w8Sbvjw_';
 
 const msg = document.getElementById('message');
 
-async function login(){
-msg.textContent='جارٍ تسجيل الدخول...';
+let client = null;
 
-const {data,error}=await client.auth.signInWithPassword({
-email:document.getElementById('email').value,
-password:document.getElementById('password').value
-});
-
-if(error){
-msg.textContent='خطأ: '+error.message;
-return;
-}
-
-showApp();
+function showMessage(text){
+  msg.textContent = text;
 }
 
 function showApp(){
-document.getElementById('login').style.display='none';
-document.getElementById('app').style.display='block';
-msg.textContent='تم تسجيل الدخول بنجاح';
+  document.getElementById('login').style.display='none';
+  document.getElementById('app').style.display='block';
+  showMessage('تم تسجيل الدخول بنجاح');
+}
+
+function showLogin(){
+  document.getElementById('app').style.display='none';
+  document.getElementById('login').style.display='block';
+}
+
+async function login(){
+  const email = document.getElementById('email').value.trim();
+  const password = document.getElementById('password').value;
+
+  if(!email || !password){
+    showMessage('أدخل البريد الإلكتروني وكلمة المرور');
+    return;
+  }
+
+  if(!client){
+    showMessage('تعذر الاتصال بمكتبة النظام. أعد تحميل الصفحة.');
+    return;
+  }
+
+  showMessage('جارٍ تسجيل الدخول...');
+
+  try{
+    const {data,error} = await client.auth.signInWithPassword({
+      email:email,
+      password:password
+    });
+
+    if(error){
+      showMessage('تعذر تسجيل الدخول: '+error.message);
+      return;
+    }
+
+    showApp();
+
+  }catch(error){
+    showMessage('حدث خطأ في الاتصال: '+error.message);
+  }
 }
 
 async function createProject(){
-const {data:{user}}=await client.auth.getUser();
+  if(!client){
+    showMessage('الاتصال بالنظام غير متاح');
+    return;
+  }
 
-if(!user){
-msg.textContent='يرجى تسجيل الدخول أولاً';
-return;
+  const title =
+    document.getElementById('title').value.trim();
+
+  if(!title){
+    showMessage('اكتب عنوان المشروع أولاً');
+    return;
+  }
+
+  showMessage('جارٍ التحقق من الحساب...');
+
+  try{
+    const {data:userData,error:userError} =
+      await client.auth.getUser();
+
+    if(userError || !userData.user){
+      showMessage('انتهت الجلسة. سجل الدخول مرة أخرى.');
+      showLogin();
+      return;
+    }
+
+    const user = userData.user;
+
+    const project = {
+      title:title,
+      client_id:user.id,
+      description:
+        document.getElementById('description').value.trim() || null,
+      property_location:
+        document.getElementById('location').value.trim() || null,
+      property_type:
+        document.getElementById('type').value.trim() || null,
+      budget:
+        document.getElementById('budget').value.trim() || null
+    };
+
+    showMessage('جارٍ حفظ المشروع...');
+
+    const {error} = await client
+      .from('projects')
+      .insert(project);
+
+    if(error){
+      showMessage('فشل حفظ المشروع: '+error.message);
+      return;
+    }
+
+    showMessage('تم إنشاء المشروع بنجاح');
+
+    document.querySelectorAll(
+      '#app input, #app textarea'
+    ).forEach(element=>{
+      element.value='';
+    });
+
+  }catch(error){
+    showMessage('حدث خطأ: '+error.message);
+  }
 }
 
-const title=document.getElementById('title').value.trim();
+async function logout(){
+  try{
+    const {error} = await client.auth.signOut();
 
-if(!title){
-msg.textContent='اكتب عنوان المشروع أولاً';
-return;
+    if(error){
+      showMessage('تعذر تسجيل الخروج: '+error.message);
+      return;
+    }
+
+    showLogin();
+    showMessage('تم تسجيل الخروج');
+
+  }catch(error){
+    showMessage('حدث خطأ: '+error.message);
+  }
 }
 
-const project={
-title:title,
-client_id:user.id,
-description:document.getElementById('description').value.trim() || null,
-property_location:document.getElement
-<!-- AMMAR production update -->
+window.login = login;
+window.createProject = createProject;
+window.logout = logout;
+
+if(!window.supabase || !window.supabase.createClient){
+  showMessage('تعذر تحميل مكتبة النظام. تحقق من اتصال الإنترنت.');
+}else{
+  client = window.supabase.createClient(
+    SUPABASE_URL,
+    SUPABASE_KEY
+  );
+
+  client.auth.getSession().then(({data,error})=>{
+    if(error){
+      showMessage('تعذر استعادة الجلسة: '+error.message);
+      return;
+    }
+
+    if(data.session){
+      showApp();
+    }
+  });
+}
+</script>
+
+</body>
+</html>
