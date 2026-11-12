@@ -92,7 +92,9 @@ BEGIN
       )', t || '_owner_all', t
     );
   END LOOP;
-END $$;
+END $;
+
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.project_tasks, public.project_expenses, public.project_quotes, public.project_updates, public.project_documents TO authenticated;
 
 INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 VALUES (
