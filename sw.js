@@ -1,5 +1,5 @@
-const CACHE_NAME='ammar-shell-v1';
-const APP_SHELL=['/','/index.html','/manifest.webmanifest','/icon.svg'];
+const CACHE_NAME='ammar-shell-v2';
+const APP_SHELL=['/','/index.html','/manifest.webmanifest','/icon.svg','/ammar-marketplace.js'];
 self.addEventListener('install',event=>{
   event.waitUntil(caches.open(CACHE_NAME).then(cache=>cache.addAll(APP_SHELL)).then(()=>self.skipWaiting()));
 });
