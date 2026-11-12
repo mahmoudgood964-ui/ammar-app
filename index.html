@@ -112,7 +112,7 @@ function goForm(project){
 function dateText(value){if(!value)return'غير متاح';const d=new Date(value);if(Number.isNaN(d.getTime()))return'غير متاح';try{return new Intl.DateTimeFormat('ar',{year:'numeric',month:'short',day:'numeric'}).format(d);}catch(e){return d.toLocaleDateString();}}
 function row(label,value){return'<div class="detail-row"><div class="detail-label">'+esc(label)+'</div><div class="detail-value">'+esc(value||'غير محدد')+'</div></div>';}
 function details(project){
- if(!project)return;if(!activeProject||String(activeProject.id)!==String(project.id))lastInviteUrl='';activeProject=project;lastViewedProjectId=String(project.id);moduleTab='tasks';
+ if(!project)return;if(!activeProject||String(activeProject.id)!==String(project.id)){lastInviteUrl='';moduleData={tasks:[],expenses:[],quotes:[],updates:[],documents:[],payments:[],activity:[],comments:[],members:[],invitations:[]};}activeProject=project;lastViewedProjectId=String(project.id);moduleTab='tasks';
  $('detailTitle').textContent=project.title||'تفاصيل المشروع';
  $('detailEdit').hidden=String(project.client_id)!==String(currentUser.id);
  $('detailBackdrop').hidden=false;renderWorkspace();loadProjectModules();
