@@ -29,9 +29,11 @@ SELECT set_config('request.jwt.claim.sub','11111111-1111-4111-8111-111111111111'
 SELECT public.ammar_start_conversation(
   '22222222-2222-4222-8222-222222222222','market_quote',:'quote_id','محادثة عرض السعر'
 ) AS quote_conversation_id \gset
+SELECT set_config('ammar.test.quote_conversation_id', :'quote_conversation_id', false);
 SELECT public.ammar_start_conversation(
   '22222222-2222-4222-8222-222222222222','agreement',:'agreement_id','محادثة الاتفاق'
 ) AS agreement_conversation_id \gset
+SELECT set_config('ammar.test.agreement_conversation_id', :'agreement_conversation_id', false);
 RESET ROLE;
 
 -- A new message creates an undelivered receipt for the other participant.
@@ -207,5 +209,19 @@ VALUES (
 );
 
 RESET ROLE;
+DO $ammar_plus_context_test$
+BEGIN
+  IF NOT EXISTS(
+    SELECT 1 FROM public.ammar_conversations
+    WHERE id=current_setting('ammar.test.quote_conversation_id')::uuid
+      AND context_type='market_quote'
+  ) THEN RAISE EXCEPTION 'Quote-specific conversation context was not persisted'; END IF;
+  IF NOT EXISTS(
+    SELECT 1 FROM public.ammar_conversations
+    WHERE id=current_setting('ammar.test.agreement_conversation_id')::uuid
+      AND context_type='agreement'
+  ) THEN RAISE EXCEPTION 'Agreement-specific conversation context was not persisted'; END IF;
+END
+$ammar_plus_context_test$;
 
 SELECT 'AMMAR ADVANCED MESSAGING TESTS PASSED' AS result;
