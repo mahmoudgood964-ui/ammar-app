@@ -241,7 +241,7 @@
       const own=s?.owner_id===user.id;
       const imageUrl=p.image_path?db.storage.from('ammar-market-files').getPublicUrl(p.image_path).data.publicUrl:null;
       return `<article class="eco-card">${imageUrl?`<img src="${esc(imageUrl)}" alt="${esc(p.title)}" loading="lazy" style="width:100%;max-height:170px;object-fit:cover;border-radius:10px;margin-bottom:9px">`:''}<h3>${esc(p.title)}</h3>
-        <div class="eco-meta"><span class="eco-pill">${esc(p.category)}</span><span class="eco-pill">${esc(p.availability==='limited'?'كمية محدودة':'متوفر')}</span>${s?.is_verified?'<span class="eco-pill">AMMAR Verified</span>':''}</div>
+        <div class="eco-meta"><span class="eco-pill">${esc(p.category)}</span><span class="eco-pill">${esc(p.availability==='limited'?'كمية محدودة':'متوفر')}</span>${s?.is_verified?'<span class="eco-pill">AMMIR Verified</span>':''}</div>
         <p>${esc(p.description||p.brand||'')}</p><div class="eco-price">${money(p.price,p.currency)} / ${esc(p.unit)}</div>
         <p><strong>${esc(s?.business_name||'مورد')}</strong></p><p>${esc(loc||'الموقع غير محدد')}</p>
         <p class="muted">آخر تحديث للسعر: ${esc(p.price_updated_at?new Date(p.price_updated_at).toLocaleString('ar'):'غير متاح')}</p>
@@ -901,7 +901,7 @@ async function servicesHtml(){
         $('ammarEcosystemView')?.classList.remove('active');
       }
     });
-    db.auth.getSession().then(r=>{if(r.data?.session?.user)start(r.data.session.user);}).catch(err=>console.warn('AMMAR ecosystem auth:',err.message));
+    db.auth.getSession().then(r=>{if(r.data?.session?.user)start(r.data.session.user);}).catch(err=>console.warn('AMMIR ecosystem auth:',err.message));
     bind();
   }
 
