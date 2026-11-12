@@ -11,6 +11,7 @@ AMMAR is a bilingual (Arabic/English) workspace for managing renovation and prop
 - Expenses, budgets, payments and CSV project exports.
 - Private project documents and signed downloads through Supabase Storage.
 - Daily site reports, issue/defect tracking, scope-change approvals and handover checklists.
+- Bank-referenced milestone workflow with customer completion approval, dispute holds and payout audit records (AMMAR does not custody or transfer funds).
 - Arabic/English interface switching.
 - Installable PWA shell.
 
@@ -31,6 +32,7 @@ Apply the migrations in order in the Supabase SQL Editor, only once per environm
 4. `202611120002_part3_policies.sql`
 5. `202611120003_team_member_privacy.sql`
 6. `202611120004_field_operations.sql`
+7. `202611120005_bank_payment_workflow.sql`
 
 Do not rerun earlier migrations that have already been applied successfully. Keep a record of the environment and migration history.
 
@@ -49,3 +51,8 @@ The current release is a project operations workspace, not yet a full multi-tena
 ## Release verification
 
 Syntax checks on the inline application JavaScript, service worker and manifest are useful preflight checks, but they do not replace browser, database-runtime, security or end-to-end acceptance tests.
+
+
+## Payments and custody
+
+The bank milestone workflow records deposit references, bank reconciliation, client acceptance, disputes, refunds and payout references. It does not move money or provide escrow. Do not receive customer funds into a personal or ordinary operating account. Any safeguarded balance, escrow arrangement, bank API, or automatic payout must be provided under a written agreement with a bank or licensed payment institution and reviewed for Sudanese regulatory requirements.
