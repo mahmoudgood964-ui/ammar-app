@@ -45,6 +45,10 @@ jobs:
         env:
           PGPASSWORD: postgres
         run: psql -h 127.0.0.1 -U postgres -d ammar_test -v ON_ERROR_STOP=1 -f supabase/migrations/202611120007_ammar_messaging_plus.sql
+      - name: Apply AMMIR storage and Realtime migration
+        env:
+          PGPASSWORD: postgres
+        run: psql -h 127.0.0.1 -U postgres -d ammar_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261112140000_ammir_storage_realtime.sql
       - name: Run marketplace integration tests
         env:
           PGPASSWORD: postgres
@@ -53,5 +57,9 @@ jobs:
         env:
           PGPASSWORD: postgres
         run: psql -h 127.0.0.1 -U postgres -d ammar_test -v ON_ERROR_STOP=1 -f tests/ammar-messaging-plus.sql
+      - name: Run storage and Realtime integration checks
+        env:
+          PGPASSWORD: postgres
+        run: psql -h 127.0.0.1 -U postgres -d ammar_test -v ON_ERROR_STOP=1 -f tests/ammar-storage-realtime.sql
       - name: Validate browser code and migration wiring
         run: node tests/check-ammar-app.mjs
