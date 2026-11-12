@@ -187,7 +187,8 @@
       const s=Array.isArray(p.supplier)?p.supplier[0]:p.supplier;
       const loc=[s?.governorate,s?.city,s?.area,s?.market_name].filter(Boolean).join(' – ');
       const own=s?.owner_id===user.id;
-      return `<article class="eco-card"><h3>${esc(p.title)}</h3>
+      const imageUrl=p.image_path?db.storage.from('ammar-market-files').getPublicUrl(p.image_path).data.publicUrl:null;
+      return `<article class="eco-card">${imageUrl?`<img src="${esc(imageUrl)}" alt="${esc(p.title)}" loading="lazy" style="width:100%;max-height:170px;object-fit:cover;border-radius:10px;margin-bottom:9px">`:''}<h3>${esc(p.title)}</h3>
         <div class="eco-meta"><span class="eco-pill">${esc(p.category)}</span><span class="eco-pill">${esc(p.availability==='limited'?'كمية محدودة':'متوفر')}</span>${s?.is_verified?'<span class="eco-pill">AMMAR Verified</span>':''}</div>
         <p>${esc(p.description||p.brand||'')}</p><div class="eco-price">${money(p.price,p.currency)} / ${esc(p.unit)}</div>
         <p><strong>${esc(s?.business_name||'مورد')}</strong></p><p>${esc(loc||'الموقع غير محدد')}</p>
@@ -242,6 +243,7 @@
         <div><label>العملة</label><select name="currency"><option value="SDG">جنيه سوداني SDG</option><option value="USD">دولار USD</option><option value="EGP">جنيه مصري EGP</option></select></div>
         <div><label>الكمية المتاحة</label><input name="quantity_available" type="number" min="0" step="0.001"></div>
         <div><label>حالة التوفر</label><select name="availability"><option value="available">متوفر</option><option value="limited">كمية محدودة</option><option value="unavailable">غير متوفر</option></select></div>
+        <div class="wide"><label>صورة المنتج (JPG أو PNG أو WebP، حد 5 ميجابايت)</label><input name="image" type="file" accept="image/jpeg,image/png,image/webp"></div>
         <div class="wide"><label>وصف ومواصفات</label><textarea name="description"></textarea></div>
         <div class="wide"><button class="btn primary" type="submit">نشر المنتج في السوق</button></div>
       </form></section>`;
@@ -454,7 +456,17 @@
         if(r.error)throw r.error;await loadProfiles();await loadMyProducts();await render();tell('تم حفظ ملف المورد.','success');
       }else if(form.id==='ecoProductForm'){
         if(!supplier)throw new Error('أنشئ حساب المورد أولاً.');
-        const r=await db.from('ammar_market_products').insert({supplier_id:supplier.id,title:d.title.trim(),category:d.category.trim(),brand:d.brand||null,unit:d.unit.trim(),price:Number(d.price),currency:d.currency||'SDG',quantity_available:d.quantity_available?Number(d.quantity_available):null,availability:d.availability||'available',description:d.description||null});
+        let imagePath=null;
+        const image=form.querySelector('input[name="image"]')?.files?.[0]||null;
+        if(image){
+          if(image.size>5*1024*1024)throw new Error('حجم صورة المنتج يجب ألا يتجاوز 5 ميجابايت.');
+          if(!/^image\/(jpeg|png|webp)$/.test(image.type))throw new Error('صيغة صورة المنتج غير مدعومة.');
+          const safe=image.name.replace(/[^a-zA-Z0-9._-]/g,'_');
+          imagePath=`${supplier.id}/${user.id}/${Date.now()}-${safe}`;
+          const upload=await db.storage.from('ammar-market-files').upload(imagePath,image,{upsert:false,contentType:image.type});
+          if(upload.error)throw upload.error;
+        }
+        const r=await db.from('ammar_market_products').insert({supplier_id:supplier.id,title:d.title.trim(),category:d.category.trim(),brand:d.brand||null,unit:d.unit.trim(),price:Number(d.price),currency:d.currency||'SDG',quantity_available:d.quantity_available?Number(d.quantity_available):null,availability:d.availability||'available',description:d.description||null,image_path:imagePath});
         if(r.error)throw r.error;await loadMyProducts();await render();tell('تم نشر المنتج في السوق.','success');
       }else if(form.id==='ecoProviderForm'){
         const payload={business_name:d.business_name.trim(),provider_type:d.provider_type,contact_name:d.contact_name||null,contact_phone:d.contact_phone||null,governorate:d.governorate||null,city:d.city||null,area:d.area||null,description:d.description||null};
