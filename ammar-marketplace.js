@@ -268,12 +268,14 @@
     const rows=[...map.values()].sort((x,y)=>new Date(y.created_at)-new Date(x.created_at));
     if(!rows.length)return '<div class="eco-empty">لا توجد طلبات شراء حتى الآن.</div>';
     const ids=rows.map(x=>x.id),supplierIds=[...new Set(rows.map(x=>x.supplier_id))];
-    const [ir,qr,sr]=await Promise.all([
+    const [ir,qr,sr,rv]=await Promise.all([
       db.from('ammar_market_request_items').select('*').in('request_id',ids),
       db.from('ammar_market_quotes').select('*').in('request_id',ids),
-      db.from('ammar_market_suppliers').select('id,business_name,owner_id').in('id',supplierIds)
+      db.from('ammar_market_suppliers').select('id,business_name,owner_id').in('id',supplierIds),
+      db.from('ammar_reviews').select('request_id').eq('reviewer_id',user.id).in('request_id',ids)
     ]);
-    if(ir.error)throw ir.error;if(qr.error)throw qr.error;if(sr.error)throw sr.error;
+    if(ir.error)throw ir.error;if(qr.error)throw qr.error;if(sr.error)throw sr.error;if(rv.error)throw rv.error;
+    const reviewed=new Set((rv.data||[]).map(x=>x.request_id));
     const sm=new Map((sr.data||[]).map(x=>[x.id,x])),im=new Map(),qm=new Map();
     (ir.data||[]).forEach(x=>{if(!im.has(x.request_id))im.set(x.request_id,[]);im.get(x.request_id).push(x);});
     (qr.data||[]).forEach(x=>{if(!qm.has(x.request_id))qm.set(x.request_id,[]);qm.get(x.request_id).push(x);});
@@ -289,6 +291,10 @@
       if(!['completed','cancelled','disputed'].includes(r.status))acts+='<button class="btn quiet" type="button" data-eco-advance="'+esc(r.id)+'" data-next="cancelled">إلغاء الطلب</button><button class="btn light" type="button" data-eco-advance="'+esc(r.id)+'" data-next="disputed">فتح نزاع</button>';
       acts+='<button class="btn light" type="button" data-eco-order-chat="'+esc(r.id)+'" data-other="'+esc(buyer?sp?.owner_id:r.buyer_id)+'">مراسلة الطرف الآخر</button>';
       if(r.status==='accepted')acts+='<button class="btn light" type="button" data-eco-create-agreement="'+esc(r.id)+'">إنشاء اتفاق موثق</button>';
+      if(r.status==='completed'&&!reviewed.has(r.id)){
+        const target=buyer?sp?.owner_id:r.buyer_id;
+        acts+=`<div class="eco-form"><div><label>تقييم التعامل</label><select id="ecoReviewRating-${esc(r.id)}"><option value="5">5 - ممتاز</option><option value="4">4 - جيد جداً</option><option value="3">3 - جيد</option><option value="2">2 - ضعيف</option><option value="1">1 - سيئ</option></select></div><div class="wide"><label>ملاحظاتك</label><input id="ecoReviewText-${esc(r.id)}" maxlength="2000"></div><div class="wide"><button class="btn light" type="button" data-eco-submit-review="${esc(r.id)}" data-reviewed-user="${esc(target)}">إرسال التقييم</button></div></div>`;
+      }
       return `<article class="eco-card"><h3>طلب #${short(r.id)}</h3><div class="eco-meta"><span class="eco-pill">${esc(statusText[r.status]||r.status)}</span><span class="eco-pill">${buyer?'طلب أرسلته':'طلب وارد'}</span></div><p>المورد: ${esc(sp?.business_name||'مورد')}</p>${items}<p>القيمة المتفق عليها: ${r.agreed_total==null?'لم تحدد':money(r.agreed_total,r.currency)}</p><div class="eco-subsection"><strong>العروض</strong>${quotes||'<p class="muted">لا توجد عروض بعد.</p>'}</div><div class="eco-actions">${acts}</div></article>`;
     }).join('')}</div>`;
   }
@@ -345,7 +351,7 @@
         <div class="wide"><label>وصف الخدمات والخبرة</label><textarea name="description">${esc(p?.description)}</textarea></div>
         <div class="wide"><button class="btn primary" type="submit">${p?'تحديث الملف':'إنشاء الملف'}</button></div>
       </form></section>`;
-    const req=await db.from('ammar_service_requests').select('*').eq('status','open').order('created_at',{ascending:false}).limit(100);
+    const req=await db.from('ammar_service_requests').select('*').order('created_at',{ascending:false}).limit(100);
     if(req.error)throw req.error;
     const requestIds=(req.data||[]).map(x=>x.id);
     let offerRows=[];
@@ -363,7 +369,7 @@
           +(o.status==='accepted'?'<button class="btn light" type="button" data-eco-service-agreement="'+esc(o.id)+'">إنشاء اتفاق</button>':'');
         return '<div class="eco-row"><div><strong>'+esc(sp?.business_name||'مقدم خدمة')+'</strong><div class="muted">'+money(o.amount,o.currency)+' · '+esc(o.duration_days==null?'المدة غير محددة':o.duration_days+' يوم')+' · '+esc(statusText[o.status]||o.status)+'</div></div><div class="eco-actions">'+actions+'</div></div>';
       }).join('');
-      const offerForm=provider&&!own?'<div class="eco-form"><div><label>عرضك المالي</label><input id="ecoSvcAmount-'+esc(r.id)+'" type="number" min="0" step="0.01"></div><div><label>مدة التنفيذ (يوم)</label><input id="ecoSvcDays-'+esc(r.id)+'" type="number" min="1"></div><div class="wide"><button class="btn primary" type="button" data-eco-service-offer="'+esc(r.id)+'">تقديم عرض</button></div></div>':'';
+      const offerForm=provider&&!own&&r.status==='open'?'<div class="eco-form"><div><label>عرضك المالي</label><input id="ecoSvcAmount-'+esc(r.id)+'" type="number" min="0" step="0.01"></div><div><label>مدة التنفيذ (يوم)</label><input id="ecoSvcDays-'+esc(r.id)+'" type="number" min="1"></div><div class="wide"><button class="btn primary" type="button" data-eco-service-offer="'+esc(r.id)+'">تقديم عرض</button></div></div>':'';
       return '<article class="eco-card"><h3>'+esc(r.title)+'</h3><div class="eco-meta"><span class="eco-pill">'+esc(r.service_type)+'</span><span class="eco-pill">'+esc(r.city||'الموقع غير محدد')+'</span></div><p>'+esc(r.description)+'</p><p>الميزانية القصوى: '+(r.budget_max==null?'غير محددة':money(r.budget_max,r.currency))+'</p>'+offerForm+'<div class="eco-subsection"><strong>العروض المقدمة</strong>'+(offersHtml||'<p class="muted">لا توجد عروض بعد.</p>')+'</div></article>';
     }).join('');
     return `${profile}<section class="eco-card eco-subsection"><h3>نشر طلب خدمة أو مقاول</h3>
@@ -411,7 +417,7 @@
 
   async function click(e){
     const t=e.target.closest('[data-eco-tab]');if(t){chooseTab(t.dataset.ecoTab);return;}
-    const b=e.target.closest('[data-eco-action],[data-eco-buy],[data-eco-contact],[data-eco-toggle-product],[data-eco-open-chat],[data-eco-accept-quote],[data-eco-submit-quote],[data-eco-advance],[data-eco-order-chat],[data-eco-create-agreement],[data-eco-service-offer],[data-eco-accept-service],[data-eco-service-chat],[data-eco-service-agreement],[data-eco-accept-agreement]');
+    const b=e.target.closest('[data-eco-action],[data-eco-buy],[data-eco-contact],[data-eco-toggle-product],[data-eco-open-chat],[data-eco-accept-quote],[data-eco-submit-quote],[data-eco-advance],[data-eco-order-chat],[data-eco-create-agreement],[data-eco-service-offer],[data-eco-accept-service],[data-eco-service-chat],[data-eco-service-agreement],[data-eco-accept-agreement],[data-eco-submit-review]');
     if(!b)return;
     try{
       if(b.dataset.ecoAction==='refresh'){await render();tell('تم تحديث البيانات.','success');return;}
@@ -493,6 +499,12 @@
       if(b.dataset.ecoAcceptAgreement){
         const r=await db.rpc('ammar_accept_agreement',{p_agreement_id:b.dataset.ecoAcceptAgreement});
         if(r.error)throw r.error;await render();tell('تم تسجيل موافقتك؛ يكتمل الاتفاق بعد موافقة الطرفين.','success');return;
+      }
+      if(b.dataset.ecoSubmitReview){
+        const rating=Number($('ecoReviewRating-'+b.dataset.ecoSubmitReview)?.value||0);
+        const review_text=$('ecoReviewText-'+b.dataset.ecoSubmitReview)?.value||null;
+        const r=await db.from('ammar_reviews').insert({request_id:b.dataset.ecoSubmitReview,reviewer_id:user.id,reviewed_user_id:b.dataset.reviewedUser,rating,review_text});
+        if(r.error)throw r.error;await render();tell('تم إرسال التقييم.','success');return;
       }
     }catch(err){tell('تعذر تنفيذ العملية: '+(err.message||'خطأ غير معروف'),'error');}
   }
