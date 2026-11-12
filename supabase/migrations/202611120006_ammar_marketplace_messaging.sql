@@ -1,0 +1,998 @@
+-- AMMAR ecosystem foundation: supplier marketplace, service RFQs, messaging,
+-- agreements, trust records and configurable transaction commission.
+-- Additive only: does not alter or delete existing AMMAR project records.
+-- Apply after 202611120005_bank_payment_workflow.sql.
+
+BEGIN;
+
+CREATE TABLE IF NOT EXISTS public.ammar_market_suppliers (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  owner_id uuid NOT NULL UNIQUE REFERENCES auth.users(id) ON DELETE CASCADE,
+  business_name text NOT NULL CHECK (char_length(business_name) BETWEEN 2 AND 180),
+  contact_name text,
+  contact_phone text,
+  whatsapp_phone text,
+  governorate text,
+  city text,
+  area text,
+  market_name text,
+  address text,
+  description text,
+  logo_path text,
+  status text NOT NULL DEFAULT 'active'
+    CHECK (status IN ('active','paused','suspended')),
+  is_verified boolean NOT NULL DEFAULT false,
+  verified_at timestamptz,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS public.ammar_market_products (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  supplier_id uuid NOT NULL REFERENCES public.ammar_market_suppliers(id) ON DELETE CASCADE,
+  title text NOT NULL CHECK (char_length(title) BETWEEN 2 AND 180),
+  category text NOT NULL,
+  brand text,
+  description text,
+  unit text NOT NULL,
+  price numeric(14,2) NOT NULL CHECK (price >= 0),
+  currency text NOT NULL DEFAULT 'SDG',
+  quantity_available numeric(14,3) CHECK (quantity_available IS NULL OR quantity_available >= 0),
+  availability text NOT NULL DEFAULT 'available'
+    CHECK (availability IN ('available','limited','unavailable')),
+  image_path text,
+  is_active boolean NOT NULL DEFAULT true,
+  price_updated_at timestamptz NOT NULL DEFAULT now(),
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS public.ammar_service_providers (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  owner_id uuid NOT NULL UNIQUE REFERENCES auth.users(id) ON DELETE CASCADE,
+  business_name text NOT NULL CHECK (char_length(business_name) BETWEEN 2 AND 180),
+  provider_type text NOT NULL
+    CHECK (provider_type IN ('contractor','maintenance','engineering','transport','equipment_rental','other')),
+  contact_name text,
+  contact_phone text,
+  governorate text,
+  city text,
+  area text,
+  address text,
+  description text,
+  portfolio_url text,
+  status text NOT NULL DEFAULT 'active'
+    CHECK (status IN ('active','paused','suspended')),
+  is_verified boolean NOT NULL DEFAULT false,
+  verified_at timestamptz,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+
+DO $ammar_schema$
+DECLARE
+  project_id_type text;
+BEGIN
+  SELECT format_type(a.atttypid, a.atttypmod)
+    INTO project_id_type
+  FROM pg_attribute a
+  WHERE a.attrelid = 'public.projects'::regclass
+    AND a.attname = 'id'
+    AND NOT a.attisdropped;
+
+  IF project_id_type IS NULL THEN
+    RAISE EXCEPTION 'AMMAR migration stopped: public.projects.id was not found';
+  END IF;
+
+  EXECUTE format($ddl$
+    CREATE TABLE IF NOT EXISTS public.ammar_market_requests (
+      id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+      buyer_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE RESTRICT,
+      supplier_id uuid NOT NULL REFERENCES public.ammar_market_suppliers(id) ON DELETE RESTRICT,
+      project_id %s REFERENCES public.projects(id) ON DELETE SET NULL,
+      status text NOT NULL DEFAULT 'submitted'
+        CHECK (status IN ('draft','submitted','quoted','accepted','fulfilling','delivered','completed','cancelled','disputed')),
+      delivery_governorate text,
+      delivery_city text,
+      delivery_area text,
+      delivery_address text,
+      buyer_note text,
+      agreed_total numeric(14,2) CHECK (agreed_total IS NULL OR agreed_total >= 0),
+      currency text NOT NULL DEFAULT 'SDG',
+      submitted_at timestamptz NOT NULL DEFAULT now(),
+      completed_at timestamptz,
+      created_at timestamptz NOT NULL DEFAULT now(),
+      updated_at timestamptz NOT NULL DEFAULT now()
+    )
+  $ddl$, project_id_type);
+
+  EXECUTE format($ddl$
+    CREATE TABLE IF NOT EXISTS public.ammar_service_requests (
+      id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+      requester_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE RESTRICT,
+      project_id %s REFERENCES public.projects(id) ON DELETE SET NULL,
+      service_type text NOT NULL
+        CHECK (service_type IN ('contractor','renovation','maintenance','engineering','inspection','transport','equipment_rental','other')),
+      title text NOT NULL CHECK (char_length(title) BETWEEN 5 AND 180),
+      description text NOT NULL CHECK (char_length(description) BETWEEN 10 AND 6000),
+      governorate text,
+      city text,
+      area text,
+      budget_min numeric(14,2) CHECK (budget_min IS NULL OR budget_min >= 0),
+      budget_max numeric(14,2) CHECK (budget_max IS NULL OR budget_max >= 0),
+      currency text NOT NULL DEFAULT 'SDG',
+      target_start_date date,
+      status text NOT NULL DEFAULT 'open'
+        CHECK (status IN ('draft','open','reviewing','awarded','closed','cancelled')),
+      created_at timestamptz NOT NULL DEFAULT now(),
+      updated_at timestamptz NOT NULL DEFAULT now(),
+      CHECK (budget_min IS NULL OR budget_max IS NULL OR budget_max >= budget_min)
+    )
+  $ddl$, project_id_type);
+
+  EXECUTE format($ddl$
+    CREATE TABLE IF NOT EXISTS public.ammar_agreements (
+      id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+      project_id %s REFERENCES public.projects(id) ON DELETE SET NULL,
+      source_type text NOT NULL DEFAULT 'project'
+        CHECK (source_type IN ('project','market_request','service_offer')),
+      source_id text,
+      client_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE RESTRICT,
+      provider_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE RESTRICT,
+      title text NOT NULL CHECK (char_length(title) BETWEEN 3 AND 180),
+      scope text NOT NULL CHECK (char_length(scope) BETWEEN 10 AND 8000),
+      amount numeric(14,2) NOT NULL CHECK (amount >= 0),
+      currency text NOT NULL DEFAULT 'SDG',
+      schedule_text text,
+      terms text,
+      status text NOT NULL DEFAULT 'sent'
+        CHECK (status IN ('draft','sent','partially_accepted','accepted','rejected','cancelled')),
+      created_by uuid NOT NULL REFERENCES auth.users(id),
+      client_accepted_at timestamptz,
+      provider_accepted_at timestamptz,
+      created_at timestamptz NOT NULL DEFAULT now(),
+      updated_at timestamptz NOT NULL DEFAULT now(),
+      CHECK (client_id <> provider_id)
+    )
+  $ddl$, project_id_type);
+END
+$ammar_schema$;
+
+CREATE TABLE IF NOT EXISTS public.ammar_market_request_items (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  request_id uuid NOT NULL REFERENCES public.ammar_market_requests(id) ON DELETE CASCADE,
+  product_id uuid REFERENCES public.ammar_market_products(id) ON DELETE SET NULL,
+  product_title text NOT NULL,
+  unit text NOT NULL,
+  quantity numeric(14,3) NOT NULL CHECK (quantity > 0),
+  requested_unit_price numeric(14,2) CHECK (requested_unit_price IS NULL OR requested_unit_price >= 0),
+  buyer_note text,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS public.ammar_market_quotes (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  request_id uuid NOT NULL REFERENCES public.ammar_market_requests(id) ON DELETE CASCADE,
+  supplier_id uuid NOT NULL REFERENCES public.ammar_market_suppliers(id) ON DELETE RESTRICT,
+  created_by uuid NOT NULL REFERENCES auth.users(id),
+  total_amount numeric(14,2) NOT NULL CHECK (total_amount >= 0),
+  currency text NOT NULL DEFAULT 'SDG',
+  delivery_days integer CHECK (delivery_days IS NULL OR delivery_days BETWEEN 0 AND 3650),
+  valid_until date,
+  notes text,
+  status text NOT NULL DEFAULT 'proposed'
+    CHECK (status IN ('proposed','accepted','rejected','withdrawn')),
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS public.ammar_service_offers (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  request_id uuid NOT NULL REFERENCES public.ammar_service_requests(id) ON DELETE CASCADE,
+  provider_id uuid NOT NULL REFERENCES public.ammar_service_providers(id) ON DELETE RESTRICT,
+  created_by uuid NOT NULL REFERENCES auth.users(id),
+  amount numeric(14,2) NOT NULL CHECK (amount >= 0),
+  currency text NOT NULL DEFAULT 'SDG',
+  duration_days integer CHECK (duration_days IS NULL OR duration_days BETWEEN 1 AND 3650),
+  inclusions text,
+  exclusions text,
+  warranty_months integer CHECK (warranty_months IS NULL OR warranty_months BETWEEN 0 AND 600),
+  status text NOT NULL DEFAULT 'proposed'
+    CHECK (status IN ('proposed','accepted','rejected','withdrawn')),
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS public.ammar_conversations (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  context_type text NOT NULL
+    CHECK (context_type IN ('project','market_product','supplier','market_request','service_offer')),
+  context_id text NOT NULL,
+  subject text,
+  created_by uuid NOT NULL REFERENCES auth.users(id),
+  last_message_at timestamptz NOT NULL DEFAULT now(),
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS public.ammar_conversation_participants (
+  conversation_id uuid NOT NULL REFERENCES public.ammar_conversations(id) ON DELETE CASCADE,
+  user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  participant_role text NOT NULL DEFAULT 'participant'
+    CHECK (participant_role IN ('participant','customer','provider')),
+  joined_at timestamptz NOT NULL DEFAULT now(),
+  last_read_at timestamptz,
+  PRIMARY KEY (conversation_id, user_id)
+);
+
+CREATE TABLE IF NOT EXISTS public.ammar_messages (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  conversation_id uuid NOT NULL REFERENCES public.ammar_conversations(id) ON DELETE CASCADE,
+  sender_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE RESTRICT,
+  message_type text NOT NULL DEFAULT 'text'
+    CHECK (message_type IN ('text','image','file','system')),
+  body text,
+  file_path text,
+  file_name text,
+  mime_type text,
+  reply_to_id uuid REFERENCES public.ammar_messages(id) ON DELETE SET NULL,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  CHECK (
+    (message_type IN ('text','system') AND body IS NOT NULL AND char_length(body) BETWEEN 1 AND 5000)
+    OR
+    (message_type IN ('image','file') AND file_path IS NOT NULL)
+  )
+);
+
+CREATE TABLE IF NOT EXISTS public.ammar_user_notifications (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  actor_id uuid REFERENCES auth.users(id) ON DELETE SET NULL,
+  notification_type text NOT NULL,
+  title text NOT NULL,
+  body text,
+  conversation_id uuid REFERENCES public.ammar_conversations(id) ON DELETE CASCADE,
+  message_id uuid REFERENCES public.ammar_messages(id) ON DELETE CASCADE,
+  read_at timestamptz,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS public.ammar_agreement_events (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  agreement_id uuid NOT NULL REFERENCES public.ammar_agreements(id) ON DELETE CASCADE,
+  actor_id uuid NOT NULL REFERENCES auth.users(id),
+  event_type text NOT NULL CHECK (event_type IN ('created','sent','accepted','rejected','cancelled','amended')),
+  note text,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS public.ammar_reviews (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  request_id uuid NOT NULL REFERENCES public.ammar_market_requests(id) ON DELETE RESTRICT,
+  reviewer_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE RESTRICT,
+  reviewed_user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE RESTRICT,
+  rating integer NOT NULL CHECK (rating BETWEEN 1 AND 5),
+  review_text text CHECK (review_text IS NULL OR char_length(review_text) <= 2000),
+  created_at timestamptz NOT NULL DEFAULT now(),
+  UNIQUE (request_id, reviewer_id),
+  CHECK (reviewer_id <> reviewed_user_id)
+);
+
+CREATE TABLE IF NOT EXISTS public.ammar_disputes (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  request_id uuid NOT NULL REFERENCES public.ammar_market_requests(id) ON DELETE RESTRICT,
+  raised_by uuid NOT NULL REFERENCES auth.users(id),
+  reason text NOT NULL CHECK (char_length(reason) BETWEEN 10 AND 5000),
+  evidence_note text,
+  status text NOT NULL DEFAULT 'open'
+    CHECK (status IN ('open','under_review','resolved','rejected')),
+  resolution_note text,
+  resolved_at timestamptz,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS public.ammar_commission_rules (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  activity_type text NOT NULL UNIQUE
+    CHECK (activity_type IN ('market_materials','contracting','maintenance','engineering','other')),
+  rate_percent numeric(5,2) NOT NULL DEFAULT 5.00
+    CHECK (rate_percent >= 0 AND rate_percent <= 100),
+  payer_side text NOT NULL DEFAULT 'provider'
+    CHECK (payer_side IN ('provider','customer','platform_split')),
+  is_active boolean NOT NULL DEFAULT true,
+  effective_from timestamptz NOT NULL DEFAULT now(),
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS public.ammar_commission_ledger (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  request_id uuid NOT NULL UNIQUE REFERENCES public.ammar_market_requests(id) ON DELETE RESTRICT,
+  gross_amount numeric(14,2) NOT NULL CHECK (gross_amount >= 0),
+  currency text NOT NULL,
+  rate_percent numeric(5,2) NOT NULL CHECK (rate_percent >= 0 AND rate_percent <= 100),
+  commission_amount numeric(14,2) NOT NULL CHECK (commission_amount >= 0),
+  payer_id uuid REFERENCES auth.users(id) ON DELETE RESTRICT,
+  status text NOT NULL DEFAULT 'recorded'
+    CHECK (status IN ('recorded','due','paid','void','refunded')),
+  recorded_at timestamptz NOT NULL DEFAULT now(),
+  settled_at timestamptz
+);
+
+CREATE TABLE IF NOT EXISTS public.ammar_transaction_events (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  request_id uuid NOT NULL REFERENCES public.ammar_market_requests(id) ON DELETE CASCADE,
+  actor_id uuid REFERENCES auth.users(id) ON DELETE SET NULL,
+  event_type text NOT NULL,
+  summary text NOT NULL CHECK (char_length(summary) BETWEEN 1 AND 1000),
+  payload jsonb NOT NULL DEFAULT '{}'::jsonb,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+INSERT INTO public.ammar_commission_rules(activity_type, rate_percent, payer_side)
+VALUES
+  ('market_materials', 5.00, 'provider'),
+  ('contracting', 5.00, 'provider'),
+  ('maintenance', 5.00, 'provider'),
+  ('engineering', 5.00, 'provider'),
+  ('other', 5.00, 'provider')
+ON CONFLICT (activity_type) DO NOTHING;
+
+CREATE INDEX IF NOT EXISTS ammar_market_products_catalog_idx
+  ON public.ammar_market_products(category, is_active, created_at DESC);
+CREATE INDEX IF NOT EXISTS ammar_market_products_supplier_idx
+  ON public.ammar_market_products(supplier_id, is_active, updated_at DESC);
+CREATE INDEX IF NOT EXISTS ammar_market_suppliers_location_idx
+  ON public.ammar_market_suppliers(governorate, city, area, market_name);
+CREATE INDEX IF NOT EXISTS ammar_market_requests_buyer_idx
+  ON public.ammar_market_requests(buyer_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS ammar_market_requests_supplier_idx
+  ON public.ammar_market_requests(supplier_id, status, created_at DESC);
+CREATE INDEX IF NOT EXISTS ammar_service_requests_status_idx
+  ON public.ammar_service_requests(status, service_type, created_at DESC);
+CREATE INDEX IF NOT EXISTS ammar_service_offers_request_idx
+  ON public.ammar_service_offers(request_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS ammar_conversation_participants_user_idx
+  ON public.ammar_conversation_participants(user_id, last_read_at);
+CREATE INDEX IF NOT EXISTS ammar_messages_conversation_idx
+  ON public.ammar_messages(conversation_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS ammar_notifications_user_idx
+  ON public.ammar_user_notifications(user_id, read_at, created_at DESC);
+CREATE INDEX IF NOT EXISTS ammar_agreements_parties_idx
+  ON public.ammar_agreements(client_id, provider_id, status);
+CREATE INDEX IF NOT EXISTS ammar_disputes_request_idx
+  ON public.ammar_disputes(request_id, status, created_at DESC);
+
+CREATE OR REPLACE FUNCTION public.ammar_ecosystem_touch_updated_at()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = public, pg_temp
+AS $$
+BEGIN
+  NEW.updated_at := now();
+  RETURN NEW;
+END;
+$$;
+
+DO $ammar_touch$
+DECLARE
+  t text;
+BEGIN
+  FOREACH t IN ARRAY ARRAY[
+    'ammar_market_suppliers','ammar_market_products','ammar_service_providers',
+    'ammar_market_requests','ammar_market_quotes','ammar_service_requests',
+    'ammar_service_offers','ammar_agreements','ammar_disputes'
+  ]
+  LOOP
+    EXECUTE format('DROP TRIGGER IF EXISTS %I ON public.%I', t || '_touch_updated_at', t);
+    EXECUTE format(
+      'CREATE TRIGGER %I BEFORE UPDATE ON public.%I FOR EACH ROW EXECUTE FUNCTION public.ammar_ecosystem_touch_updated_at()',
+      t || '_touch_updated_at', t
+    );
+  END LOOP;
+END
+$ammar_touch$;
+
+CREATE OR REPLACE FUNCTION public.ammar_is_conversation_member(
+  p_conversation_id uuid,
+  p_user_id uuid DEFAULT auth.uid()
+)
+RETURNS boolean
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+  SELECT EXISTS (
+    SELECT 1
+    FROM public.ammar_conversation_participants cp
+    WHERE cp.conversation_id = p_conversation_id
+      AND cp.user_id = p_user_id
+  );
+$$;
+
+CREATE OR REPLACE FUNCTION public.ammar_start_conversation(
+  p_other_user uuid,
+  p_context_type text,
+  p_context_id text,
+  p_subject text DEFAULT NULL
+)
+RETURNS uuid
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+DECLARE
+  v_user uuid := auth.uid();
+  v_conversation uuid;
+BEGIN
+  IF v_user IS NULL THEN
+    RAISE EXCEPTION 'Authentication required';
+  END IF;
+  IF p_other_user IS NULL OR p_other_user = v_user THEN
+    RAISE EXCEPTION 'A different participant is required';
+  END IF;
+  IF p_context_type NOT IN ('project','market_product','supplier','market_request','service_offer')
+     OR coalesce(trim(p_context_id),'') = '' THEN
+    RAISE EXCEPTION 'A valid conversation context is required';
+  END IF;
+
+  IF p_context_type = 'project' THEN
+    IF public.ammar_project_role(p_context_id) IS NULL THEN
+      RAISE EXCEPTION 'You are not a member of this project';
+    END IF;
+    IF NOT EXISTS (
+      SELECT 1 FROM public.projects p
+      WHERE p.id::text = p_context_id
+        AND (
+          p.client_id = p_other_user
+          OR EXISTS (
+            SELECT 1 FROM public.project_members pm
+            WHERE pm.project_id::text = p_context_id AND pm.user_id = p_other_user
+          )
+        )
+    ) THEN
+      RAISE EXCEPTION 'The other participant is not a member of this project';
+    END IF;
+  ELSIF p_context_type = 'market_product' THEN
+    IF NOT EXISTS (
+      SELECT 1
+      FROM public.ammar_market_products mp
+      JOIN public.ammar_market_suppliers s ON s.id = mp.supplier_id
+      WHERE mp.id::text = p_context_id
+        AND s.owner_id = p_other_user
+        AND mp.is_active = true
+        AND s.status = 'active'
+    ) THEN
+      RAISE EXCEPTION 'The product does not belong to this supplier';
+    END IF;
+  ELSIF p_context_type = 'supplier' THEN
+    IF NOT EXISTS (
+      SELECT 1 FROM public.ammar_market_suppliers s
+      WHERE s.id::text = p_context_id AND s.owner_id = p_other_user AND s.status = 'active'
+    ) THEN
+      RAISE EXCEPTION 'Supplier profile not found';
+    END IF;
+  ELSIF p_context_type = 'market_request' THEN
+    IF NOT EXISTS (
+      SELECT 1
+      FROM public.ammar_market_requests r
+      JOIN public.ammar_market_suppliers s ON s.id = r.supplier_id
+      WHERE r.id::text = p_context_id
+        AND (
+          (r.buyer_id = v_user AND s.owner_id = p_other_user)
+          OR
+          (r.buyer_id = p_other_user AND s.owner_id = v_user)
+        )
+    ) THEN
+      RAISE EXCEPTION 'You are not a party to this market request';
+    END IF;
+  ELSIF p_context_type = 'service_offer' THEN
+    IF NOT EXISTS (
+      SELECT 1
+      FROM public.ammar_service_offers o
+      JOIN public.ammar_service_requests r ON r.id = o.request_id
+      JOIN public.ammar_service_providers sp ON sp.id = o.provider_id
+      WHERE o.id::text = p_context_id
+        AND (
+          (r.requester_id = v_user AND sp.owner_id = p_other_user)
+          OR
+          (r.requester_id = p_other_user AND sp.owner_id = v_user)
+        )
+    ) THEN
+      RAISE EXCEPTION 'You are not a party to this service offer';
+    END IF;
+  END IF;
+
+  SELECT c.id INTO v_conversation
+  FROM public.ammar_conversations c
+  WHERE c.context_type = p_context_type
+    AND c.context_id = p_context_id
+    AND EXISTS (
+      SELECT 1 FROM public.ammar_conversation_participants cp
+      WHERE cp.conversation_id = c.id AND cp.user_id = v_user
+    )
+    AND EXISTS (
+      SELECT 1 FROM public.ammar_conversation_participants cp
+      WHERE cp.conversation_id = c.id AND cp.user_id = p_other_user
+    )
+  ORDER BY c.created_at DESC
+  LIMIT 1;
+
+  IF v_conversation IS NULL THEN
+    INSERT INTO public.ammar_conversations(context_type, context_id, subject, created_by)
+    VALUES (p_context_type, p_context_id, nullif(trim(p_subject),''), v_user)
+    RETURNING id INTO v_conversation;
+
+    INSERT INTO public.ammar_conversation_participants(conversation_id, user_id, participant_role)
+    VALUES
+      (v_conversation, v_user, 'customer'),
+      (v_conversation, p_other_user, 'provider')
+    ON CONFLICT DO NOTHING;
+  END IF;
+
+  RETURN v_conversation;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.ammar_mark_conversation_read(p_conversation_id uuid)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+BEGIN
+  IF auth.uid() IS NULL OR NOT public.ammar_is_conversation_member(p_conversation_id, auth.uid()) THEN
+    RAISE EXCEPTION 'Conversation access denied';
+  END IF;
+  UPDATE public.ammar_conversation_participants
+  SET last_read_at = now()
+  WHERE conversation_id = p_conversation_id AND user_id = auth.uid();
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.ammar_accept_agreement(p_agreement_id uuid)
+RETURNS text
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+DECLARE
+  a public.ammar_agreements%ROWTYPE;
+BEGIN
+  SELECT * INTO a FROM public.ammar_agreements WHERE id = p_agreement_id FOR UPDATE;
+  IF NOT FOUND OR auth.uid() NOT IN (a.client_id, a.provider_id) THEN
+    RAISE EXCEPTION 'Agreement not found or access denied';
+  END IF;
+  IF a.status IN ('cancelled','rejected') THEN
+    RAISE EXCEPTION 'This agreement can no longer be accepted';
+  END IF;
+
+  IF auth.uid() = a.client_id THEN
+    UPDATE public.ammar_agreements
+    SET client_accepted_at = coalesce(client_accepted_at, now())
+    WHERE id = p_agreement_id
+    RETURNING * INTO a;
+  ELSE
+    UPDATE public.ammar_agreements
+    SET provider_accepted_at = coalesce(provider_accepted_at, now())
+    WHERE id = p_agreement_id
+    RETURNING * INTO a;
+  END IF;
+
+  IF a.client_accepted_at IS NOT NULL AND a.provider_accepted_at IS NOT NULL THEN
+    UPDATE public.ammar_agreements SET status = 'accepted' WHERE id = p_agreement_id;
+    INSERT INTO public.ammar_agreement_events(agreement_id, actor_id, event_type, note)
+    VALUES (p_agreement_id, auth.uid(), 'accepted', 'Both parties accepted the agreement.');
+    RETURN 'accepted';
+  ELSE
+    UPDATE public.ammar_agreements SET status = 'partially_accepted' WHERE id = p_agreement_id;
+    INSERT INTO public.ammar_agreement_events(agreement_id, actor_id, event_type, note)
+    VALUES (p_agreement_id, auth.uid(), 'accepted', 'One party accepted the agreement.');
+    RETURN 'partially_accepted';
+  END IF;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.ammar_notify_new_message()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+DECLARE
+  v_subject text;
+BEGIN
+  UPDATE public.ammar_conversations
+  SET last_message_at = NEW.created_at
+  WHERE id = NEW.conversation_id;
+
+  SELECT subject INTO v_subject
+  FROM public.ammar_conversations WHERE id = NEW.conversation_id;
+
+  INSERT INTO public.ammar_user_notifications(
+    user_id, actor_id, notification_type, title, body, conversation_id, message_id
+  )
+  SELECT cp.user_id, NEW.sender_id, 'new_message',
+         coalesce(v_subject, 'رسالة جديدة في عَمِّر'),
+         left(coalesce(NEW.body, NEW.file_name, 'مرفق جديد'), 240),
+         NEW.conversation_id, NEW.id
+  FROM public.ammar_conversation_participants cp
+  WHERE cp.conversation_id = NEW.conversation_id
+    AND cp.user_id <> NEW.sender_id;
+
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS ammar_notify_new_message_trigger ON public.ammar_messages;
+CREATE TRIGGER ammar_notify_new_message_trigger
+AFTER INSERT ON public.ammar_messages
+FOR EACH ROW EXECUTE FUNCTION public.ammar_notify_new_message();
+
+ALTER TABLE public.ammar_market_suppliers ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.ammar_market_products ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.ammar_service_providers ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.ammar_market_requests ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.ammar_market_request_items ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.ammar_market_quotes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.ammar_service_requests ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.ammar_service_offers ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.ammar_conversations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.ammar_conversation_participants ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.ammar_messages ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.ammar_user_notifications ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.ammar_agreements ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.ammar_agreement_events ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.ammar_reviews ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.ammar_disputes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.ammar_commission_rules ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.ammar_commission_ledger ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.ammar_transaction_events ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY ammar_suppliers_select ON public.ammar_market_suppliers
+FOR SELECT TO authenticated USING (status = 'active' OR owner_id = auth.uid());
+CREATE POLICY ammar_suppliers_insert ON public.ammar_market_suppliers
+FOR INSERT TO authenticated WITH CHECK (owner_id = auth.uid());
+CREATE POLICY ammar_suppliers_update ON public.ammar_market_suppliers
+FOR UPDATE TO authenticated USING (owner_id = auth.uid()) WITH CHECK (owner_id = auth.uid());
+
+CREATE POLICY ammar_products_select ON public.ammar_market_products
+FOR SELECT TO authenticated USING (
+  (is_active = true AND EXISTS (
+    SELECT 1 FROM public.ammar_market_suppliers s
+    WHERE s.id = supplier_id AND s.status = 'active'
+  ))
+  OR EXISTS (
+    SELECT 1 FROM public.ammar_market_suppliers s
+    WHERE s.id = supplier_id AND s.owner_id = auth.uid()
+  )
+);
+CREATE POLICY ammar_products_insert ON public.ammar_market_products
+FOR INSERT TO authenticated WITH CHECK (
+  EXISTS (SELECT 1 FROM public.ammar_market_suppliers s
+          WHERE s.id = supplier_id AND s.owner_id = auth.uid())
+);
+CREATE POLICY ammar_products_update ON public.ammar_market_products
+FOR UPDATE TO authenticated USING (
+  EXISTS (SELECT 1 FROM public.ammar_market_suppliers s
+          WHERE s.id = supplier_id AND s.owner_id = auth.uid())
+) WITH CHECK (
+  EXISTS (SELECT 1 FROM public.ammar_market_suppliers s
+          WHERE s.id = supplier_id AND s.owner_id = auth.uid())
+);
+CREATE POLICY ammar_products_delete ON public.ammar_market_products
+FOR DELETE TO authenticated USING (
+  EXISTS (SELECT 1 FROM public.ammar_market_suppliers s
+          WHERE s.id = supplier_id AND s.owner_id = auth.uid())
+);
+
+CREATE POLICY ammar_service_providers_select ON public.ammar_service_providers
+FOR SELECT TO authenticated USING (status = 'active' OR owner_id = auth.uid());
+CREATE POLICY ammar_service_providers_insert ON public.ammar_service_providers
+FOR INSERT TO authenticated WITH CHECK (owner_id = auth.uid());
+CREATE POLICY ammar_service_providers_update ON public.ammar_service_providers
+FOR UPDATE TO authenticated USING (owner_id = auth.uid()) WITH CHECK (owner_id = auth.uid());
+
+CREATE POLICY ammar_market_requests_select ON public.ammar_market_requests
+FOR SELECT TO authenticated USING (
+  buyer_id = auth.uid()
+  OR EXISTS (SELECT 1 FROM public.ammar_market_suppliers s
+             WHERE s.id = supplier_id AND s.owner_id = auth.uid())
+);
+CREATE POLICY ammar_market_requests_insert ON public.ammar_market_requests
+FOR INSERT TO authenticated WITH CHECK (
+  buyer_id = auth.uid()
+  AND EXISTS (SELECT 1 FROM public.ammar_market_suppliers s
+              WHERE s.id = supplier_id AND s.status = 'active')
+  AND (project_id IS NULL OR public.ammar_project_role(project_id::text) IS NOT NULL)
+);
+CREATE POLICY ammar_market_requests_update ON public.ammar_market_requests
+FOR UPDATE TO authenticated USING (
+  buyer_id = auth.uid()
+  OR EXISTS (SELECT 1 FROM public.ammar_market_suppliers s
+             WHERE s.id = supplier_id AND s.owner_id = auth.uid())
+) WITH CHECK (
+  buyer_id = auth.uid()
+  OR EXISTS (SELECT 1 FROM public.ammar_market_suppliers s
+             WHERE s.id = supplier_id AND s.owner_id = auth.uid())
+);
+
+CREATE POLICY ammar_market_items_select ON public.ammar_market_request_items
+FOR SELECT TO authenticated USING (
+  EXISTS (
+    SELECT 1 FROM public.ammar_market_requests r
+    LEFT JOIN public.ammar_market_suppliers s ON s.id = r.supplier_id
+    WHERE r.id = request_id AND (r.buyer_id = auth.uid() OR s.owner_id = auth.uid())
+  )
+);
+CREATE POLICY ammar_market_items_insert ON public.ammar_market_request_items
+FOR INSERT TO authenticated WITH CHECK (
+  EXISTS (SELECT 1 FROM public.ammar_market_requests r
+          WHERE r.id = request_id AND r.buyer_id = auth.uid())
+  AND (product_id IS NULL OR EXISTS (
+    SELECT 1 FROM public.ammar_market_products p
+    JOIN public.ammar_market_requests r ON r.id = request_id
+    WHERE p.id = product_id AND p.supplier_id = r.supplier_id
+  ))
+);
+
+CREATE POLICY ammar_market_quotes_select ON public.ammar_market_quotes
+FOR SELECT TO authenticated USING (
+  EXISTS (
+    SELECT 1 FROM public.ammar_market_requests r
+    JOIN public.ammar_market_suppliers s ON s.id = r.supplier_id
+    WHERE r.id = request_id
+      AND (r.buyer_id = auth.uid() OR s.owner_id = auth.uid())
+  )
+);
+CREATE POLICY ammar_market_quotes_insert ON public.ammar_market_quotes
+FOR INSERT TO authenticated WITH CHECK (
+  created_by = auth.uid()
+  AND EXISTS (
+    SELECT 1 FROM public.ammar_market_requests r
+    JOIN public.ammar_market_suppliers s ON s.id = r.supplier_id
+    WHERE r.id = request_id AND r.supplier_id = supplier_id AND s.owner_id = auth.uid()
+  )
+);
+CREATE POLICY ammar_market_quotes_update ON public.ammar_market_quotes
+FOR UPDATE TO authenticated USING (
+  EXISTS (SELECT 1 FROM public.ammar_market_suppliers s
+          WHERE s.id = supplier_id AND s.owner_id = auth.uid())
+  OR EXISTS (SELECT 1 FROM public.ammar_market_requests r
+             WHERE r.id = request_id AND r.buyer_id = auth.uid())
+) WITH CHECK (
+  EXISTS (SELECT 1 FROM public.ammar_market_suppliers s
+          WHERE s.id = supplier_id AND s.owner_id = auth.uid())
+  OR EXISTS (SELECT 1 FROM public.ammar_market_requests r
+             WHERE r.id = request_id AND r.buyer_id = auth.uid())
+);
+
+CREATE POLICY ammar_service_requests_select ON public.ammar_service_requests
+FOR SELECT TO authenticated USING (
+  requester_id = auth.uid()
+  OR EXISTS (SELECT 1 FROM public.ammar_service_providers sp
+             WHERE sp.owner_id = auth.uid() AND sp.status = 'active')
+);
+CREATE POLICY ammar_service_requests_insert ON public.ammar_service_requests
+FOR INSERT TO authenticated WITH CHECK (
+  requester_id = auth.uid()
+  AND (project_id IS NULL OR public.ammar_project_role(project_id::text) IS NOT NULL)
+);
+CREATE POLICY ammar_service_requests_update ON public.ammar_service_requests
+FOR UPDATE TO authenticated USING (requester_id = auth.uid())
+WITH CHECK (requester_id = auth.uid());
+
+CREATE POLICY ammar_service_offers_select ON public.ammar_service_offers
+FOR SELECT TO authenticated USING (
+  EXISTS (SELECT 1 FROM public.ammar_service_requests r
+          WHERE r.id = request_id AND r.requester_id = auth.uid())
+  OR EXISTS (SELECT 1 FROM public.ammar_service_providers sp
+             WHERE sp.id = provider_id AND sp.owner_id = auth.uid())
+);
+CREATE POLICY ammar_service_offers_insert ON public.ammar_service_offers
+FOR INSERT TO authenticated WITH CHECK (
+  created_by = auth.uid()
+  AND EXISTS (SELECT 1 FROM public.ammar_service_providers sp
+              WHERE sp.id = provider_id AND sp.owner_id = auth.uid() AND sp.status = 'active')
+  AND EXISTS (SELECT 1 FROM public.ammar_service_requests r
+              WHERE r.id = request_id AND r.status = 'open')
+);
+CREATE POLICY ammar_service_offers_update ON public.ammar_service_offers
+FOR UPDATE TO authenticated USING (
+  EXISTS (SELECT 1 FROM public.ammar_service_providers sp
+          WHERE sp.id = provider_id AND sp.owner_id = auth.uid())
+  OR EXISTS (SELECT 1 FROM public.ammar_service_requests r
+             WHERE r.id = request_id AND r.requester_id = auth.uid())
+) WITH CHECK (
+  EXISTS (SELECT 1 FROM public.ammar_service_providers sp
+          WHERE sp.id = provider_id AND sp.owner_id = auth.uid())
+  OR EXISTS (SELECT 1 FROM public.ammar_service_requests r
+             WHERE r.id = request_id AND r.requester_id = auth.uid())
+);
+
+CREATE POLICY ammar_conversations_select ON public.ammar_conversations
+FOR SELECT TO authenticated USING (public.ammar_is_conversation_member(id, auth.uid()));
+CREATE POLICY ammar_participants_select ON public.ammar_conversation_participants
+FOR SELECT TO authenticated USING (public.ammar_is_conversation_member(conversation_id, auth.uid()));
+CREATE POLICY ammar_participants_update_self ON public.ammar_conversation_participants
+FOR UPDATE TO authenticated USING (user_id = auth.uid()) WITH CHECK (user_id = auth.uid());
+CREATE POLICY ammar_messages_select ON public.ammar_messages
+FOR SELECT TO authenticated USING (public.ammar_is_conversation_member(conversation_id, auth.uid()));
+CREATE POLICY ammar_messages_insert ON public.ammar_messages
+FOR INSERT TO authenticated WITH CHECK (
+  sender_id = auth.uid()
+  AND public.ammar_is_conversation_member(conversation_id, auth.uid())
+);
+
+CREATE POLICY ammar_notifications_select ON public.ammar_user_notifications
+FOR SELECT TO authenticated USING (user_id = auth.uid());
+CREATE POLICY ammar_notifications_update_self ON public.ammar_user_notifications
+FOR UPDATE TO authenticated USING (user_id = auth.uid()) WITH CHECK (user_id = auth.uid());
+
+CREATE POLICY ammar_agreements_select ON public.ammar_agreements
+FOR SELECT TO authenticated USING (auth.uid() IN (client_id, provider_id));
+CREATE POLICY ammar_agreements_insert ON public.ammar_agreements
+FOR INSERT TO authenticated WITH CHECK (
+  created_by = auth.uid()
+  AND auth.uid() IN (client_id, provider_id)
+  AND (project_id IS NULL OR public.ammar_project_role(project_id::text) IS NOT NULL)
+);
+CREATE POLICY ammar_agreement_events_select ON public.ammar_agreement_events
+FOR SELECT TO authenticated USING (
+  EXISTS (SELECT 1 FROM public.ammar_agreements a
+          WHERE a.id = agreement_id AND auth.uid() IN (a.client_id, a.provider_id))
+);
+
+CREATE POLICY ammar_reviews_select ON public.ammar_reviews
+FOR SELECT TO authenticated USING (true);
+CREATE POLICY ammar_reviews_insert ON public.ammar_reviews
+FOR INSERT TO authenticated WITH CHECK (
+  reviewer_id = auth.uid()
+  AND EXISTS (
+    SELECT 1 FROM public.ammar_market_requests r
+    JOIN public.ammar_market_suppliers s ON s.id = r.supplier_id
+    WHERE r.id = request_id AND r.status = 'completed'
+      AND (r.buyer_id = auth.uid() AND s.owner_id = reviewed_user_id)
+  )
+);
+
+CREATE POLICY ammar_disputes_select ON public.ammar_disputes
+FOR SELECT TO authenticated USING (
+  EXISTS (
+    SELECT 1 FROM public.ammar_market_requests r
+    JOIN public.ammar_market_suppliers s ON s.id = r.supplier_id
+    WHERE r.id = request_id AND (r.buyer_id = auth.uid() OR s.owner_id = auth.uid())
+  )
+);
+CREATE POLICY ammar_disputes_insert ON public.ammar_disputes
+FOR INSERT TO authenticated WITH CHECK (
+  raised_by = auth.uid()
+  AND EXISTS (
+    SELECT 1 FROM public.ammar_market_requests r
+    JOIN public.ammar_market_suppliers s ON s.id = r.supplier_id
+    WHERE r.id = request_id AND r.status NOT IN ('cancelled')
+      AND (r.buyer_id = auth.uid() OR s.owner_id = auth.uid())
+  )
+);
+
+CREATE POLICY ammar_commission_rules_select ON public.ammar_commission_rules
+FOR SELECT TO authenticated USING (is_active = true);
+CREATE POLICY ammar_commission_ledger_select ON public.ammar_commission_ledger
+FOR SELECT TO authenticated USING (payer_id = auth.uid());
+CREATE POLICY ammar_transaction_events_select ON public.ammar_transaction_events
+FOR SELECT TO authenticated USING (
+  EXISTS (SELECT 1 FROM public.ammar_market_requests r
+          JOIN public.ammar_market_suppliers s ON s.id = r.supplier_id
+          WHERE r.id = request_id AND (r.buyer_id = auth.uid() OR s.owner_id = auth.uid()))
+);
+CREATE POLICY ammar_transaction_events_insert ON public.ammar_transaction_events
+FOR INSERT TO authenticated WITH CHECK (
+  actor_id = auth.uid()
+  AND EXISTS (SELECT 1 FROM public.ammar_market_requests r
+              JOIN public.ammar_market_suppliers s ON s.id = r.supplier_id
+              WHERE r.id = request_id AND (r.buyer_id = auth.uid() OR s.owner_id = auth.uid()))
+);
+
+GRANT SELECT, INSERT, UPDATE ON
+  public.ammar_market_suppliers,
+  public.ammar_market_products,
+  public.ammar_service_providers,
+  public.ammar_market_requests,
+  public.ammar_market_quotes,
+  public.ammar_service_requests,
+  public.ammar_service_offers,
+  public.ammar_agreements,
+  public.ammar_reviews,
+  public.ammar_disputes,
+  public.ammar_transaction_events
+TO authenticated;
+
+GRANT SELECT, INSERT ON public.ammar_market_request_items TO authenticated;
+GRANT SELECT ON public.ammar_conversations, public.ammar_conversation_participants,
+  public.ammar_messages, public.ammar_user_notifications,
+  public.ammar_agreement_events, public.ammar_commission_rules,
+  public.ammar_commission_ledger TO authenticated;
+GRANT INSERT ON public.ammar_messages TO authenticated;
+GRANT UPDATE (last_read_at) ON public.ammar_conversation_participants TO authenticated;
+GRANT UPDATE (read_at) ON public.ammar_user_notifications TO authenticated;
+
+REVOKE ALL ON public.ammar_commission_ledger, public.ammar_commission_rules FROM anon, authenticated;
+GRANT SELECT ON public.ammar_commission_rules TO authenticated;
+GRANT SELECT ON public.ammar_commission_ledger TO authenticated;
+
+REVOKE ALL ON FUNCTION public.ammar_is_conversation_member(uuid,uuid) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.ammar_start_conversation(uuid,text,text,text) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.ammar_mark_conversation_read(uuid) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.ammar_accept_agreement(uuid) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.ammar_ecosystem_touch_updated_at() FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.ammar_notify_new_message() FROM PUBLIC;
+
+GRANT EXECUTE ON FUNCTION public.ammar_is_conversation_member(uuid,uuid) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.ammar_start_conversation(uuid,text,text,text) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.ammar_mark_conversation_read(uuid) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.ammar_accept_agreement(uuid) TO authenticated;
+
+INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+VALUES (
+  'ammar-chat-files',
+  'ammar-chat-files',
+  false,
+  26214400,
+  ARRAY[
+    'image/jpeg','image/png','image/webp','application/pdf',
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'application/vnd.ms-excel',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+  ]
+)
+ON CONFLICT (id) DO NOTHING;
+
+DROP POLICY IF EXISTS ammar_chat_files_member_select ON storage.objects;
+CREATE POLICY ammar_chat_files_member_select ON storage.objects
+FOR SELECT TO authenticated USING (
+  bucket_id = 'ammar-chat-files'
+  AND public.ammar_is_conversation_member((storage.foldername(name))[1]::uuid, auth.uid())
+);
+DROP POLICY IF EXISTS ammar_chat_files_member_insert ON storage.objects;
+CREATE POLICY ammar_chat_files_member_insert ON storage.objects
+FOR INSERT TO authenticated WITH CHECK (
+  bucket_id = 'ammar-chat-files'
+  AND public.ammar_is_conversation_member((storage.foldername(name))[1]::uuid, auth.uid())
+);
+DROP POLICY IF EXISTS ammar_chat_files_member_delete ON storage.objects;
+CREATE POLICY ammar_chat_files_member_delete ON storage.objects
+FOR DELETE TO authenticated USING (
+  bucket_id = 'ammar-chat-files'
+  AND (storage.foldername(name))[2] = auth.uid()::text
+  AND public.ammar_is_conversation_member((storage.foldername(name))[1]::uuid, auth.uid())
+);
+
+-- Add only if Supabase Realtime publication exists and these tables are not present.
+DO $ammar_realtime$
+DECLARE t text;
+BEGIN
+  IF EXISTS (SELECT 1 FROM pg_publication WHERE pubname = 'supabase_realtime') THEN
+    FOREACH t IN ARRAY ARRAY[
+      'ammar_conversations','ammar_messages','ammar_user_notifications'
+    ]
+    LOOP
+      IF NOT EXISTS (
+        SELECT 1 FROM pg_publication_tables
+        WHERE pubname = 'supabase_realtime'
+          AND schemaname = 'public'
+          AND tablename = t
+      ) THEN
+        EXECUTE format('ALTER PUBLICATION supabase_realtime ADD TABLE public.%I', t);
+      END IF;
+    END LOOP;
+  END IF;
+EXCEPTION
+  WHEN insufficient_privilege THEN
+    RAISE NOTICE 'Realtime publication update skipped; enable these tables manually if required.';
+  WHEN undefined_object THEN
+    RAISE NOTICE 'Supabase Realtime publication is not available in this project.';
+END
+$ammar_realtime$;
+
+COMMIT;
