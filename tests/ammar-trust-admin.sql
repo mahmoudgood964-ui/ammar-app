@@ -69,7 +69,7 @@ DO $test$
 BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM public.ammar_service_providers
-    WHERE id=:'provider_id'::uuid
+    WHERE id=current_setting('ammir.test.provider_id')::uuid
       AND is_verified=false
       AND verified_at IS NULL
       AND status='active'
@@ -127,7 +127,7 @@ BEGIN
   SELECT count(*), max(message_body)
   INTO v_count, v_body
   FROM public.ammar_admin_list_message_reports(50)
-  WHERE report_id=:'report_id'::uuid;
+  WHERE report_id=current_setting('ammir.test.report_id')::uuid;
 
   IF v_count <> 1 OR v_body <> 'AMMIR trust moderation test message' THEN
     RAISE EXCEPTION 'Administrator report review RPC did not return the reported message context';
@@ -139,7 +139,7 @@ UPDATE public.ammar_message_reports
 SET status='investigating',
     reviewed_at=now(),
     reviewed_by='aaaaaaaa-1000-4000-8000-000000000002'
-WHERE id=:'report_id';
+WHERE id=current_setting('ammir.test.report_id')::uuid;
 
 UPDATE public.ammar_market_suppliers
 SET is_verified=true, verified_at=now()
@@ -153,13 +153,13 @@ DO $test$
 BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM public.ammar_market_suppliers
-    WHERE id=:'supplier_id'::uuid AND is_verified=true AND verified_at IS NOT NULL
+    WHERE id=current_setting('ammir.test.supplier_id')::uuid AND is_verified=true AND verified_at IS NOT NULL
   ) THEN
     RAISE EXCEPTION 'Administrator could not verify a supplier';
   END IF;
   IF NOT EXISTS (
     SELECT 1 FROM public.ammar_service_providers
-    WHERE id=:'provider_id'::uuid AND is_verified=true AND verified_at IS NOT NULL
+    WHERE id=current_setting('ammir.test.provider_id')::uuid AND is_verified=true AND verified_at IS NOT NULL
   ) THEN
     RAISE EXCEPTION 'Administrator could not verify a service provider';
   END IF;
