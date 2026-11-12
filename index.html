@@ -199,7 +199,7 @@ function moduleForm(kind){
 function renderTeamPanel(){
  const owner=String(activeProject.client_id)===String(currentUser.id),members=moduleData.members||[],invites=moduleData.invitations||[];
  let s='<section class="panel"><div class="panel-head"><h3>فريق المشروع</h3><span class="muted">'+(members.length+1)+' عضو</span></div><div class="member-row"><div class="member-meta"><strong>مالك المشروع</strong><small>'+esc(activeProject.client_id)+'</small></div><span class="status-pill">المالك</span></div>';
- s+=members.map(m=>'<div class="member-row"><div class="member-meta"><strong>'+esc(m.user_id)+'</strong><small>انضم: '+esc(dateText(m.created_at))+'</small></div><div class="actions"><select class="team-role" data-member-role="'+esc(m.user_id)+'" '+(!owner?'disabled':'')+'>'+Object.entries(memberRoleLabels).map(([k,v])=>'<option value="'+k+'" '+(m.member_role===k?'selected':'')+'>'+v+'</option>').join('')+'</select>'+(owner?'<button class="btn quiet" type="button" data-remove-member="'+esc(m.user_id)+'">إزالة</button>':'')+'</div></div>').join('');
+ s+=members.map(m=>'<div class="member-row"><div class="member-meta"><strong>'+esc(m.user_id)+'</strong><small>انضم: '+esc(dateText(m.created_at))+'</small></div><div class="actions"><select class="team-role" data-member-role="'+esc(m.user_id)+'" '+(!owner?'disabled':'')+'>'+Object.entries(memberRoleLabels).map(([k,v])=>'<option value="'+k+'" '+((({admin:'manager',project_manager:'manager',owner:'manager',member:'worker',technician:'worker'})[m.member_role]||m.member_role)===k?'selected':'')+'>'+v+'</option>').join('')+'</select>'+(owner?'<button class="btn quiet" type="button" data-remove-member="'+esc(m.user_id)+'">إزالة</button>':'')+'</div></div>').join('');
  if(!members.length)s+='<div class="empty">لم تتم إضافة أعضاء بعد. ادعُ أول عضو للبدء بالعمل الجماعي.</div>';
  s+='</section>';
  if(owner){
@@ -207,7 +207,7 @@ function renderTeamPanel(){
   if(lastInviteUrl)s+='<div class="notice" style="overflow-wrap:anywhere">رابط الدعوة: <a href="'+esc(lastInviteUrl)+'">'+esc(lastInviteUrl)+'</a><div class="actions"><button class="btn light" type="button" data-copy-invite>نسخ الرابط</button><button class="btn quiet" type="button" data-share-invite>مشاركة</button></div></div>';
   s+='</section>';
  }
- if(invites.length)s+='<section class="panel"><h3>الدعوات السابقة</h3>'+invites.map(i=>'<div class="member-row"><div class="member-meta"><strong>'+esc(i.email)+'</strong><small>'+esc(memberRoleLabels[i.member_role]||i.member_role)+' · تنتهي '+esc(dateText(i.expires_at))+'</small></div><span class="pill">'+esc(({pending:'بانتظار القبول',accepted:'مقبولة',revoked:'ملغاة',expired:'منتهية'})[i.status]||i.status)+'</span></div>').join('')+'</section>';
+ if(invites.length)s+='<section class="panel"><h3>الدعوات السابقة</h3>'+invites.map(i=>'<div class="member-row"><div class="member-meta"><strong>'+esc(i.email)+'</strong><small>'+esc(memberRoleLabels[i.member_role]||i.member_role)+' · تنتهي '+esc(dateText(i.expires_at))+'</small></div><div class="actions"><span class="pill">'+esc(({pending:'بانتظار القبول',accepted:'مقبولة',revoked:'ملغاة',expired:'منتهية'})[i.status]||i.status)+'</span>'+(owner&&i.status==='pending'?'<button class="btn quiet" type="button" data-revoke-invitation="'+esc(i.id)+'">إلغاء الدعوة</button>':'')+'</div></div>').join('')+'</section>';
  return s;
 }
 function renderActivityPanel(){
@@ -284,6 +284,8 @@ async function handleModuleClick(e){
  const sh=e.target.closest('[data-share-invite]');if(sh&&lastInviteUrl){if(navigator.share)await navigator.share({title:'دعوة إلى مشروع عَمِّر',url:lastInviteUrl});else{await navigator.clipboard.writeText(lastInviteUrl);message($('appMessage'),'تم نسخ رابط الدعوة.','success');}return;}
  const rm=e.target.closest('[data-remove-member]');
  if(rm){if(!confirm('إزالة هذا العضو من المشروع؟'))return;const r=await client.rpc('ammar_remove_project_member',{p_project_id:String(activeProject.id),p_user_id:rm.dataset.removeMember});if(r.error)throw r.error;await logActivity('member_removed','تمت إزالة عضو من الفريق','team',rm.dataset.removeMember);await loadProjectModules();message($('appMessage'),'تمت إزالة العضو.','success');return;}
+ const revoke=e.target.closest('[data-revoke-invitation]');
+ if(revoke){if(!confirm('إلغاء رابط الدعوة؟ لن يتمكن المستلم من استخدامه بعد ذلك.'))return;const r=await client.rpc('ammar_revoke_project_invitation',{p_project_id:String(activeProject.id),p_invitation_id:revoke.dataset.revokeInvitation});if(r.error)throw r.error;await loadProjectModules();message($('appMessage'),'تم إلغاء الدعوة.','success');return;}
  const dp=e.target.closest('[data-delete-payment]');
  if(dp){if(!confirm('حذف سجل الدفعة نهائياً؟'))return;const r=await client.from('project_payments').delete().eq('id',dp.dataset.deletePayment).eq('project_id',activeProject.id);if(r.error)throw r.error;await logActivity('payment_deleted','تم حذف سجل دفعة','payment',dp.dataset.deletePayment);await loadProjectModules();message($('appMessage'),'تم حذف الدفعة.','success');return;}
  const edit=e.target.closest('[data-edit-module]');
