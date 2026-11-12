@@ -1,38 +1,71 @@
-# عَمِّر | AMMAR
+# عَمِّر | AMMAR — مستودع التطوير
 
-AMMAR is a bilingual (Arabic/English) workspace for managing renovation and property-maintenance projects, from project setup through field execution and handover.
+مساحة لإدارة مشاريع البناء والترميم والصيانة، مع فرع تطوير مستقل يضيف سوق مواد البناء والموردين والخدمات والشراء والمراسلات المرتبطة بالمشروع.
 
-## Current capabilities
+> **تنبيه إصدار:** ميزات السوق والمراسلات الواردة أدناه موجودة في فرع `feature/ammar-market-messaging` وليست جزءاً من `main` أو نسخة الإنتاج إلى أن تكتمل بوابة staging والمراجعة والدمج والنشر.
 
-- Account registration, sign-in and password recovery through Supabase Auth.
-- Project creation, updates, search and shared project access.
-- Team invitations, role-based access and activity history.
-- Tasks, progress updates, contractor quotations and structured quotation comparison.
-- Expenses, budgets, payments and CSV project exports.
-- Private project documents and signed downloads through Supabase Storage.
-- Daily site reports, issue/defect tracking, scope-change approvals and handover checklists.
-- Supplier profiles, self-managed construction-material listings, regional catalog, purchase requests and supplier quotations (after the ecosystem migration is applied).
-- Private customer/supplier conversations with text and file/image attachments, read receipts, notifications and project-linked purchase requests.
-- Service-provider profiles and service requests, agreement records with dual-party acceptance timestamps, dispute/review records and configurable commission rules.
-- Bank-referenced milestone workflow with customer completion approval, dispute holds and payout audit records (AMMAR does not custody or transfer funds).
-- Arabic/English interface switching.
-- Installable PWA shell.
-- Supplier marketplace for construction materials with supplier-managed prices, availability, product images and regional catalog.
-- Project-linked purchase requests, supplier quotations, order status, delivery confirmation and purchase expense recording.
-- Private in-app customer/supplier messaging with attachments, unread notifications and realtime updates.
-- Contractor and service-provider profiles, service requests, offers, two-party agreements, completion confirmation and reviews.
-- Configurable transaction commission ledger (5% initial default); commission entries are accounting records only and do not collect or transfer funds.
+## وحدات المشروع الأساسية
 
-## Technology
+- التسجيل والدخول واستعادة كلمة المرور عبر Supabase Auth.
+- إنشاء المشاريع والبحث والمشاركة وإدارة أعضاء الفريق والأدوار.
+- المهام والتقدم والتعليقات وعروض المقاولين والمصروفات والميزانيات والمدفوعات.
+- تقارير المواقع اليومية وسجل النشاط والمشكلات والعيوب وطلبات التغيير وقوائم التسليم.
+- مستندات المشروع الخاصة وروابط التنزيل الموقعة من Supabase Storage.
+- واجهة أساسية تدعم العربية والإنجليزية، وغلاف PWA قابل للتثبيت.
 
-- Static HTML, CSS and JavaScript in `index.html`.
-- Supabase Auth, Postgres, Row Level Security and Storage.
-- Vercel hosting.
-- PWA manifest, service worker and SVG application icon.
+## قدرات السوق والرسائل في فرع التطوير
 
-## Database migrations
+تُفعّل بعد تطبيق ترحيلي السوق والمراسلات 006 و007 في بيئة Supabase المناسبة:
 
-Apply the migrations in order in the Supabase SQL Editor, only once per environment:
+### السوق والشراء
+- حسابات الموردين وملفاتهم التجارية.
+- نشر منتجات البناء مع الفئة والوحدة والسعر والعملة والتوفر والكمية وصورة المنتج.
+- البحث الإقليمي بحسب بيانات المدينة والمنطقة والسوق.
+- طلبات شراء مرتبطة بمورد وبمنتج، وعروض أسعار وقبولها.
+- متابعة حالات الطلب من الإرسال حتى التأكيد على الاستلام.
+- ربط إكمال معاملة المواد بمصروف المشروع.
+
+### المقاولون والخدمات والاتفاقات
+- ملفات مقدمي الخدمات والمقاولين.
+- طلبات خدمات وعروض تنفيذ وقبول العرض.
+- اتفاقات مرتبطة بصفقة، مع قبول الطرفين وسجل أحداث للاتفاق.
+- تقييمات وسجلات أولية للبلاغات والنزاعات.
+- تسجيل إكمال الخدمة ومصروف المشروع.
+
+### المراسلات الداخلية — ترحيل 007
+- محادثات مرتبطة بمنتج أو طلب شراء أو عرض خدمة أو مشروع أو ملف مورد.
+- رسائل نصية وصور وملفات وفيديو ومشاركة موقع.
+- مرفقات خاصة وروابط موقعة مؤقتة.
+- إيصالات إرسال وتسليم وقراءة، وعدّاد غير المقروء وإشعارات داخل التطبيق وتحديثات Realtime.
+- آخر ظهور مع خيار إخفائه، وأرشفة المحادثات.
+- بحث وتصفية المحادثات، وبحث في الرسائل المحملة.
+- الرد وإعادة توجيه الرسائل النصية والتثبيت والإبلاغ والحظر وإلغاء الحظر.
+- تحويل رسالة في محادثة مشروع إلى مهمة أو طلب تغيير.
+
+### حدود الرسائل الحالية
+- المحادثات ثنائية الطرف، وليست نظام مجموعات/قنوات متكاملاً.
+- واجهة الرسائل المضافة عربية في معظمها، ولم يكتمل تعريب/ترجمة كل العناصر للإنجليزية.
+- البحث في المحادثة محدود بالرسائل المحملة في الصفحة، وليس فهرسة غير محدودة لكل التاريخ.
+- إعادة التوجيه الحالية للرسائل النصية.
+- لا توجد حتى الآن رسائل صوتية أو مكالمات، ترجمة آلية، تنبيهات SLA لتأخر الردود، أو إشعارات Push/Email موثوقة.
+- البلاغات تُسجّل، لكن لوحة الإدارة والتحقيق والإغلاق ليست مكتملة.
+
+## العمولة والمدفوعات
+
+نسبة 5% قيمة ابتدائية محفوظة في قواعد إعداد العمولة، وليست نسبة سوقية مثبتة ولا التزاماً تجارياً نهائياً. يسجل النظام قيمة عمولة مستحقة بعد تحقق شروط الإكمال؛ لا يجمع عَمِّر الأموال ولا يحتفظ بها ولا ينقلها ولا يوفر Escrow. أي تحصيل أو دفع أو أموال محمية يتطلب مزوداً مرخصاً واتفاقاً مكتوباً ومراجعة تنظيمية.
+
+## التقنية
+
+- HTML/CSS/JavaScript في `index.html` و`ammar-marketplace.js`.
+- Supabase Auth وPostgreSQL وRLS وStorage وRealtime.
+- Vercel للاستضافة.
+- PWA manifest وService Worker.
+
+لا توفر PWA الحالية تحريراً كاملاً لبيانات المشاريع دون اتصال أو مزامنة خلفية موثوقة.
+
+## ترحيلات قاعدة البيانات
+
+ترتيب الترحيلات المعتمد للمشروع:
 
 1. `202611120001_project_management.sql`
 2. `202611120002_part1_schema.sql`
@@ -41,41 +74,46 @@ Apply the migrations in order in the Supabase SQL Editor, only once per environm
 5. `202611120003_team_member_privacy.sql`
 6. `202611120004_field_operations.sql`
 7. `202611120005_bank_payment_workflow.sql`
-8. `202611120006_ammar_marketplace_messaging.sql`
-8. `202611120006_ammar_marketplace_messaging.sql`
+8. `202611120006_ammar_marketplace_messaging.sql` — أساس السوق والرسائل.
+9. `202611120007_ammar_messaging_plus.sql` — الإيصالات والخصوصية والحظر والميزات المتقدمة.
 
-Do not rerun earlier migrations that have already been applied successfully. Keep a record of the environment and migration history.
+**لا تعِد تشغيل ترحيل سبق تطبيقه بنجاح على قاعدة قائمة.** احتفظ بسجل واضح لما طُبق في كل بيئة. لا تطبق 006 أو 007 على قاعدة الإنتاج كاختصار للتجربة. ابدأ بقاعدة Supabase staging منفصلة، ثم اختبر بحساب مشتري وحساب مورد وحساب ثالث غير مشارك، وبعد نجاح RLS وStorage وRealtime فقط يمكن التفكير في الإنتاج.
 
-For the AMMAR marketplace release, apply migration 8 first in a separate Supabase test project. Confirm the new tables, RLS policies, Storage buckets and realtime publication, then run the buyer/supplier/service-provider acceptance tests with separate accounts. Only after the test environment passes should the same migration be applied to production. The GitHub feature pull request must be reviewed and merged separately; merging code alone does not apply the database migration.
+## الاختبارات الحالية
 
-## Deployment notes
+GitHub Actions run #61 على الفرع نفّذ بنجاح:
+1. إنشاء PostgreSQL test database وfixtures توافق أجزاء من Supabase.
+2. تطبيق الترحيل 006.
+3. تطبيق الترحيل 007.
+4. اختبارات تكامل السوق والشراء والخدمات والاتفاقات والمصروفات والعمولة.
+5. اختبارات الرسائل والإيصالات والقراءة وآخر ظهور والحظر والخصوصية والمرفقات والتحويل إلى مهمة وطلب تغيير.
+6. فحص JavaScript وربط الترحيلات.
 
-The site uses the Supabase publishable/anon key in the browser. This key is intended to be public; database security must therefore be enforced by RLS and least-privilege grants. Never put a Supabase service-role key or other server secret in `index.html`.
+هذه نتيجة **بيئة PostgreSQL آلية اصطناعية**؛ ولا تثبت تطبيق الترحيلات على مشروع Supabase الفعلي أو اختبار حسابات حقيقية أو سلامة الإطلاق الإنتاجي وحدها.
 
-Configure the production Supabase Auth site URL and redirect URLs to match the deployed domain. Email delivery for password recovery and invitations requires a verified sender/provider configuration.
+## الفروع والإصدار
 
-## Product and release boundaries
+- الفرع الذي يحتوي على التغييرات: [feature/ammar-market-messaging](https://github.com/mahmoudgood964-ui/ammar-app/tree/feature/ammar-market-messaging)
+- طلب الدمج: [PR #1](https://github.com/mahmoudgood964-ui/ammar-app/pull/1)
+- المعاينة غير الإنتاجية التي أبلغ Vercel عن جاهزيتها: [Vercel Preview](https://ammar-app-git-feature-ammar-market-messaging-mahmoudgood964-ui.vercel.app)
 
-The service worker caches the application shell for quicker loading and an installable app experience. It does **not** currently provide full offline project-data editing or reliable background synchronization.
+لا تدمج الفرع إلى `main` قبل اختبار Supabase staging والمراجعة الأمنية وتجربة هاتف فعلية وقبول قائمة الجاهزية. نجاح GitHub Actions أو وجود معاينة Vercel لا يعني أن التطبيق الإنتاجي يحتوي الميزات.
 
-The ecosystem migration adds the first marketplace and messaging foundation. It does not itself create a payment processor, escrow, or funds custody. The current rollout should be treated as a controlled pilot until the new migration is applied, the new account-to-account workflows are tested, and the RLS review below is complete. The service-provider and agreement schemas provide a foundation; they still need broader acceptance workflows and operational review before public-scale use. Before broad public launch, complete a real-device/browser regression pass, database/RLS security review, backup and restore validation, monitoring/alerts, legal/privacy pages, billing and payment integrations where needed, and a supervised customer pilot in Sudan. Validate localization, currencies, date formats and operational workflows in each target market before expanding.
+## قراءات المنتج والجاهزية
 
-## Release verification
+- [مراجعة المنافسين والتموضع وفحص الاسم](docs/AMMAR_COMPETITIVE_POSITIONING_AND_NAME_REVIEW.md)
+- [تدقيق المراسلات والفجوات وبوابة الإطلاق](docs/AMMAR_MESSAGING_AND_RELEASE_GAP_AUDIT.md)
 
-Syntax checks on the inline application JavaScript, service worker and manifest are useful preflight checks, but they do not replace browser, database-runtime, security or end-to-end acceptance tests.
+**ملاحظة الاسم:** فحص المصادر العامة وجد تطبيقاً باسم «عمار» في نشاط المقاولات، وطلب علامة AMMAR في مصر ضمن الفئة 35. لذلك لا يوجد تأكيد بأن الاسم آمن أو متاح. يلزم فحص قانوني رسمي في كل سوق مستهدف قبل تثبيت الاسم أو بناء حملة إطلاق عليه.
 
+## متطلبات ما قبل الإطلاق العام
 
-## Payments and custody
+- تطبيق 006 و007 على Supabase staging منفصل مع حفظ نسخة احتياطية وسجل schema.
+- اختبار حسابين تجاريين وحساب ثالث للتحقق من عزل الطلبات والمحادثات والمرفقات.
+- مراجعة RLS وGRANTs وStorage وRealtime على المخطط الكامل.
+- توثيق إجراءات تحقق الموردين، معالجة البلاغات والنزاعات، شروط الاستخدام والخصوصية.
+- اختبار Android فعلياً والاتصال الضعيف وRTL واللغة الإنجليزية.
+- إضافة BOQ وRFQ متعدد الموردين والمقارنة البندية والترسية الجزئية وإثبات التسليم؛ هذه فجوات تنافسية لم تُنجز بعد.
+- مراجعة قانونية للاسم والعلامة التجارية في السودان والإمارات والسعودية ومصر قبل الإطلاق.
 
-The bank milestone workflow records deposit references, bank reconciliation, client acceptance, disputes, refunds and payout references. It does not move money or provide escrow. Do not receive customer funds into a personal or ordinary operating account. Any safeguarded balance, escrow arrangement, bank API, or automatic payout must be provided under a written agreement with a bank or licensed payment institution and reviewed for Sudanese regulatory requirements.
-
-
-## AMMAR marketplace and messaging rollout
-
-The marketplace and messaging implementation is isolated in `ammar-marketplace.js` and migration `202611120006_ammar_marketplace_messaging.sql`. Apply the migration once, after migration 005, in a non-production Supabase environment first. It is additive and does not rewrite existing project tables or records.
-
-Current browser functionality includes supplier registration, product creation with optional image upload, location/catalog filtering, project-linked purchase requests, supplier quotes, quote acceptance, delivery status transitions, internal conversations, private file attachments, service-provider profiles, service RFQs, agreement creation/dual-party acceptance and a payer-facing commission ledger view.
-
-Before merging this branch to production, test with at least two independent authenticated accounts (buyer and supplier). Verify that each account can only see its own orders and conversations, and that unverified suppliers cannot set their own verification state. Verify message attachment access from a non-participant account. Do not claim marketplace operations are live until the migration has been applied to the target Supabase project and the branch is deployed.
-
-The default commission rate is 5% for the configured service categories, with the provider as the default payer. It is a configurable starting rule, not a market-validated final price. On completion of a market-material order, the database records a commission due entry; it does not collect or transfer funds.
+لا يوصف السوق أو الرسائل بأنها «متاحة للمستخدمين» إلا بعد اجتياز هذه المتطلبات ونشر نسخة إنتاج فعلية.
