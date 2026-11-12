@@ -310,7 +310,12 @@ CREATE TABLE IF NOT EXISTS public.ammar_commission_rules (
 
 CREATE TABLE IF NOT EXISTS public.ammar_commission_ledger (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  request_id uuid NOT NULL UNIQUE REFERENCES public.ammar_market_requests(id) ON DELETE RESTRICT,
+  request_id uuid UNIQUE REFERENCES public.ammar_market_requests(id) ON DELETE RESTRICT,
+  activity_type text NOT NULL DEFAULT 'market_materials'
+    CHECK (activity_type IN ('market_materials','contracting','maintenance','engineering','other')),
+  source_type text NOT NULL DEFAULT 'market_request'
+    CHECK (source_type IN ('market_request','service_offer')),
+  source_id text NOT NULL,
   gross_amount numeric(14,2) NOT NULL CHECK (gross_amount >= 0),
   currency text NOT NULL,
   rate_percent numeric(5,2) NOT NULL CHECK (rate_percent >= 0 AND rate_percent <= 100),
@@ -319,7 +324,8 @@ CREATE TABLE IF NOT EXISTS public.ammar_commission_ledger (
   status text NOT NULL DEFAULT 'recorded'
     CHECK (status IN ('recorded','due','paid','void','refunded')),
   recorded_at timestamptz NOT NULL DEFAULT now(),
-  settled_at timestamptz
+  settled_at timestamptz,
+  UNIQUE(source_type, source_id)
 );
 
 CREATE TABLE IF NOT EXISTS public.ammar_transaction_events (
@@ -828,14 +834,15 @@ BEGIN
       v_payer := CASE WHEN v_payer_side = 'customer'
                       THEN r.buyer_id ELSE v_supplier_owner END;
       INSERT INTO public.ammar_commission_ledger(
-        request_id, gross_amount, currency, rate_percent,
-        commission_amount, payer_id, status
+        request_id, activity_type, source_type, source_id,
+        gross_amount, currency, rate_percent, commission_amount, payer_id, status
       )
       VALUES (
-        r.id, v_amount, v_currency, v_rate,
+        r.id, 'market_materials', 'market_request', r.id::text,
+        v_amount, v_currency, v_rate,
         round(v_amount * v_rate / 100, 2), v_payer, 'due'
       )
-      ON CONFLICT (request_id) DO NOTHING;
+      ON CONFLICT (source_type, source_id) DO NOTHING;
     END IF;
   END IF;
 
@@ -868,6 +875,93 @@ BEGIN
   RETURN r.id;
 END;
 $$;
+
+CREATE OR REPLACE FUNCTION public.ammar_complete_service_request(p_request_id uuid)
+RETURNS text
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $
+DECLARE
+  r public.ammar_service_requests%ROWTYPE;
+  o public.ammar_service_offers%ROWTYPE;
+  v_provider_owner uuid;
+  v_provider_type text;
+  v_activity text;
+  v_rate numeric(5,2);
+  v_payer_side text;
+  v_payer uuid;
+BEGIN
+  SELECT * INTO r
+  FROM public.ammar_service_requests
+  WHERE id = p_request_id
+  FOR UPDATE;
+  IF NOT FOUND OR r.requester_id <> auth.uid() THEN
+    RAISE EXCEPTION 'Only the service requester can confirm completion';
+  END IF;
+  IF r.status <> 'awarded' THEN
+    RAISE EXCEPTION 'Only an awarded service request can be completed';
+  END IF;
+
+  SELECT so.*, sp.owner_id, sp.provider_type
+  INTO o, v_provider_owner, v_provider_type
+  FROM public.ammar_service_offers so
+  JOIN public.ammar_service_providers sp ON sp.id = so.provider_id
+  WHERE so.request_id = r.id AND so.status = 'accepted'
+  FOR UPDATE OF so;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'An accepted service offer is required';
+  END IF;
+
+  UPDATE public.ammar_service_requests
+  SET status = 'closed', updated_at = now()
+  WHERE id = r.id;
+
+  IF r.project_id IS NOT NULL THEN
+    INSERT INTO public.project_expenses(
+      project_id, description, amount, currency, spent_on, notes
+    )
+    VALUES (
+      r.project_id,
+      left('خدمة من عَمِّر - ' || r.title, 240),
+      o.amount,
+      o.currency,
+      CURRENT_DATE,
+      'AMMAR service offer: ' || o.id::text || '. Automatically recorded after requester confirmed completion.'
+    );
+  END IF;
+
+  v_activity := CASE
+    WHEN v_provider_type = 'contractor' THEN 'contracting'
+    WHEN v_provider_type = 'maintenance' THEN 'maintenance'
+    WHEN v_provider_type = 'engineering' THEN 'engineering'
+    ELSE 'other'
+  END;
+
+  SELECT rate_percent, payer_side
+  INTO v_rate, v_payer_side
+  FROM public.ammar_commission_rules
+  WHERE activity_type = v_activity AND is_active = true
+  LIMIT 1;
+
+  IF v_rate IS NOT NULL THEN
+    v_payer := CASE WHEN v_payer_side = 'customer'
+                    THEN r.requester_id ELSE v_provider_owner END;
+    INSERT INTO public.ammar_commission_ledger(
+      request_id, activity_type, source_type, source_id,
+      gross_amount, currency, rate_percent, commission_amount, payer_id, status
+    )
+    VALUES (
+      NULL, v_activity, 'service_offer', o.id::text,
+      o.amount, o.currency, v_rate,
+      round(o.amount * v_rate / 100, 2), v_payer, 'due'
+    )
+    ON CONFLICT (source_type, source_id) DO NOTHING;
+  END IF;
+
+  RETURN 'closed';
+END;
+$;
 
 CREATE OR REPLACE FUNCTION public.ammar_validate_agreement()
 RETURNS trigger
@@ -1321,6 +1415,7 @@ REVOKE ALL ON FUNCTION public.ammar_accept_agreement(uuid) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.ammar_accept_market_quote(uuid) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.ammar_advance_market_request(uuid,text,text) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.ammar_accept_service_offer(uuid) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.ammar_complete_service_request(uuid) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.ammar_validate_agreement() FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.ammar_record_agreement_creation() FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.ammar_ecosystem_touch_updated_at() FROM PUBLIC;
@@ -1334,6 +1429,7 @@ GRANT EXECUTE ON FUNCTION public.ammar_accept_agreement(uuid) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.ammar_accept_market_quote(uuid) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.ammar_advance_market_request(uuid,text,text) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.ammar_accept_service_offer(uuid) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.ammar_complete_service_request(uuid) TO authenticated;
 
 INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 VALUES (
