@@ -212,6 +212,13 @@ function translated(value){
  if(translations[trimmed])return value.replace(trimmed,translations[trimmed]);
  const m=trimmed.match(/^عرض (\d+) من (\d+) مشروع$/);
  if(m)return value.replace(trimmed,'Showing '+m[1]+' of '+m[2]+' projects');
+ const durationMatch=trimmed.match(/^التنفيذ: (\d+) يوم$/);if(durationMatch)return value.replace(trimmed,'Duration: '+durationMatch[1]+' days');
+ const warrantyMatch=trimmed.match(/^الضمان: (\d+) شهر$/);if(warrantyMatch)return value.replace(trimmed,'Warranty: '+warrantyMatch[1]+' months');
+ const validityMatch=trimmed.match(/^الصلاحية: (.+)$/);if(validityMatch)return value.replace(trimmed,'Valid until: '+validityMatch[1]);
+ const reportMatch=trimmed.match(/^(\d+) تقرير$/);if(reportMatch)return value.replace(trimmed,reportMatch[1]+' reports');
+ const quoteMatch=trimmed.match(/^(\d+) عرض$/);if(quoteMatch)return value.replace(trimmed,quoteMatch[1]+' quotations');
+ const commentMatch=trimmed.match(/^(\d+) تعليق$/);if(commentMatch)return value.replace(trimmed,commentMatch[1]+' comments');
+ const eventMatch=trimmed.match(/^(\d+) حدث$/);if(eventMatch)return value.replace(trimmed,eventMatch[1]+' events');
  return value;
 }
 function applyLanguage(){
