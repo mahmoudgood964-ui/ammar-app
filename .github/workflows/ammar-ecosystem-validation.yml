@@ -62,6 +62,14 @@ jobs:
         env:
           PGPASSWORD: postgres
         run: psql -h 127.0.0.1 -U postgres -d ammar_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261112203000_ammir_provider_verification_audit.sql
+      - name: Disable unapproved commission defaults
+        env:
+          PGPASSWORD: postgres
+        run: psql -h 127.0.0.1 -U postgres -d ammar_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261112204500_disable_unapproved_commission_defaults.sql
+      - name: Verify AMMIR commission defaults
+        env:
+          PGPASSWORD: postgres
+        run: psql -h 127.0.0.1 -U postgres -d ammar_test -v ON_ERROR_STOP=1 -f tests/ammar-commission-defaults.sql
       - name: Run AMMIR trust and admin permission tests
         env:
           PGPASSWORD: postgres
