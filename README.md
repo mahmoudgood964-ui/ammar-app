@@ -17,6 +17,11 @@ AMMAR is a bilingual (Arabic/English) workspace for managing renovation and prop
 - Bank-referenced milestone workflow with customer completion approval, dispute holds and payout audit records (AMMAR does not custody or transfer funds).
 - Arabic/English interface switching.
 - Installable PWA shell.
+- Supplier marketplace for construction materials with supplier-managed prices, availability, product images and regional catalog.
+- Project-linked purchase requests, supplier quotations, order status, delivery confirmation and purchase expense recording.
+- Private in-app customer/supplier messaging with attachments, unread notifications and realtime updates.
+- Contractor and service-provider profiles, service requests, offers, two-party agreements, completion confirmation and reviews.
+- Configurable transaction commission ledger (5% initial default); commission entries are accounting records only and do not collect or transfer funds.
 
 ## Technology
 
@@ -37,8 +42,11 @@ Apply the migrations in order in the Supabase SQL Editor, only once per environm
 6. `202611120004_field_operations.sql`
 7. `202611120005_bank_payment_workflow.sql`
 8. `202611120006_ammar_marketplace_messaging.sql`
+8. `202611120006_ammar_marketplace_messaging.sql`
 
 Do not rerun earlier migrations that have already been applied successfully. Keep a record of the environment and migration history.
+
+For the AMMAR marketplace release, apply migration 8 first in a separate Supabase test project. Confirm the new tables, RLS policies, Storage buckets and realtime publication, then run the buyer/supplier/service-provider acceptance tests with separate accounts. Only after the test environment passes should the same migration be applied to production. The GitHub feature pull request must be reviewed and merged separately; merging code alone does not apply the database migration.
 
 ## Deployment notes
 
