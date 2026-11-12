@@ -128,7 +128,7 @@ const SUPABASE_URL='https://uutwijowzewmvvrzsaww.supabase.co';
 const SUPABASE_KEY='sb_publishable_o-zC0NdMggZbPPY2l1REhA_w8Sbvjw_';
 const APP_URL='https://ammar-app.vercel.app/';
 const $=id=>document.getElementById(id);
-let client=null,currentUser=null,deferredInstallPrompt=null,projectsCache=[],editingProjectId=null,recoveryMode=false,lastViewedProjectId=null,activeProject=null,moduleTab='tasks',pendingInviteToken=new URLSearchParams(location.search).get('invite')||localStorage.getItem('ammar_pending_invite')||null,inviteAccepting=false,notificationTimer=null,lastInviteUrl='',moduleData={tasks:[],expenses:[],quotes:[],updates:[],documents:[],payments:[],activity:[],comments:[],members:[],invitations:[],siteReports:[],issues:[],changeOrders:[],handover:[]},moduleLoadWarnings=[];
+let client=null,currentUser=null,deferredInstallPrompt=null,projectsCache=[],editingProjectId=null,recoveryMode=false,lastViewedProjectId=null,activeProject=null,moduleTab='tasks',pendingInviteToken=new URLSearchParams(location.search).get('invite')||localStorage.getItem('ammar_pending_invite')||null,inviteAccepting=false,notificationTimer=null,lastInviteUrl='',moduleData={tasks:[],expenses:[],quotes:[],updates:[],documents:[],payments:[],activity:[],comments:[],members:[],invitations:[],siteReports:[],issues:[],changeOrders:[],handover:[],paymentMilestones:[],paymentEvents:[]},moduleLoadWarnings=[];
 if(pendingInviteToken)localStorage.setItem('ammar_pending_invite',pendingInviteToken);
 const projectStatusLabels={planning:'قيد التخطيط',approved:'معتمد',in_progress:'قيد التنفيذ',on_hold:'متوقف مؤقتاً',completed:'مكتمل',cancelled:'ملغي'};
 const memberRoleLabels={manager:'مدير مشروع',supervisor:'مشرف',engineer:'مهندس',accountant:'محاسب',worker:'منفذ',viewer:'مشاهدة فقط'};
@@ -203,7 +203,62 @@ const translations={
 'لا توجد نتائج مطابقة لبحثك.':'No matching results.','قائمة المشاريع فارغة':'Your project list is empty',
 'إعادة المحاولة':'Try again','مقارنة عروض المقاولين والموردين':'Contractor and supplier quotation comparison','أقل سعر مسجل':'Lowest submitted quotation','العروض المسجلة':'Submitted quotations','المقارنة السعرية تتم داخل العملة نفسها فقط. السعر الأقل لا يعني العرض الأفضل؛ راجع نطاق العمل والمدة والضمان والاستثناءات قبل الاختيار.':'Price comparisons are made only within the same currency. The lowest price is not necessarily the best offer; review scope, duration, warranty and exclusions.','إدخال عروضاً بعملة واضحة للمقارنة. لا تتم مقارنة أسعار بعملات مختلفة.':'Enter quotations with clear currencies. Different currencies are not compared.','إضافة قائمة فحص قياسية':'Add standard handover checklist','القائمة القياسية موجودة بالفعل.':'The standard checklist is already present.','جارٍ حفظ البيانات في قاعدة البيانات...':'Saving to the database...',
 'تم حفظ البيانات بنجاح.':'Saved successfully.','تم تحديث حالة الدفعة.':'Payment status updated.',
-'تم تحديث حالة المهمة.':'Task status updated.','تم تحديث حالة عرض السعر.':'Quotation status updated.'
+'تم تحديث حالة المهمة.':'Task status updated.','تم تحديث حالة عرض السعر.':'Quotation status updated.',
+
+'مراحل الدفع البنكي':'Bank milestone payments',
+'عنوان الدفعة المرحلية *':'Milestone title *',
+'اسم المقاول المستحق *':'Contractor name *',
+'إنشاء مرحلة دفع':'Create payment milestone',
+'إنشاء دفعة مرحلية':'Create a payment milestone',
+'الدفع البنكي المرحلي':'Bank milestone payments',
+'تنبيه:':'Notice:',
+'عَمِّر يسجل المراحل والمراجع فقط؛ لا يستقبل الأموال ولا يحجزها ولا يحولها.':'AMMAR records stages and references only; it does not receive, hold or transfer funds.',
+'الإيصال المصور وحده ليس إثبات استلام.':'A receipt image alone is not proof of receipt.',
+'يجب مطابقة المبلغ والمرجع في بوابة البنك أو كشف الحساب.':'Match the amount and reference in the bank portal or account statement.',
+'لا تستخدم حساباً شخصياً أو حساب التشغيل لحفظ أموال العملاء.':'Do not use a personal or operating account to hold customer funds.',
+'الضمان أو Escrow يتطلب اتفاقاً مكتوباً مع بنك أو جهة دفع مرخصة على حساب مخصص وآلية صرف.':'Escrow requires a written agreement with a bank or licensed provider for a designated account and release process.',
+'بانتظار إيداع العميل':'Awaiting customer deposit',
+'تم الإبلاغ عن التحويل':'Transfer reported',
+'تمت مطابقة الاستلام البنكي':'Bank receipt reconciled',
+'بانتظار اعتماد العميل':'Awaiting customer approval',
+'اعتماد العميل — بانتظار الصرف':'Customer approved — awaiting payout',
+'تم تسجيل تحويل المقاول':'Contractor payout recorded',
+'نزاع مفتوح — الصرف موقوف':'Dispute open — payout paused',
+'تم تسجيل الاسترداد':'Refund recorded',
+'البنك الذي أُرسل إليه المبلغ *':'Receiving bank *',
+'مرجع التحويل *':'Transfer reference *',
+'تسجيل التحويل المرسل':'Report transfer sent',
+'تفاصيل المطابقة مع كشف الحساب أو بوابة البنك *':'Reconciliation details from bank statement or portal *',
+'تأكيد الاستلام البنكي':'Confirm bank receipt',
+'بدء التنفيذ':'Start work',
+'تقرير الإنجاز *':'Completion report *',
+'إرسال الإنجاز للعميل':'Submit completion to customer',
+'اعتماد الإنجاز':'Approve completion',
+'مرجع التحويل الفعلي للمقاول *':'Actual contractor transfer reference *',
+'تسجيل تحويل المقاول بعد تنفيذه':'Record contractor payout after execution',
+'قرار التسوية *':'Settlement decision *',
+'استئناف المرحلة بعد التسوية':'Resume after settlement',
+'مرجع الاسترداد الفعلي *':'Actual refund reference *',
+'ملاحظة التسوية *':'Settlement note *',
+'تسجيل الاسترداد':'Record refund',
+'سبب النزاع *':'Dispute reason *',
+'فتح نزاع وإيقاف الصرف':'Open dispute and pause payout',
+'إلغاء المرحلة':'Cancel milestone',
+'المقاول:':'Contractor:',
+'المبلغ:':'Amount:',
+'البنك:':'Bank:',
+'مرجع الإيداع:':'Deposit reference:',
+'مطابقة البنك:':'Bank reconciliation:',
+'إنجاز المقاول:':'Contractor completion:',
+'مرجع صرف المقاول:':'Contractor payout reference:',
+'النزاع:':'Dispute:',
+'مرجع الاسترداد:':'Refund reference:',
+'سجل التدقيق':'Audit trail',
+'المراحل المسجلة':'Recorded milestones',
+'لا توجد مراحل دفع بعد.':'No payment milestones yet.',
+'تاريخ الاستحقاق':'Due date',
+'العملة *':'Currency *'
+
 };
 const originalTextNodes=new WeakMap(),originalAttributes=new WeakMap();
 let appLanguage=localStorage.getItem('ammar_language')||'ar';
@@ -274,7 +329,7 @@ function goForm(project){
 function dateText(value){if(!value)return appLanguage==='en'?'Unavailable':'غير متاح';const d=new Date(value);if(Number.isNaN(d.getTime()))return appLanguage==='en'?'Unavailable':'غير متاح';try{return new Intl.DateTimeFormat(appLanguage==='en'?'en-US':'ar',{year:'numeric',month:'short',day:'numeric'}).format(d);}catch(e){return d.toLocaleDateString();}}
 function row(label,value){return'<div class="detail-row"><div class="detail-label">'+esc(label)+'</div><div class="detail-value">'+esc(value||'غير محدد')+'</div></div>';}
 function details(project){
- if(!project)return;if(!activeProject||String(activeProject.id)!==String(project.id)){lastInviteUrl='';moduleLoadWarnings=[];moduleData={tasks:[],expenses:[],quotes:[],updates:[],documents:[],payments:[],activity:[],comments:[],members:[],invitations:[],siteReports:[],issues:[],changeOrders:[],handover:[]};}activeProject=project;lastViewedProjectId=String(project.id);moduleTab='tasks';
+ if(!project)return;if(!activeProject||String(activeProject.id)!==String(project.id)){lastInviteUrl='';moduleLoadWarnings=[];moduleData={tasks:[],expenses:[],quotes:[],updates:[],documents:[],payments:[],activity:[],comments:[],members:[],invitations:[],siteReports:[],issues:[],changeOrders:[],handover:[],paymentMilestones:[],paymentEvents:[]};}activeProject=project;lastViewedProjectId=String(project.id);moduleTab='tasks';
  $('detailTitle').textContent=project.title||'تفاصيل المشروع';
  $('detailEdit').hidden=String(project.client_id)!==String(currentUser.id);
  $('detailBackdrop').hidden=false;renderWorkspace();loadProjectModules();
@@ -313,7 +368,7 @@ function logActivity(eventType,summary,entityType,entityId,metadata){
  .then(r=>{if(r.error)console.warn('AMMAR activity log:',r.error.message);});
 }
 function workspaceTabs(){
- const tabs=[['tasks','المهام'],['progress','التقدم'],['quotes','العروض'],['expenses','المصروفات'],['finance','المالية'],['documents','الملفات'],['team','الفريق'],['siteReports','تقارير الموقع'],['issues','العيوب والملاحظات'],['changeOrders','طلبات التغيير'],['handover','الاستلام'],['comments','التعليقات'],['activity','سجل النشاط'],['overview','الملخص']];
+ const tabs=[['tasks','المهام'],['progress','التقدم'],['quotes','العروض'],['expenses','المصروفات'],['finance','المالية'],['documents','الملفات'],['team','الفريق'],['siteReports','تقارير الموقع'],['issues','العيوب والملاحظات'],['changeOrders','طلبات التغيير'],['handover','الاستلام'],['paymentProtection','مراحل الدفع البنكي'],['comments','التعليقات'],['activity','سجل النشاط'],['overview','الملخص']];
  return '<div class="actions" style="margin:14px 0;gap:6px">'+tabs.map(([k,v])=>'<button class="btn '+(moduleTab===k?'primary':'quiet')+'" type="button" data-module-tab="'+k+'">'+v+'</button>').join('')+'<button class="btn light" type="button" data-export-project>تصدير التقرير</button></div><div id="modulePanel"></div>';
 }
 function renderWorkspace(){
@@ -367,6 +422,7 @@ function moduleForm(kind){
  if(kind==='changeOrders')return '<form data-module-form="changeOrders"><div class="field"><label>عنوان التغيير المطلوب *</label><input name="title" maxlength="240" required placeholder="مثال: إضافة معالجة عزل للسطح"></div><div class="field"><label>مبررات التغيير وأثره على النطاق *</label><textarea name="reason" maxlength="5000" required></textarea></div><div class="form-grid"><div class="field"><label>الأثر المالي الإضافي</label><input name="cost_impact" type="number" min="0" step="0.01" value="0"></div><div class="field"><label>العملة</label><input name="currency" maxlength="12" placeholder="SDG / SAR / AED / USD"></div><div class="field"><label>الأثر الزمني (أيام)</label><input name="days_impact" type="number" min="0" max="3650" value="0"></div></div><button class="btn primary" type="submit">إرسال طلب الاعتماد</button></form>';
  if(kind==='handover')return '<form data-module-form="handover"><div class="form-grid"><div class="field"><label>التصنيف</label><input name="category" maxlength="100" placeholder="كهرباء، سباكة، تشطيبات..."></div><div class="field"><label>بند الفحص *</label><input name="title" maxlength="240" required></div></div><div class="field"><label>الملاحظات</label><textarea name="notes" maxlength="2000"></textarea></div><button class="btn primary" type="submit">إضافة بند الفحص</button></form>';
  if(kind==='payments')return '<form data-module-form="payments"><div class="field"><label>وصف الدفعة أو المستحق *</label><input name="description" maxlength="240" required></div><div class="form-grid"><div class="field"><label>المبلغ *</label><input name="amount" type="number" min="0" step="0.01" required></div><div class="field"><label>العملة</label><input name="currency" maxlength="12"></div><div class="field"><label>تاريخ الاستحقاق</label><input name="due_date" type="date"></div><div class="field"><label>تاريخ الدفع</label><input name="paid_on" type="date"></div><div class="field"><label>الحالة</label><select name="status"><option value="planned">مجدول</option><option value="paid">مدفوع</option><option value="cancelled">ملغي</option></select></div><div class="field"><label>طريقة الدفع</label><input name="payment_method" maxlength="80"></div><div class="field"><label>رقم مرجعي</label><input name="reference" maxlength="120"></div></div><div class="field"><label>ملاحظات</label><textarea name="notes"></textarea></div><button class="btn primary" type="submit">تسجيل الدفعة</button></form>';
+ if(kind==='paymentMilestone')return '<form data-module-form="paymentMilestone"><div class="field"><label>عنوان الدفعة المرحلية *</label><input name="title" maxlength="200" required></div><div class="field"><label>اسم المقاول المستحق *</label><input name="contractor_name" maxlength="200" required></div><div class="form-grid"><div class="field"><label>المبلغ *</label><input name="amount" type="number" min="0.01" step="0.01" required></div><div class="field"><label>العملة *</label><input name="currency" maxlength="12" required placeholder="SDG"></div><div class="field"><label>تاريخ الاستحقاق</label><input name="due_date" type="date"></div></div><button class="btn primary" type="submit">إنشاء مرحلة دفع</button></form>';
  if(kind==='documents')return '<form data-module-form="documents"><div class="field"><label>اسم الملف *</label><input name="title" maxlength="180" required></div><div class="field"><label>اختر صورة أو مستند (حتى 15 MB) *</label><input name="file" type="file" accept="image/jpeg,image/png,image/webp,application/pdf,.doc,.docx,.xls,.xlsx" required></div><div class="field"><label>ملاحظات</label><textarea name="notes"></textarea></div><button class="btn primary" type="submit">رفع الملف</button></form>';
  return '';
 }
@@ -405,6 +461,31 @@ function renderFinancePanel(){
  return '<section class="panel"><div class="panel-head"><h3>المؤشرات المالية</h3><span class="muted">لا نخلط العملات المختلفة</span></div>'+metrics+byRows+paidRows+'</section>'+(canWriteModule('payments')?'<section class="panel"><h3>تسجيل دفعة أو مستحق</h3>'+moduleForm('payments')+'</section>':'')+'<section class="panel"><h3>الدفعات والمستحقات</h3>'+rows+'</section>';
 }
 
+
+function paymentActionForm(item,action,fields,button){
+ return '<form data-payment-action-form data-milestone-id="'+esc(item.id)+'" data-payment-action="'+esc(action)+'">'+fields+'<button class="btn primary" type="submit">'+esc(button)+'</button></form>';
+}
+function renderPaymentProtectionPanel(){
+ const items=moduleData.paymentMilestones||[],events=moduleData.paymentEvents||[],role=currentProjectRole();
+ const statusNames={awaiting_deposit:'بانتظار إيداع العميل',deposit_reported:'تم الإبلاغ عن التحويل',bank_confirmed:'تمت مطابقة الاستلام البنكي',in_progress:'قيد التنفيذ',completion_submitted:'بانتظار اعتماد العميل',client_approved:'اعتماد العميل — بانتظار الصرف',payout_recorded:'تم تسجيل تحويل المقاول',disputed:'نزاع مفتوح — الصرف موقوف',refunded:'تم تسجيل الاسترداد',cancelled:'ملغاة'};
+ const cards=items.map(x=>{
+  let actions='';
+  if(x.status==='awaiting_deposit'&&role==='owner') actions+=paymentActionForm(x,'report_deposit','<div class="form-grid"><div class="field"><label>البنك *</label><input name="bank_name" required maxlength="120"></div><div class="field"><label>مرجع التحويل *</label><input name="transfer_reference" required maxlength="120"></div></div>','تسجيل التحويل المرسل');
+  if(x.status==='deposit_reported'&&['owner','manager','accountant'].includes(role)) actions+=paymentActionForm(x,'confirm_bank_receipt','<div class="field"><label>تفاصيل المطابقة مع كشف الحساب أو بوابة البنك *</label><textarea name="note" minlength="8" required></textarea></div>','تأكيد الاستلام البنكي');
+  if(x.status==='bank_confirmed'&&['owner','manager','supervisor','engineer','worker'].includes(role)) actions+=paymentActionForm(x,'start_work','','بدء التنفيذ');
+  if(x.status==='in_progress'&&['owner','manager','supervisor','engineer','worker'].includes(role)) actions+=paymentActionForm(x,'submit_completion','<div class="field"><label>تقرير الإنجاز *</label><textarea name="note" minlength="8" required></textarea></div>','إرسال الإنجاز للعميل');
+  if(x.status==='completion_submitted'&&role==='owner') actions+=paymentActionForm(x,'approve_completion','','اعتماد الإنجاز');
+  if(x.status==='client_approved'&&['owner','manager','accountant'].includes(role)) actions+=paymentActionForm(x,'record_payout','<div class="field"><label>مرجع التحويل الفعلي للمقاول *</label><input name="payout_reference" required maxlength="120"></div>','تسجيل تحويل المقاول بعد تنفيذه');
+  if(x.status==='disputed'&&['owner','manager'].includes(role)) actions+=paymentActionForm(x,'resolve_dispute_continue','<div class="field"><label>قرار التسوية *</label><textarea name="note" minlength="8" required></textarea></div>','استئناف المرحلة بعد التسوية');
+  if(x.status==='disputed'&&['owner','manager','accountant'].includes(role)) actions+=paymentActionForm(x,'record_refund','<div class="form-grid"><div class="field"><label>مرجع الاسترداد الفعلي *</label><input name="refund_reference" required maxlength="120"></div><div class="field"><label>ملاحظة التسوية *</label><textarea name="note" minlength="8" required></textarea></div></div>','تسجيل الاسترداد');
+  if(!['payout_recorded','refunded','cancelled','disputed'].includes(x.status)&&role!=='viewer') actions+=paymentActionForm(x,'open_dispute','<div class="field"><label>سبب النزاع *</label><textarea name="note" minlength="8" required></textarea></div>','فتح نزاع وإيقاف الصرف');
+  if(x.status==='awaiting_deposit'&&['owner','manager'].includes(role)) actions+=paymentActionForm(x,'cancel','','إلغاء المرحلة');
+  const history=events.filter(ev=>String(ev.milestone_id)===String(x.id)).map(ev=>'<div class="timeline-item"><strong>'+esc(ev.event_type)+'</strong><small>'+esc(dateText(ev.created_at))+' · '+esc(ev.note||'')+'</small></div>').join('');
+  return '<article class="module-record"><div class="panel-head"><h4>'+esc(x.title)+'</h4><span class="pill">'+esc(statusNames[x.status]||x.status)+'</span></div><p><strong>المقاول:</strong> '+esc(x.contractor_name)+' · <strong>المبلغ:</strong> '+esc(Number(x.amount).toLocaleString('en-US'))+' '+esc(x.currency)+'</p><p><strong>البنك:</strong> '+esc(x.bank_name||'يُحدد عند التحويل')+' · <strong>مرجع الإيداع:</strong> '+esc(x.deposit_reference||'لم يُسجل')+'</p>'+(x.bank_confirmation_note?'<p><strong>مطابقة البنك:</strong> '+esc(x.bank_confirmation_note)+'</p>':'')+(x.completion_note?'<p><strong>إنجاز المقاول:</strong> '+esc(x.completion_note)+'</p>':'')+(x.payout_reference?'<p><strong>مرجع صرف المقاول:</strong> '+esc(x.payout_reference)+'</p>':'')+(x.dispute_reason?'<p><strong>النزاع:</strong> '+esc(x.dispute_reason)+'</p>':'')+(x.refund_reference?'<p><strong>مرجع الاسترداد:</strong> '+esc(x.refund_reference)+'</p>':'')+'<div class="workspace-section">'+actions+'</div>'+(history?'<details><summary>سجل التدقيق</summary>'+history+'</details>':'')+'</article>';
+ }).join('');
+ const create=canWriteModule('payments')?'<section class="panel"><h3>إنشاء دفعة مرحلية</h3>'+moduleForm('paymentMilestone')+'</section>':'';
+ return '<section class="panel"><h3>الدفع البنكي المرحلي</h3><div class="notice"><strong>تنبيه:</strong> عَمِّر يسجل المراحل والمراجع فقط؛ لا يستقبل الأموال ولا يحجزها ولا يحولها. الإيصال المصور وحده ليس إثبات استلام. يجب مطابقة المبلغ والمرجع في بوابة البنك أو كشف الحساب. لا تستخدم حساباً شخصياً أو حساب التشغيل لحفظ أموال العملاء. الضمان أو Escrow يتطلب اتفاقاً مكتوباً مع بنك أو جهة دفع مرخصة على حساب مخصص وآلية صرف.</div>'+create+'</section><section class="panel"><h3>المراحل المسجلة</h3><div class="module-list">'+(cards||'<div class="module-empty">لا توجد مراحل دفع بعد.</div>')+'</div></section>';
+}
 function renderSiteReportsPanel(){
  const items=moduleData.siteReports||[];
  const cards=items.length?items.map(x=>'<article class="module-record"><h4>تقرير '+esc(dateText(x.report_date))+'</h4><p>'+esc(x.completed_work)+'</p><p><strong>الطاقم:</strong> '+esc(x.crew_count)+' · <strong>التقدم:</strong> '+esc(x.progress_percent==null?'غير محدد':x.progress_percent+'%')+' · <strong>الطقس:</strong> '+esc(x.weather||'غير محدد')+'</p>'+(x.blockers?'<p><strong>المعوقات:</strong> '+esc(x.blockers)+'</p>':'')+(x.safety_notes?'<p><strong>السلامة:</strong> '+esc(x.safety_notes)+'</p>':'')+'</article>').join(''):'<div class="module-empty">لم تُسجل تقارير موقع بعد.</div>';
@@ -436,7 +517,7 @@ function renderModulePanel(){
  if(k==='team'){box.innerHTML=renderTeamPanel();return;}
  if(k==='activity'){box.innerHTML=renderActivityPanel();return;}
  if(k==='comments'){box.innerHTML=renderCommentsPanel();return;}
- if(k==='finance'){box.innerHTML=renderFinancePanel();return;}if(k==='quotes'){box.innerHTML=renderQuotesPanel();return;}if(k==='siteReports'){box.innerHTML=renderSiteReportsPanel();return;}if(k==='issues'){box.innerHTML=renderIssuesPanel();return;}if(k==='changeOrders'){box.innerHTML=renderChangeOrdersPanel();return;}if(k==='handover'){box.innerHTML=renderHandoverPanel();return;}
+ if(k==='finance'){box.innerHTML=renderFinancePanel();return;}if(k==='paymentProtection'){box.innerHTML=renderPaymentProtectionPanel();return;}if(k==='quotes'){box.innerHTML=renderQuotesPanel();return;}if(k==='siteReports'){box.innerHTML=renderSiteReportsPanel();return;}if(k==='issues'){box.innerHTML=renderIssuesPanel();return;}if(k==='changeOrders'){box.innerHTML=renderChangeOrdersPanel();return;}if(k==='handover'){box.innerHTML=renderHandoverPanel();return;}
  if(k==='overview'){
   const done=moduleData.tasks.filter(x=>x.status==='done').length,last=moduleData.updates[0];
   box.innerHTML='<div class="panel">'+row('حالة المشروع',projectStatusLabels[activeProject.status]||'قيد التخطيط')+row('البداية',activeProject.start_date)+row('التسليم المستهدف',activeProject.target_end_date)+row('الميزانية الرقمية',activeProject.budget_amount==null?'غير محددة':activeProject.budget_amount+' '+(activeProject.budget_currency||''))+row('الموقع',activeProject.property_location)+row('نوع العقار',activeProject.property_type)+row('إجمالي المهام',moduleData.tasks.length)+row('المهام المكتملة',done)+row('إنجاز المهام',moduleData.tasks.length?Math.round(done/moduleData.tasks.length*100)+'%':'لا توجد مهام')+row('إجمالي المصروفات المسجلة',moduleData.expenses.reduce((s,x)=>s+Number(x.amount||0),0))+row('آخر نسبة إنجاز',last?last.progress+'%':'لم تسجل بعد')+row('أعضاء الفريق',moduleData.members.length+1)+'</div>';return;
@@ -447,7 +528,7 @@ function renderModulePanel(){
 
 async function loadProjectModules(){
  if(!activeProject||!client)return;
- const map={tasks:'project_tasks',expenses:'project_expenses',quotes:'project_quotes',updates:'project_updates',documents:'project_documents',payments:'project_payments',activity:'project_activity',comments:'project_comments',members:'project_members',invitations:'project_invitations',siteReports:'project_site_reports',issues:'project_issues',changeOrders:'project_change_orders',handover:'project_handover_items'};
+ const map={tasks:'project_tasks',expenses:'project_expenses',quotes:'project_quotes',updates:'project_updates',documents:'project_documents',payments:'project_payments',activity:'project_activity',comments:'project_comments',members:'project_members',invitations:'project_invitations',siteReports:'project_site_reports',issues:'project_issues',changeOrders:'project_change_orders',handover:'project_handover_items',paymentMilestones:'project_payment_milestones',paymentEvents:'project_payment_events'};
  const failures=[];
  const pairs=await Promise.all(Object.entries(map).map(async([k,t])=>{
   if(k==='invitations'&&String(activeProject.client_id)!==String(currentUser.id))return[k,[]];
@@ -464,6 +545,12 @@ async function loadProjectModules(){
 
 async function submitModule(form){
  const kind=form.dataset.moduleForm,fd=new FormData(form),v=Object.fromEntries(fd.entries());let table,payload,eventType,summary;
+ if(kind==='paymentMilestone'){
+  const r=await client.rpc('ammar_create_payment_milestone',{p_project_id:String(activeProject.id),p_title:v.title.trim(),p_contractor_name:v.contractor_name.trim(),p_amount:Number(v.amount),p_currency:v.currency.trim().toUpperCase(),p_due_date:v.due_date||null});
+  if(r.error)throw r.error;
+  await logActivity('payment_milestone_created','تم إنشاء مرحلة دفع للمقاول: '+v.contractor_name.trim(),'payment_milestone',r.data&&r.data.id);
+  await loadProjectModules(); return;
+ }
  if(kind==='tasks'){table='project_tasks';payload={project_id:activeProject.id,title:v.title.trim(),details:v.details.trim()||null,assigned_to:v.assigned_to.trim()||null,due_date:v.due_date||null};eventType='task_created';summary='تمت إضافة مهمة: '+v.title.trim();}
  else if(kind==='expenses'){table='project_expenses';payload={project_id:activeProject.id,description:v.description.trim(),amount:Number(v.amount),currency:v.currency.trim()||null,spent_on:v.spent_on||new Date().toISOString().slice(0,10),notes:v.notes.trim()||null};eventType='expense_recorded';summary='تم تسجيل مصروف: '+v.description.trim();}
  else if(kind==='quotes'){table='project_quotes';payload={project_id:activeProject.id,supplier_name:v.supplier_name.trim(),title:v.title.trim(),amount:v.amount===''?null:Number(v.amount),currency:v.currency.trim().toUpperCase()||null,details:v.details.trim()||null,contact_email:v.contact_email.trim()||null,contact_phone:v.contact_phone.trim()||null,duration_days:v.duration_days===''?null:Number(v.duration_days),warranty_months:v.warranty_months===''?null:Number(v.warranty_months),valid_until:v.valid_until||null,inclusions:v.inclusions.trim()||null,exclusions:v.exclusions.trim()||null};eventType='quote_added';summary='تمت إضافة عرض سعر: '+v.title.trim();}
@@ -485,6 +572,20 @@ async function submitModule(form){
  if(r.error){if(kind==='documents'&&payload.file_path){const cleanup=await client.storage.from('ammar-project-files').remove([payload.file_path]);if(cleanup.error)console.warn('AMMAR upload cleanup:',cleanup.error.message);}throw r.error;}delete form.dataset.editId;
  const btn=form.querySelector('button[type="submit"]');if(btn)btn.textContent=({tasks:'إضافة المهمة',expenses:'تسجيل المصروف',quotes:'إضافة عرض السعر',payments:'تسجيل الدفعة'})[kind]||'حفظ';
  await logActivity(editingId?kind+'_updated':eventType,(editingId?'تم تعديل سجل. ':'')+summary,kind,editingId);await loadProjectModules();
+}
+
+async function transitionPaymentMilestone(form){
+ const v=Object.fromEntries(new FormData(form).entries());
+ const r=await client.rpc('ammar_transition_payment_milestone',{
+  p_milestone_id:form.dataset.milestoneId,p_action:form.dataset.paymentAction,
+  p_note:(v.note||'').trim()||null,p_bank_name:(v.bank_name||'').trim()||null,
+  p_transfer_reference:(v.transfer_reference||'').trim()||null,
+  p_payout_reference:(v.payout_reference||'').trim()||null,
+  p_refund_reference:(v.refund_reference||'').trim()||null
+ });
+ if(r.error)throw r.error;
+ await logActivity('payment_milestone_'+form.dataset.paymentAction,'تم تحديث مسار الدفعة المرحلية','payment_milestone',form.dataset.milestoneId);
+ await loadProjectModules();
 }
 
 function csvCell(value){
@@ -651,9 +752,9 @@ function init(){if(!window.supabase||typeof window.supabase.createClient!=='func
  $('detailEdit').addEventListener('click',()=>{const p=projectsCache.find(x=>String(x.id)===String(lastViewedProjectId));$('detailBackdrop').hidden=true;if(p)goForm(p);});
  $('detailContent').addEventListener('click',e=>{handleModuleClick(e).catch(err=>message($('appMessage'),'تعذر تنفيذ العملية: '+(err.message||'خطأ غير معروف'),'error'));});
  $('detailContent').addEventListener('submit',e=>{
-  const mf=e.target.closest('[data-module-form]'),inv=e.target.closest('#teamInviteForm'),com=e.target.closest('#projectCommentForm');
-  if(!mf&&!inv&&!com)return;e.preventDefault();const form=mf||inv||com,btn=form.querySelector('button[type="submit"]');busy(btn,true,'جارٍ الحفظ...');
-  const work=mf?submitModule(mf):inv?createTeamInvitation(inv):postComment(com);
+  const mf=e.target.closest('[data-module-form]'),pa=e.target.closest('[data-payment-action-form]'),inv=e.target.closest('#teamInviteForm'),com=e.target.closest('#projectCommentForm');
+  if(!mf&&!pa&&!inv&&!com)return;e.preventDefault();const form=mf||pa||inv||com,btn=form.querySelector('button[type="submit"]');busy(btn,true,'جارٍ الحفظ...');
+  const work=mf?submitModule(mf):pa?transitionPaymentMilestone(pa):inv?createTeamInvitation(inv):postComment(com);
   work.then(()=>{if(mf)message($('appMessage'),'تم حفظ البيانات بنجاح.','success');}).catch(err=>message($('appMessage'),'تعذر تنفيذ العملية: '+(err.message||'خطأ غير معروف'),'error')).finally(()=>busy(btn,false));
  });
  $('detailContent').addEventListener('change',async e=>{
