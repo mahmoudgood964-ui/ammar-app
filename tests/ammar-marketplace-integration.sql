@@ -62,12 +62,17 @@ SET ROLE authenticated;
 SELECT set_config('request.jwt.claim.sub','22222222-2222-4222-8222-222222222222',false);
 SELECT public.ammar_accept_agreement(:'agreement_id');
 
--- A private market-request conversation and message.
+-- A private market-request conversation and message, sent by the buyer.
+RESET ROLE;
+SET ROLE authenticated;
+SELECT set_config('request.jwt.claim.sub','11111111-1111-4111-8111-111111111111',false);
 SELECT public.ammar_start_conversation(
   '22222222-2222-4222-8222-222222222222','market_request',:'request_id','محادثة اختبار'
 ) AS conversation_id \gset
 INSERT INTO public.ammar_messages(conversation_id,sender_id,message_type,body)
 VALUES (:'conversation_id','11111111-1111-4111-8111-111111111111','text','رسالة اختبار من العميل.');
+INSERT INTO storage.objects(bucket_id,name)
+VALUES ('ammar-chat-files', :'conversation_id' || '/11111111-1111-4111-8111-111111111111/test.pdf');
 
 -- The supplier acknowledges fulfilment; the buyer confirms receipt.
 RESET ROLE;
@@ -135,14 +140,18 @@ RESET ROLE;
 SET ROLE authenticated;
 SELECT set_config('request.jwt.claim.sub','33333333-3333-4333-8333-333333333333',false);
 SELECT set_config('ammar.test.conversation_id', :'conversation_id', false);
-DO $$ BEGIN
+SELECT set_config('ammar.test.file_path', :'conversation_id' || '/11111111-1111-4111-8111-111111111111/test.pdf', false);
+DO $ BEGIN
   IF EXISTS (SELECT 1 FROM public.ammar_conversations WHERE id=current_setting('ammar.test.conversation_id')::uuid) THEN
     RAISE EXCEPTION 'RLS failure: outsider can read a private conversation';
   END IF;
   IF EXISTS (SELECT 1 FROM public.ammar_messages WHERE conversation_id=current_setting('ammar.test.conversation_id')::uuid) THEN
     RAISE EXCEPTION 'RLS failure: outsider can read private messages';
   END IF;
-END $$;
+  IF EXISTS (SELECT 1 FROM storage.objects WHERE bucket_id='ammar-chat-files' AND name=current_setting('ammar.test.file_path')) THEN
+    RAISE EXCEPTION 'RLS failure: outsider can read a private attachment';
+  END IF;
+END $;
 
 RESET ROLE;
 
