@@ -10,6 +10,8 @@ const messagingPlus = fs.readFileSync('supabase/migrations/202611120007_ammar_me
 const trustMigration = fs.readFileSync('supabase/migrations/20261112200000_ammir_trust_and_admin_access.sql', 'utf8');
 const verificationMigration = fs.readFileSync('supabase/migrations/20261112203000_ammir_provider_verification_audit.sql', 'utf8');
 const trustTests = fs.readFileSync('tests/ammar-trust-admin.sql', 'utf8');
+const providerGateMigration = fs.readFileSync('supabase/migrations/20261112210000_ammir_verified_provider_transaction_gate.sql', 'utf8');
+const marketplaceIntegration = fs.readFileSync('tests/ammar-marketplace-integration.sql', 'utf8');
 const messagingTests = fs.readFileSync('tests/ammar-messaging-plus.sql', 'utf8');
 const competitiveAudit = fs.readFileSync('docs/AMMAR_COMPETITIVE_POSITIONING_AND_NAME_REVIEW.md', 'utf8');
 const releaseAudit = fs.readFileSync('docs/AMMAR_MESSAGING_AND_RELEASE_GAP_AUDIT.md', 'utf8');
@@ -109,5 +111,17 @@ assert.ok(verificationMigration.includes('SET search_path ='), 'Admin verificati
 assert.ok(trustTests.includes('Supplier self-verification or self-suspension was not blocked'), 'Trust regression tests are missing');
 assert.ok(trustTests.includes('Non-admin was able to approve a supplier'), 'Non-admin privilege-escalation test is missing');
 assert.ok(trustTests.includes('AMMIR TRUST AND ADMIN ACCESS TESTS PASSED'), 'Trust/admin integration test completion marker is missing');
+
+
+assert.ok(providerGateMigration.includes('s.is_verified = true'), 'Market purchase verification gate is missing');
+assert.ok(providerGateMigration.includes('sp.is_verified = true'), 'Service provider verification gate is missing');
+assert.ok(providerGateMigration.includes('ammar_accept_market_quote'), 'Quote acceptance verification gate is missing');
+assert.ok(providerGateMigration.includes('ammar_accept_service_offer'), 'Service offer acceptance verification gate is missing');
+assert.ok(marketplaceIntegration.includes('Unverified supplier unexpectedly accepted'), 'Unverified supplier purchase regression test is missing');
+assert.ok(marketplaceIntegration.includes('Unverified provider unexpectedly submitted'), 'Unverified service provider offer regression test is missing');
+assert.ok(marketplaceIntegration.includes('Buyer unexpectedly accepted a quote from an unverified supplier'), 'Quote acceptance verification regression test is missing');
+assert.ok(marketplaceIntegration.includes('Buyer unexpectedly accepted an offer from an unverified provider'), 'Service offer acceptance verification regression test is missing');
+assert.ok(moduleSource.includes('الشراء متاح بعد اعتماد المورد'), 'Unverified supplier purchase warning is missing from the UI');
+assert.ok(moduleSource.includes('تقديم العروض الرسمية يتاح بعد اعتماد حسابك'), 'Unverified service-provider offer warning is missing from the UI');
 
 console.log('AMMIR static application and migration checks passed.');
