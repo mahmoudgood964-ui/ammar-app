@@ -57,6 +57,11 @@ INSERT INTO public.ammar_agreements(
 ) RETURNING id AS agreement_id \gset
 SELECT public.ammar_accept_agreement(:'agreement_id');
 
+RESET ROLE;
+SET ROLE authenticated;
+SELECT set_config('request.jwt.claim.sub','22222222-2222-4222-8222-222222222222',false);
+SELECT public.ammar_accept_agreement(:'agreement_id');
+
 -- A private market-request conversation and message.
 SELECT public.ammar_start_conversation(
   '22222222-2222-4222-8222-222222222222','market_request',:'request_id','محادثة اختبار'
@@ -118,6 +123,11 @@ INSERT INTO public.ammar_agreements(
   'اتفاق ترميم اختبار','تنفيذ أعمال الترميم وفق النطاق المقدم والمقبول.',50000,'SDG',
   '11111111-1111-4111-8111-111111111111'
 ) RETURNING id AS service_agreement_id \gset
+SELECT public.ammar_accept_agreement(:'service_agreement_id');
+
+RESET ROLE;
+SET ROLE authenticated;
+SELECT set_config('request.jwt.claim.sub','22222222-2222-4222-8222-222222222222',false);
 SELECT public.ammar_accept_agreement(:'service_agreement_id');
 
 -- Outsider must not read the private conversation or its messages.
