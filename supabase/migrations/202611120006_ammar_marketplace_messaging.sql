@@ -641,10 +641,12 @@ BEGIN
       AND p.supplier_id = $2
       AND p.is_active = true
       AND p.availability IN ('available','limited')
+      AND (p.quantity_available IS NULL OR p.quantity_available >= $6)
       AND s.status = 'active'
+      AND s.owner_id <> $1
     RETURNING id
   $query$, v_project_id_type)
-  USING auth.uid(), p_supplier_id, p_project_id, p_buyer_note, p_product_id
+  USING auth.uid(), p_supplier_id, p_project_id, p_buyer_note, p_product_id, p_quantity
   INTO v_request_id;
 
   IF v_request_id IS NULL THEN
@@ -903,6 +905,32 @@ CREATE TRIGGER ammar_agreement_created_trigger
 AFTER INSERT ON public.ammar_agreements
 FOR EACH ROW EXECUTE FUNCTION public.ammar_record_agreement_creation();
 
+CREATE OR REPLACE FUNCTION public.ammar_market_quote_created()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $
+BEGIN
+  UPDATE public.ammar_market_requests
+  SET status = 'quoted'
+  WHERE id = NEW.request_id AND status = 'submitted';
+
+  INSERT INTO public.ammar_transaction_events(request_id, actor_id, event_type, summary, payload)
+  VALUES (
+    NEW.request_id, NEW.created_by, 'quote_submitted',
+    'تم استلام عرض سعر من المورد.',
+    jsonb_build_object('quote_id', NEW.id, 'amount', NEW.total_amount, 'currency', NEW.currency)
+  );
+  RETURN NEW;
+END;
+$;
+
+DROP TRIGGER IF EXISTS ammar_market_quote_created_trigger ON public.ammar_market_quotes;
+CREATE TRIGGER ammar_market_quote_created_trigger
+AFTER INSERT ON public.ammar_market_quotes
+FOR EACH ROW EXECUTE FUNCTION public.ammar_market_quote_created();
+
 CREATE OR REPLACE FUNCTION public.ammar_notify_new_message()
 RETURNS trigger
 LANGUAGE plpgsql
@@ -1047,10 +1075,14 @@ FOR SELECT TO authenticated USING (
 CREATE POLICY ammar_market_quotes_insert ON public.ammar_market_quotes
 FOR INSERT TO authenticated WITH CHECK (
   created_by = auth.uid()
+  AND status = 'proposed'
   AND EXISTS (
     SELECT 1 FROM public.ammar_market_requests r
     JOIN public.ammar_market_suppliers s ON s.id = r.supplier_id
-    WHERE r.id = request_id AND r.supplier_id = supplier_id AND s.owner_id = auth.uid()
+    WHERE r.id = request_id
+      AND r.supplier_id = supplier_id
+      AND s.owner_id = auth.uid()
+      AND r.status IN ('submitted','quoted')
   )
 );
 CREATE POLICY ammar_service_requests_select ON public.ammar_service_requests
@@ -1235,6 +1267,7 @@ REVOKE ALL ON public.ammar_commission_ledger, public.ammar_commission_rules FROM
 GRANT SELECT ON public.ammar_commission_rules TO authenticated;
 GRANT SELECT ON public.ammar_commission_ledger TO authenticated;
 
+REVOKE ALL ON FUNCTION public.ammar_market_quote_created() FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.ammar_create_market_request(uuid,uuid,numeric,text,text) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.ammar_is_conversation_member(uuid,uuid) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.ammar_start_conversation(uuid,text,text,text) FROM PUBLIC;
