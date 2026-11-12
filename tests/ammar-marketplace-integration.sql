@@ -35,8 +35,9 @@ VALUES (:'request_id',:'supplier_id','22222222-2222-4222-8222-222222222222',2000
 RETURNING id AS quote_id \gset
 
 RESET ROLE;
-DO $$ BEGIN
-  IF (SELECT status FROM public.ammar_market_requests WHERE id=:'request_id') <> 'quoted' THEN
+SELECT set_config('ammar.test.request_id', :'request_id', false);
+DO $ BEGIN
+  IF (SELECT status FROM public.ammar_market_requests WHERE id=current_setting('ammar.test.request_id')::uuid) <> 'quoted' THEN
     RAISE EXCEPTION 'Quote trigger did not set request status to quoted';
   END IF;
 END $$;
@@ -123,11 +124,12 @@ SELECT public.ammar_accept_agreement(:'service_agreement_id');
 RESET ROLE;
 SET ROLE authenticated;
 SELECT set_config('request.jwt.claim.sub','33333333-3333-4333-8333-333333333333',false);
-DO $$ BEGIN
-  IF EXISTS (SELECT 1 FROM public.ammar_conversations WHERE id=:'conversation_id') THEN
+SELECT set_config('ammar.test.conversation_id', :'conversation_id', false);
+DO $ BEGIN
+  IF EXISTS (SELECT 1 FROM public.ammar_conversations WHERE id=current_setting('ammar.test.conversation_id')::uuid) THEN
     RAISE EXCEPTION 'RLS failure: outsider can read a private conversation';
   END IF;
-  IF EXISTS (SELECT 1 FROM public.ammar_messages WHERE conversation_id=:'conversation_id') THEN
+  IF EXISTS (SELECT 1 FROM public.ammar_messages WHERE conversation_id=current_setting('ammar.test.conversation_id')::uuid) THEN
     RAISE EXCEPTION 'RLS failure: outsider can read private messages';
   END IF;
 END $$;
@@ -135,7 +137,8 @@ END $$;
 RESET ROLE;
 
 -- Final assertions under database owner.
-DO $$
+SELECT set_config('ammar.test.request_id', :'request_id', false);
+DO $
 DECLARE v_expenses integer; v_commission numeric; v_notifications integer;
 BEGIN
   SELECT count(*) INTO v_expenses FROM public.project_expenses
@@ -143,7 +146,7 @@ BEGIN
   IF v_expenses <> 1 THEN RAISE EXCEPTION 'Expected one linked project expense, got %',v_expenses; END IF;
 
   SELECT commission_amount INTO v_commission FROM public.ammar_commission_ledger
-  WHERE request_id=:'request_id';
+  WHERE request_id=current_setting('ammar.test.request_id')::uuid;
   IF v_commission <> 100 THEN RAISE EXCEPTION 'Expected 5%% commission of 100, got %',v_commission; END IF;
 
   SELECT count(*) INTO v_notifications FROM public.ammar_user_notifications
