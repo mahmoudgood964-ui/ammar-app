@@ -306,10 +306,10 @@ function message(el,text,type){el.textContent=text||'';el.className='message'+(t
 function busy(button,on,label){if(!button)return;if(on){button.dataset.old=button.textContent;button.disabled=true;button.textContent=label||'جارٍ التنفيذ...';}else{button.disabled=false;if(button.dataset.old)button.textContent=button.dataset.old;delete button.dataset.old;}}
 function esc(value){return String(value==null?'':value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 function authPanel(name){['login','signup','reset'].forEach(p=>$(p+'Panel').hidden=p!==name);message($('authMessage'),'');}
-function showAuth(text,type){currentUser=null;if(notificationTimer){clearInterval(notificationTimer);notificationTimer=null;}$('appShell').hidden=true;$('authShell').hidden=false;authPanel('login');if(text)message($('authMessage'),text,type||'info');}
+function showAuth(text,type){currentUser=null;window.ammarCurrentUser=null;if(notificationTimer){clearInterval(notificationTimer);notificationTimer=null;}$('appShell').hidden=true;$('authShell').hidden=false;authPanel('login');if(text)message($('authMessage'),text,type||'info');}
 function showRecovery(){recoveryMode=true;authPanel('reset');$('resetRequestForm').hidden=true;$('newPasswordForm').hidden=false;message($('authMessage'),'أدخل كلمة المرور الجديدة.','info');}
 function activeView(name){['dashboard','projects','form'].forEach(v=>$(v+'View').classList.toggle('active',v===name));document.querySelectorAll('[data-view]').forEach(b=>b.classList.toggle('active',b.dataset.view===name));if(name==='projects')renderProjects();if(name==='dashboard')renderDashboard();}
-function showApp(user){if(recoveryMode)return;currentUser=user||currentUser;if(!currentUser)return;$('authShell').hidden=true;$('appShell').hidden=false;$('headerEmail').textContent=currentUser.email||'';$('userAvatar').textContent=(currentUser.email||'ع').trim().charAt(0).toUpperCase();activeView('dashboard');loadProjects();loadNotifications();if(!notificationTimer)notificationTimer=setInterval(()=>{if(currentUser&&!document.hidden)loadNotifications();},60000);if(pendingInviteToken)acceptPendingInvitation();}
+function showApp(user){if(recoveryMode)return;currentUser=user||currentUser;if(!currentUser)return;window.ammarSupabase=client;window.ammarCurrentUser=currentUser;$('authShell').hidden=true;$('appShell').hidden=false;$('headerEmail').textContent=currentUser.email||'';$('userAvatar').textContent=(currentUser.email||'ع').trim().charAt(0).toUpperCase();activeView('dashboard');loadProjects();loadNotifications();if(!notificationTimer)notificationTimer=setInterval(()=>{if(currentUser&&!document.hidden)loadNotifications();},60000);if(pendingInviteToken)acceptPendingInvitation();}
 function goForm(project){
  editingProjectId=project?String(project.id):null;$('projectForm').reset();
  $('formHeading').textContent=project?'تعديل بيانات المشروع':'إنشاء مشروع جديد';
@@ -792,5 +792,6 @@ function init(){if(!window.supabase||typeof window.supabase.createClient!=='func
 init();
 })();
 </script>
+<script src="/ammar-marketplace.js"></script>
 </body>
 </html>
