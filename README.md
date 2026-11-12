@@ -72,14 +72,14 @@
 ترتيب الترحيلات المعتمد للمشروع:
 
 1. `202611120001_project_management.sql`
-2. `202611120002_part1_schema.sql`
-3. `202611120002_part2_functions.sql`
-4. `202611120002_part3_policies.sql`
-5. `202611120003_team_member_privacy.sql`
-6. `202611120004_field_operations.sql`
-7. `202611120005_bank_payment_workflow.sql`
-8. `202611120006_ammar_marketplace_messaging.sql` — أساس السوق والرسائل.
-9. `202611120007_ammar_messaging_plus.sql` — الإيصالات والخصوصية والحظر والميزات المتقدمة.
+2. `202611120002_collaboration_workflow_finance.sql` — النسخة الموحدة من المخطط والدوال والسياسات.
+3. `202611120003_team_member_privacy.sql`
+4. `202611120004_field_operations.sql`
+5. `202611120005_bank_payment_workflow.sql`
+6. `202611120006_ammar_marketplace_messaging.sql` — أساس السوق والرسائل.
+7. `202611120007_ammar_messaging_plus.sql` — الإيصالات والخصوصية والحظر والميزات المتقدمة.
+
+الأجزاء المنفصلة القديمة للترحيل 002 محفوظة في `docs/sql-manual-parts/` للرجوع فقط، وليست ملفات ترحيل مستقلة ولا تُشغّل مع النسخة الموحدة
 
 **لا تعِد تشغيل ترحيل سبق تطبيقه بنجاح على قاعدة قائمة.** احتفظ بسجل واضح لما طُبق في كل بيئة. لا تطبق 006 أو 007 على قاعدة الإنتاج كاختصار للتجربة. ابدأ بقاعدة Supabase staging منفصلة، ثم اختبر بحساب مشتري وحساب مورد وحساب ثالث غير مشارك، وبعد نجاح RLS وStorage وRealtime فقط يمكن التفكير في الإنتاج.
 
