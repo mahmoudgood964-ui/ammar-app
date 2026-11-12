@@ -81,6 +81,11 @@
 8. `20261112131813_create_ammir_project_files_storage_bucket.sql`
 9. `20261112132359_harden_marketplace_messaging_definer_grants.sql`
 10. `20261112133000_reconcile_project_management_contract.sql`
+11. `20261112134500_optimize_project_rls_policies.sql`
+12. `20261112135000_add_marketplace_foreign_key_indexes.sql`
+13. `20261112135500_add_remaining_marketplace_fk_indexes.sql`
+
+ملف baseline الخاص ببيئة الاختبار محفوظ في `tests/fixtures/ammir-staging-legacy-base.sql` ولا يُطبق على قاعدة الإنتاج
 
 الأجزاء المنفصلة القديمة للترحيل 002 محفوظة في `docs/sql-manual-parts/` للرجوع فقط، وليست ملفات ترحيل مستقلة ولا تُشغّل مع النسخة الموحدة
 
