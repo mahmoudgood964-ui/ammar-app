@@ -45,6 +45,14 @@ assert.ok(migration.includes('ammar-chat-files'), 'Private chat file bucket is m
 assert.ok(migration.includes('ammar-market-files'), 'Product image bucket is missing');
 assert.ok(migration.includes('project_expenses'), 'Completed purchases must be linked to project expenses');
 assert.doesNotMatch(migration, /\bDROP\s+(?:TABLE|SCHEMA)\b/i, 'Migration must not drop existing tables or schemas');
+const realtimeStart = moduleSource.indexOf('function switchRealtime');
+const realtimeEnd = moduleSource.indexOf('async function click', realtimeStart);
+const realtimeBlock = moduleSource.slice(realtimeStart, realtimeEnd);
+for (const table of ['ammar_messages','ammar_user_notifications','ammar_message_receipts']) {
+  assert.ok(realtimeBlock.includes("table:'" + table + "'"), 'Missing realtime subscription for ' + table);
+}
+assert.ok(moduleSource.includes("m.message_type==='text'&&m.body"), 'Forward control must be limited to text messages');
+
 assert.ok(!/(^|\n)AS \$(\n|$)/.test(migration), 'Found malformed PL/pgSQL dollar opening delimiter');
 assert.ok(!/(^|\n)\$(\n|$)/.test(migration), 'Found malformed PL/pgSQL dollar closing delimiter');
 
