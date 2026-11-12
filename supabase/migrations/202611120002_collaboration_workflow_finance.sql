@@ -274,13 +274,21 @@ BEGIN
   IF v_email <> lower(v_inv.email) THEN
     RAISE EXCEPTION 'Sign in with the email address that received this invitation';
   END IF;
+  IF EXISTS (
+    SELECT 1 FROM public.projects p
+    WHERE p.id::text=v_inv.project_id::text AND p.client_id=auth.uid()
+  ) THEN
+    RAISE EXCEPTION 'The project owner does not need to accept a team invitation';
+  END IF;
 
-  INSERT INTO public.project_members(project_id,user_id,member_role,member_email)
-  SELECT v_inv.project_id,auth.uid(),v_inv.member_role,v_email
-  WHERE NOT EXISTS (
-    SELECT 1 FROM public.project_members pm
-    WHERE pm.project_id::text = v_inv.project_id::text AND pm.user_id = auth.uid()
-  );
+  UPDATE public.project_members
+  SET member_role=v_inv.member_role,member_email=v_email
+  WHERE project_id::text=v_inv.project_id::text AND user_id=auth.uid();
+
+  IF NOT FOUND THEN
+    INSERT INTO public.project_members(project_id,user_id,member_role,member_email)
+    VALUES(v_inv.project_id,auth.uid(),v_inv.member_role,v_email);
+  END IF;
 
   UPDATE public.project_invitations
   SET status='accepted',accepted_by=auth.uid(),accepted_at=now()
