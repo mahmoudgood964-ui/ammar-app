@@ -593,6 +593,83 @@ BEGIN
 END;
 $$;
 
+CREATE OR REPLACE FUNCTION public.ammar_create_market_request(
+  p_supplier_id uuid,
+  p_product_id uuid,
+  p_quantity numeric,
+  p_project_id text DEFAULT NULL,
+  p_buyer_note text DEFAULT NULL
+)
+RETURNS uuid
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $
+DECLARE
+  v_project_id_type text;
+  v_request_id uuid;
+BEGIN
+  IF auth.uid() IS NULL THEN RAISE EXCEPTION 'Authentication required'; END IF;
+  IF p_quantity IS NULL OR p_quantity <= 0 THEN
+    RAISE EXCEPTION 'Quantity must be greater than zero';
+  END IF;
+
+  SELECT format_type(a.atttypid, a.atttypmod)
+    INTO v_project_id_type
+  FROM pg_attribute a
+  WHERE a.attrelid = 'public.projects'::regclass
+    AND a.attname = 'id' AND NOT a.attisdropped;
+  IF v_project_id_type IS NULL THEN
+    RAISE EXCEPTION 'Project identifier type could not be determined';
+  END IF;
+
+  IF nullif(trim(coalesce(p_project_id,'')),'') IS NOT NULL
+     AND public.ammar_project_role(p_project_id) IS NULL THEN
+    RAISE EXCEPTION 'You are not a member of the selected project';
+  END IF;
+
+  EXECUTE format($query$
+    INSERT INTO public.ammar_market_requests(
+      buyer_id, supplier_id, project_id, currency, buyer_note
+    )
+    SELECT $1, $2,
+           CASE WHEN nullif($3,'') IS NULL THEN NULL::%1$s ELSE $3::%1$s END,
+           p.currency, $4
+    FROM public.ammar_market_products p
+    JOIN public.ammar_market_suppliers s ON s.id = p.supplier_id
+    WHERE p.id = $5
+      AND p.supplier_id = $2
+      AND p.is_active = true
+      AND p.availability IN ('available','limited')
+      AND s.status = 'active'
+    RETURNING id
+  $query$, v_project_id_type)
+  USING auth.uid(), p_supplier_id, p_project_id, p_buyer_note, p_product_id
+  INTO v_request_id;
+
+  IF v_request_id IS NULL THEN
+    RAISE EXCEPTION 'The selected product is unavailable or the supplier is inactive';
+  END IF;
+
+  INSERT INTO public.ammar_market_request_items(
+    request_id, product_id, product_title, unit, quantity, requested_unit_price
+  )
+  SELECT v_request_id, p.id, p.title, p.unit, p_quantity, p.price
+  FROM public.ammar_market_products p
+  WHERE p.id = p_product_id;
+
+  INSERT INTO public.ammar_transaction_events(
+    request_id, actor_id, event_type, summary, payload
+  )
+  VALUES (
+    v_request_id, auth.uid(), 'request_created', 'تم إنشاء طلب شراء من سوق عَمِّر.',
+    jsonb_build_object('product_id', p_product_id, 'quantity', p_quantity)
+  );
+
+  RETURN v_request_id;
+END;
+$;
+
 CREATE OR REPLACE FUNCTION public.ammar_accept_market_quote(p_quote_id uuid)
 RETURNS uuid
 LANGUAGE plpgsql
@@ -767,13 +844,13 @@ BEGIN
     IF NOT EXISTS (
       SELECT 1 FROM public.projects p
       WHERE p.id = NEW.project_id
-        AND (
-          p.client_id = NEW.provider_id
-          OR EXISTS (SELECT 1 FROM public.project_members pm
-                     WHERE pm.project_id = p.id AND pm.user_id = NEW.provider_id)
+        AND p.client_id = NEW.client_id
+        AND EXISTS (
+          SELECT 1 FROM public.project_members pm
+          WHERE pm.project_id = p.id AND pm.user_id = NEW.provider_id
         )
-    ) AND NEW.provider_id <> (SELECT client_id FROM public.projects WHERE id = NEW.project_id) THEN
-      RAISE EXCEPTION 'The other party must be a member of the referenced project';
+    ) THEN
+      RAISE EXCEPTION 'The client and provider must match the referenced project and membership';
     END IF;
   ELSIF NEW.source_type = 'market_request' THEN
     IF NOT EXISTS (
@@ -1128,12 +1205,6 @@ GRANT UPDATE (business_name,provider_type,contact_name,contact_phone,
   governorate,city,area,address,description,portfolio_url)
 ON public.ammar_service_providers TO authenticated;
 
-GRANT INSERT (buyer_id,supplier_id,project_id,delivery_governorate,
-  delivery_city,delivery_area,delivery_address,buyer_note,currency)
-ON public.ammar_market_requests TO authenticated;
-GRANT INSERT (request_id,product_id,product_title,unit,quantity,
-  requested_unit_price,buyer_note)
-ON public.ammar_market_request_items TO authenticated;
 GRANT INSERT (request_id,supplier_id,created_by,total_amount,currency,
   delivery_days,valid_until,notes)
 ON public.ammar_market_quotes TO authenticated;
@@ -1164,6 +1235,7 @@ REVOKE ALL ON public.ammar_commission_ledger, public.ammar_commission_rules FROM
 GRANT SELECT ON public.ammar_commission_rules TO authenticated;
 GRANT SELECT ON public.ammar_commission_ledger TO authenticated;
 
+REVOKE ALL ON FUNCTION public.ammar_create_market_request(uuid,uuid,numeric,text,text) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.ammar_is_conversation_member(uuid,uuid) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.ammar_start_conversation(uuid,text,text,text) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.ammar_mark_conversation_read(uuid) FROM PUBLIC;
@@ -1176,6 +1248,7 @@ REVOKE ALL ON FUNCTION public.ammar_record_agreement_creation() FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.ammar_ecosystem_touch_updated_at() FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.ammar_notify_new_message() FROM PUBLIC;
 
+GRANT EXECUTE ON FUNCTION public.ammar_create_market_request(uuid,uuid,numeric,text,text) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.ammar_is_conversation_member(uuid,uuid) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.ammar_start_conversation(uuid,text,text,text) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.ammar_mark_conversation_read(uuid) TO authenticated;
