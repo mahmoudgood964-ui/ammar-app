@@ -81,7 +81,7 @@
 
 ## الاختبارات الحالية
 
-GitHub Actions run #61 على الفرع نفّذ بنجاح:
+GitHub Actions run #92 على الفرع نفّذ بنجاح:
 1. إنشاء PostgreSQL test database وfixtures توافق أجزاء من Supabase.
 2. تطبيق الترحيل 006.
 3. تطبيق الترحيل 007.
