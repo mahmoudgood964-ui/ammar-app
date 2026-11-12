@@ -377,6 +377,14 @@ function exportProjectReport(){
  (moduleData.members||[]).forEach(x=>rows.push(['TEAM',x.member_email||x.user_id,memberRoleLabels[x.member_role]||x.member_role]));
  rows.push([],['COMMENTS','Author','Comment','Created']);
  (moduleData.comments||[]).forEach(x=>rows.push(['COMMENTS',x.author_id,x.message,x.created_at]));
+ rows.push([],['SITE REPORTS','Date','Crew','Progress','Work','Blockers','Safety']);
+ (moduleData.siteReports||[]).forEach(x=>rows.push(['SITE REPORTS',x.report_date,x.crew_count,x.progress_percent,x.completed_work,x.blockers,x.safety_notes]));
+ rows.push([],['ISSUES','Title','Severity','Status','Location','Due date']);
+ (moduleData.issues||[]).forEach(x=>rows.push(['ISSUES',x.title,x.severity,x.status,x.location,x.due_date]));
+ rows.push([],['CHANGE ORDERS','Title','Reason','Cost impact','Currency','Days impact','Status','Decision note']);
+ (moduleData.changeOrders||[]).forEach(x=>rows.push(['CHANGE ORDERS',x.title,x.reason,x.cost_impact,x.currency,x.days_impact,x.status,x.decision_note]));
+ rows.push([],['HANDOVER','Category','Item','Status','Notes']);
+ (moduleData.handover||[]).forEach(x=>rows.push(['HANDOVER',x.category,x.title,x.status,x.notes]));
  rows.push([],['ACTIVITY','Actor','Event','Summary','Created']);
  (moduleData.activity||[]).forEach(x=>rows.push(['ACTIVITY',x.actor_id,x.event_type,x.summary,x.created_at]));
  const csv='\uFEFF'+rows.map(r=>r.map(csvCell).join(',')).join('\r\n');
@@ -400,6 +408,16 @@ async function handleModuleClick(e){
  if(edit){const kind=edit.dataset.editModule,id=edit.dataset.id,item=(moduleData[kind]||[]).find(x=>String(x.id)===String(id));if(!item)return;moduleTab=kind;renderWorkspace();const form=$('modulePanel').querySelector('[data-module-form="'+kind+'"]');if(!form)return;form.dataset.editId=id;Object.entries(item).forEach(([key,value])=>{const field=form.elements[key];if(field&&value!=null){if(key==='assigned_to'&&field.tagName==='SELECT'&&!Array.from(field.options).some(o=>o.value===String(value))){const option=document.createElement('option');option.value=String(value);option.textContent=String(value)+' (تعيين سابق)';field.appendChild(option);}field.value=String(value);}});const btn=form.querySelector('button[type="submit"]');if(btn)btn.textContent='حفظ التعديلات';form.scrollIntoView({behavior:'smooth',block:'start'});return;}
  const del=e.target.closest('[data-delete-module]');
  if(del){const kind=del.dataset.deleteModule,id=del.dataset.id,labels={tasks:'المهمة',expenses:'المصروف',quotes:'عرض السعر',documents:'الملف'};if(!confirm('هل تريد حذف '+(labels[kind]||'السجل')+' نهائياً؟ لا يمكن التراجع عن ذلك.'))return;const item=(moduleData[kind]||[]).find(x=>String(x.id)===String(id));if(!item)return;if(kind==='documents'){const removed=await client.storage.from('ammar-project-files').remove([item.file_path]);if(removed.error)throw removed.error;}const tables={tasks:'project_tasks',expenses:'project_expenses',quotes:'project_quotes',documents:'project_documents'},result=await client.from(tables[kind]).delete().eq('id',id).eq('project_id',activeProject.id);if(result.error)throw result.error;await logActivity(kind+'_deleted','تم حذف سجل من قسم '+kind,kind,id);await loadProjectModules();message($('appMessage'),'تم حذف السجل بنجاح.','success');return;}
+
+ const seed=e.target.closest('[data-seed-handover]');
+ if(seed){
+  const defaults=[['عام','مطابقة نطاق الأعمال مع الاتفاق'],['كهرباء','اختبار لوحات الكهرباء والقواطع'],['كهرباء','اختبار المفاتيح ومخارج الكهرباء'],['سباكة','اختبار تسربات المياه والصرف'],['عزل','فحص العزل المائي ومعالجة التسرب'],['تكييف','اختبار وحدات التكييف والتهوية'],['أبواب ونوافذ','فحص الأبواب والنوافذ والأقفال'],['تشطيبات','فحص الدهانات والأرضيات والأسقف'],['سلامة','التأكد من إزالة المخلفات وتأمين الموقع'],['وثائق','تسليم الضمانات والكتيبات والمفاتيح']];
+  const existing=new Set((moduleData.handover||[]).map(x=>x.title.trim().toLowerCase()));
+  const missing=defaults.filter(x=>!existing.has(x[1].toLowerCase()));
+  if(missing.length){const rows=missing.map(x=>({project_id:activeProject.id,category:x[0],title:x[1],status:'pending',created_by:currentUser.id}));const r=await client.from('project_handover_items').insert(rows);if(r.error)throw r.error;await logActivity('handover_template_added','تمت إضافة قائمة فحص الاستلام القياسية','handover',null,{count:rows.length});await loadProjectModules();message($('appMessage'),'تمت إضافة '+rows.length+' بنداً إلى قائمة الاستلام.','success');}
+  else message($('appMessage'),'قائمة الفحص القياسية موجودة بالفعل.','info');
+  return;
+ }
  const dl=e.target.closest('[data-download-doc]');if(dl){const doc=moduleData.documents.find(x=>String(x.id)===String(dl.dataset.downloadDoc));if(!doc)return;const r=await client.storage.from('ammar-project-files').createSignedUrl(doc.file_path,120);if(r.error)throw r.error;window.open(r.data.signedUrl,'_blank','noopener');}
 }
 async function createTeamInvitation(form){
@@ -506,6 +524,13 @@ function init(){if(!window.supabase||typeof window.supabase.createClient!=='func
  if(mr){try{const r=await client.rpc('ammar_update_project_member_role',{p_project_id:String(activeProject.id),p_user_id:mr.dataset.memberRole,p_role:mr.value});if(r.error)throw r.error;await logActivity('member_role_changed','تم تحديث دور عضو في الفريق','team',mr.dataset.memberRole,{role:mr.value});await loadProjectModules();message($('appMessage'),'تم تحديث صلاحية العضو.','success');}catch(err){message($('appMessage'),'تعذر تحديث الدور: '+(err.message||'خطأ'),'error');await loadProjectModules();}return;}
  const ps=e.target.closest('[data-payment-status]');
  if(ps){try{const r=await client.from('project_payments').update({status:ps.value,updated_at:new Date().toISOString(),paid_on:ps.value==='paid'?new Date().toISOString().slice(0,10):null}).eq('id',ps.dataset.paymentStatus).eq('project_id',activeProject.id);if(r.error)throw r.error;await logActivity('payment_status_changed','تم تحديث حالة دفعة','payment',ps.dataset.paymentStatus,{status:ps.value});await loadProjectModules();message($('appMessage'),'تم تحديث حالة الدفعة.','success');}catch(err){message($('appMessage'),'تعذر تحديث الدفعة: '+(err.message||'خطأ'),'error');}return;}
+
+ const issueStatus=e.target.closest('[data-issue-status]');
+ if(issueStatus){try{const status=issueStatus.value;const r=await client.from('project_issues').update({status,resolved_at:['resolved','verified'].includes(status)?new Date().toISOString():null}).eq('id',issueStatus.dataset.issueStatus).eq('project_id',activeProject.id);if(r.error)throw r.error;await logActivity('issue_status_changed','تم تحديث حالة عيب أو ملاحظة','issue',issueStatus.dataset.issueStatus,{status});await loadProjectModules();message($('appMessage'),'تم تحديث حالة الملاحظة.','success');}catch(err){message($('appMessage'),'تعذر تحديث الملاحظة: '+(err.message||'خطأ'),'error');}return;}
+ const changeStatus=e.target.closest('[data-change-status]');
+ if(changeStatus){try{const note=$('detailContent').querySelector('[data-change-note="'+changeStatus.dataset.changeStatus+'"]');const status=changeStatus.value;const r=await client.from('project_change_orders').update({status,decision_note:note?note.value.trim()||null:null,decided_by:currentUser.id,decided_at:['approved','rejected'].includes(status)?new Date().toISOString():null}).eq('id',changeStatus.dataset.changeStatus).eq('project_id',activeProject.id);if(r.error)throw r.error;await logActivity('change_order_decided','تم تحديث قرار طلب تغيير','change_order',changeStatus.dataset.changeStatus,{status});await loadProjectModules();message($('appMessage'),'تم حفظ قرار طلب التغيير.','success');}catch(err){message($('appMessage'),'تعذر حفظ القرار: '+(err.message||'خطأ'),'error');}return;}
+ const handoverStatus=e.target.closest('[data-handover-status]');
+ if(handoverStatus){try{const status=handoverStatus.value;const r=await client.from('project_handover_items').update({status,checked_by:currentUser.id,checked_at:status==='pending'?null:new Date().toISOString()}).eq('id',handoverStatus.dataset.handoverStatus).eq('project_id',activeProject.id);if(r.error)throw r.error;await logActivity('handover_item_checked','تم تحديث بند من قائمة الاستلام','handover',handoverStatus.dataset.handoverStatus,{status});await loadProjectModules();message($('appMessage'),'تم تحديث بند الاستلام.','success');}catch(err){message($('appMessage'),'تعذر تحديث بند الاستلام: '+(err.message||'خطأ'),'error');}return;}
  const task=e.target.closest('[data-task-status]'),quote=e.target.closest('[data-quote-status]');if(!task&&!quote)return;
  try{
   const r=task?await client.from('project_tasks').update({status:task.value,updated_at:new Date().toISOString()}).eq('id',task.dataset.taskStatus).eq('project_id',activeProject.id):await client.from('project_quotes').update({status:quote.value}).eq('id',quote.dataset.quoteStatus).eq('project_id',activeProject.id);
