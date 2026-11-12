@@ -280,7 +280,9 @@ async function submitModule(form){
 }
 
 function csvCell(value){
- const raw=String(value==null?'':value);
+ let raw=String(value==null?'':value);
+ // Neutralise spreadsheet formula injection from user-entered project content.
+ if(/^\s*[=+@-]/.test(raw))raw="'"+raw;
  return '"'+raw.replace(/"/g,'""')+'"';
 }
 function exportProjectReport(){
@@ -394,9 +396,9 @@ async function saveProject(e){
   const wasEdit=!!editingProjectId;let r;
   if(wasEdit){r=await client.from('projects').update(data).eq('id',editingProjectId).eq('client_id',currentUser.id).select('id');if(r.error)throw r.error;if(!r.data||!r.data.length)throw new Error('لم يتم تعديل السجل. تأكد أنك مالك المشروع.');}
   else{r=await client.from('projects').insert(Object.assign({},data,{client_id:currentUser.id})).select('id');if(r.error)throw r.error;}
-  const projectId=wasEdit?editingProjectId:(r.data&&r.data[0]?r.data[0].id:null);editingProjectId=null;$('projectForm').reset();message($('formMessage'),'تم حفظ المشروع بنجاح.','success');await loadProjects();
+  const projectId=wasEdit?editingProjectId:(r.data&&r.data[0]?r.data[0].id:null);editingProjectId=null;$('projectForm').reset();message($('formMessage'),'تم حفظ المشروع بنجاح.','success');const refreshed=await loadProjects();
   const saved=projectsCache.find(p=>String(p.id)===String(projectId));if(saved){activeProject=saved;await logActivity(wasEdit?'project_updated':'project_created',wasEdit?'تم تحديث بيانات المشروع':'تم إنشاء المشروع','project',saved.id);}
-  activeView('projects');message($('appMessage'),'تم حفظ المشروع وتحديث القائمة.','success');
+  activeView('projects');message($('appMessage'),refreshed?'تم حفظ المشروع وتحديث القائمة.':'تم حفظ المشروع، لكن تعذر تحديث القائمة. استخدم زر التحديث لإعادة المحاولة.',refreshed?'success':'error');
  }catch(err){message($('formMessage'),'تعذر حفظ المشروع: '+(err.message||'حدث خطأ غير متوقع.'),'error');}
  finally{busy(b,false);}
 }
