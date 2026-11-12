@@ -116,7 +116,7 @@ const SUPABASE_URL='https://uutwijowzewmvvrzsaww.supabase.co';
 const SUPABASE_KEY='sb_publishable_o-zC0NdMggZbPPY2l1REhA_w8Sbvjw_';
 const APP_URL='https://ammar-app.vercel.app/';
 const $=id=>document.getElementById(id);
-let client=null,currentUser=null,projectsCache=[],editingProjectId=null,recoveryMode=false,lastViewedProjectId=null,activeProject=null,moduleTab='tasks',pendingInviteToken=new URLSearchParams(location.search).get('invite')||localStorage.getItem('ammar_pending_invite')||null,inviteAccepting=false,notificationTimer=null,lastInviteUrl='',moduleData={tasks:[],expenses:[],quotes:[],updates:[],documents:[],payments:[],activity:[],comments:[],members:[],invitations:[],siteReports:[],issues:[],changeOrders:[],handover:[]},moduleLoadWarnings=[];
+let client=null,currentUser=null,deferredInstallPrompt=null,projectsCache=[],editingProjectId=null,recoveryMode=false,lastViewedProjectId=null,activeProject=null,moduleTab='tasks',pendingInviteToken=new URLSearchParams(location.search).get('invite')||localStorage.getItem('ammar_pending_invite')||null,inviteAccepting=false,notificationTimer=null,lastInviteUrl='',moduleData={tasks:[],expenses:[],quotes:[],updates:[],documents:[],payments:[],activity:[],comments:[],members:[],invitations:[],siteReports:[],issues:[],changeOrders:[],handover:[]},moduleLoadWarnings=[];
 if(pendingInviteToken)localStorage.setItem('ammar_pending_invite',pendingInviteToken);
 const projectStatusLabels={planning:'قيد التخطيط',approved:'معتمد',in_progress:'قيد التنفيذ',on_hold:'متوقف مؤقتاً',completed:'مكتمل',cancelled:'ملغي'};
 const memberRoleLabels={manager:'مدير مشروع',supervisor:'مشرف',engineer:'مهندس',accountant:'محاسب',worker:'منفذ',viewer:'مشاهدة فقط'};
@@ -502,10 +502,21 @@ async function logout(){try{const r=await client.auth.signOut();if(r.error)throw
 function clickApp(e){
  const vb=e.target.closest('[data-view]');if(vb){if(vb.dataset.view==='form')goForm(null);else activeView(vb.dataset.view);return;}
  const ab=e.target.closest('[data-action]');if(!ab)return;const action=ab.dataset.action;
- if(action==='logout'){logout();return;}if(action==='refresh'){loadProjects();return;}if(action==='notifications'){openNotifications();return;}
+ if(action==='logout'){logout();return;}if(action==='refresh'){loadProjects();return;}if(action==='notifications'){openNotifications();return;}if(action==='install'){installApp();return;}
  const p=projectsCache.find(x=>String(x.id)===String(ab.dataset.id));if(action==='details')details(p);if(action==='edit'&&p&&String(p.client_id)===String(currentUser.id))goForm(p);
 }
 
+function setMarketingLanguage(lang){
+ const landing=$('publicLanding');if(!landing)return;
+ landing.querySelectorAll('[data-ar][data-en]').forEach(el=>{el.textContent=lang==='en'?el.dataset.en:el.dataset.ar;});
+ landing.dir=lang==='en'?'ltr':'rtl';landing.style.textAlign=lang==='en'?'left':'right';
+ const b=$('marketingLang');if(b)b.textContent=lang==='en'?'العربية':'EN';
+ localStorage.setItem('ammar_marketing_lang',lang);
+}
+async function installApp(){
+ if(!deferredInstallPrompt){message($('appMessage'),'من قائمة المتصفح اختر "إضافة إلى الشاشة الرئيسية" لتثبيت عَمِّر.','info');return;}
+ deferredInstallPrompt.prompt();await deferredInstallPrompt.userChoice;deferredInstallPrompt=null;$('installButton').hidden=true;
+}
 function init(){if(!window.supabase||typeof window.supabase.createClient!=='function'){message($('authMessage'),'تعذر تحميل مكتبة الاتصال. تحقق من الإنترنت ثم أعد تحميل الصفحة.','error');return;}try{client=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY,{auth:{autoRefreshToken:true,persistSession:true,detectSessionInUrl:true}});}catch(e){message($('authMessage'),'تعذر تهيئة الاتصال: '+e.message,'error');return;}
  client.auth.onAuthStateChange((event,session)=>{if(event==='PASSWORD_RECOVERY')showRecovery();else if(event==='SIGNED_OUT'){recoveryMode=false;showAuth('تم تسجيل الخروج.');}else if(event==='SIGNED_IN'&&session&&!recoveryMode)showApp(session.user);});
  $('loginForm').addEventListener('submit',login);$('signupForm').addEventListener('submit',signup);$('resetRequestForm').addEventListener('submit',resetRequest);$('newPasswordForm').addEventListener('submit',saveNewPassword);$('projectForm').addEventListener('submit',saveProject);$('projectSearch').addEventListener('input',renderProjects);
@@ -542,6 +553,10 @@ function init(){if(!window.supabase||typeof window.supabase.createClient!=='func
 
  document.querySelectorAll('[data-auth-panel]').forEach(b=>b.addEventListener('click',()=>{const name=b.dataset.authPanel;if(name==='reset'){$('resetRequestForm').hidden=false;$('newPasswordForm').hidden=true;$('resetEmail').value=$('loginEmail').value.trim();}authPanel(name);}));
  $('appShell').addEventListener('click',clickApp);
+ $('marketingLang').addEventListener('click',()=>setMarketingLanguage(localStorage.getItem('ammar_marketing_lang')==='en'?'ar':'en'));
+ setMarketingLanguage(localStorage.getItem('ammar_marketing_lang')||'ar');
+ window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredInstallPrompt=e;$('installButton').hidden=false;});
+ if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').catch(e=>console.warn('AMMAR service worker:',e.message));
  const hp=new URLSearchParams(location.hash.replace(/^#/,'')).get('type'),qp=new URLSearchParams(location.search).get('type');const hashError=new URLSearchParams(location.hash.replace(/^#/,'')).get('error_description')||new URLSearchParams(location.search).get('error_description');
  if(hp==='recovery'||qp==='recovery'){recoveryMode=true;authPanel('reset');$('resetRequestForm').hidden=true;$('newPasswordForm').hidden=false;message($('authMessage'),'جارٍ التحقق من رابط الاستعادة...');}if(pendingInviteToken&&!recoveryMode)message($('authMessage'),'تم فتح رابط دعوة. سجّل الدخول أو أنشئ حساباً بالبريد الذي تلقى الدعوة.','info');
  client.auth.getSession().then(r=>{if(r.error){showAuth('تعذر التحقق من الجلسة: '+r.error.message,'error');return;}if(recoveryMode){if(r.data.session)showRecovery();else message($('authMessage'),'رابط الاستعادة غير صالح أو منتهي. اطلب رابطاً جديداً.','error');}else if(r.data.session)showApp(r.data.session.user);else if(hashError)showAuth('تعذر إكمال رابط البريد: '+hashError,'error');else showAuth();}).catch(e=>showAuth('حدث خطأ أثناء فتح التطبيق: '+e.message,'error'));
