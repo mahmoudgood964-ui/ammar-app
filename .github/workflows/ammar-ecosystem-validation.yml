@@ -1,0 +1,49 @@
+name: AMMAR ecosystem validation
+
+on:
+  push:
+    branches:
+      - feature/ammar-market-messaging
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: ammar_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d ammar_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+      - name: Create Supabase-compatible database fixtures
+        env:
+          PGPASSWORD: postgres
+        run: psql -h 127.0.0.1 -U postgres -d ammar_test -v ON_ERROR_STOP=1 -f tests/ammar-db-bootstrap.sql
+      - name: Apply ecosystem migration
+        env:
+          PGPASSWORD: postgres
+        run: psql -h 127.0.0.1 -U postgres -d ammar_test -v ON_ERROR_STOP=1 -f supabase/migrations/202611120006_ammar_marketplace_messaging.sql
+      - name: Run marketplace and messaging integration tests
+        env:
+          PGPASSWORD: postgres
+        run: psql -h 127.0.0.1 -U postgres -d ammar_test -v ON_ERROR_STOP=1 -f tests/ammar-marketplace-integration.sql
+      - name: Validate browser code and migration wiring
+        run: node tests/check-ammar-app.mjs
