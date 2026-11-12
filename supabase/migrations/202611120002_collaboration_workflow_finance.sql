@@ -107,6 +107,61 @@ CREATE INDEX IF NOT EXISTS project_comments_project_idx ON public.project_commen
 CREATE INDEX IF NOT EXISTS project_payments_project_idx ON public.project_payments(project_id, due_date DESC);
 CREATE INDEX IF NOT EXISTS project_notifications_user_idx ON public.project_notifications(user_id, created_at DESC);
 
+-- Store the invited email on the membership record so the roster is usable without exposing auth.users.
+ALTER TABLE public.project_members ADD COLUMN IF NOT EXISTS member_email text;
+
+-- Keep modification timestamps reliable even when writes come from another client.
+CREATE OR REPLACE FUNCTION public.ammar_touch_updated_at()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = public, pg_temp
+AS $
+BEGIN
+  NEW.updated_at := now();
+  RETURN NEW;
+END;
+$;
+
+DROP TRIGGER IF EXISTS ammar_projects_touch_updated_at ON public.projects;
+CREATE TRIGGER ammar_projects_touch_updated_at
+BEFORE UPDATE ON public.projects
+FOR EACH ROW EXECUTE FUNCTION public.ammar_touch_updated_at();
+
+DROP TRIGGER IF EXISTS ammar_project_tasks_touch_updated_at ON public.project_tasks;
+CREATE TRIGGER ammar_project_tasks_touch_updated_at
+BEFORE UPDATE ON public.project_tasks
+FOR EACH ROW EXECUTE FUNCTION public.ammar_touch_updated_at();
+
+DROP TRIGGER IF EXISTS ammar_project_comments_touch_updated_at ON public.project_comments;
+CREATE TRIGGER ammar_project_comments_touch_updated_at
+BEFORE UPDATE ON public.project_comments
+FOR EACH ROW EXECUTE FUNCTION public.ammar_touch_updated_at();
+
+DROP TRIGGER IF EXISTS ammar_project_payments_touch_updated_at ON public.project_payments;
+CREATE TRIGGER ammar_project_payments_touch_updated_at
+BEFORE UPDATE ON public.project_payments
+FOR EACH ROW EXECUTE FUNCTION public.ammar_touch_updated_at();
+
+CREATE OR REPLACE FUNCTION public.ammar_set_project_completion_time()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = public, pg_temp
+AS $
+BEGIN
+  IF NEW.status='completed' AND OLD.status IS DISTINCT FROM 'completed' AND NEW.completed_at IS NULL THEN
+    NEW.completed_at := now();
+  ELSIF NEW.status<>'completed' THEN
+    NEW.completed_at := NULL;
+  END IF;
+  RETURN NEW;
+END;
+$;
+
+DROP TRIGGER IF EXISTS ammar_projects_completion_time ON public.projects;
+CREATE TRIGGER ammar_projects_completion_time
+BEFORE UPDATE OF status ON public.projects
+FOR EACH ROW EXECUTE FUNCTION public.ammar_set_project_completion_time();
+
 -- Resolve project membership in a SECURITY DEFINER function to avoid RLS recursion.
 CREATE OR REPLACE FUNCTION public.ammar_project_role(p_project_id text)
 RETURNS text
@@ -209,8 +264,8 @@ BEGIN
     RAISE EXCEPTION 'Sign in with the email address that received this invitation';
   END IF;
 
-  INSERT INTO public.project_members(project_id,user_id,member_role)
-  SELECT v_inv.project_id,auth.uid(),v_inv.member_role
+  INSERT INTO public.project_members(project_id,user_id,member_role,member_email)
+  SELECT v_inv.project_id,auth.uid(),v_inv.member_role,v_email
   WHERE NOT EXISTS (
     SELECT 1 FROM public.project_members pm
     WHERE pm.project_id::text = v_inv.project_id::text AND pm.user_id = auth.uid()
