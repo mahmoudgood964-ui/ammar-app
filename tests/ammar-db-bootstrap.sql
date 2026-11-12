@@ -37,6 +37,34 @@ CREATE TABLE public.project_expenses (
   created_at timestamptz NOT NULL DEFAULT now()
 );
 
+CREATE TABLE public.project_tasks (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  project_id uuid NOT NULL REFERENCES public.projects(id) ON DELETE CASCADE,
+  title text NOT NULL,
+  details text,
+  status text NOT NULL DEFAULT 'todo',
+  due_date date,
+  assigned_to text,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE TABLE public.project_change_orders (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  project_id uuid NOT NULL REFERENCES public.projects(id) ON DELETE CASCADE,
+  title text NOT NULL,
+  reason text NOT NULL,
+  cost_impact numeric(14,2) NOT NULL DEFAULT 0,
+  currency text,
+  days_impact integer NOT NULL DEFAULT 0,
+  status text NOT NULL DEFAULT 'submitted',
+  decision_note text,
+  requested_by uuid,
+  decided_by uuid,
+  decided_at timestamptz,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+
 CREATE OR REPLACE FUNCTION public.ammar_project_role(p_project_id text)
 RETURNS text LANGUAGE sql STABLE SECURITY DEFINER SET search_path=public,pg_temp AS $$
   SELECT CASE
