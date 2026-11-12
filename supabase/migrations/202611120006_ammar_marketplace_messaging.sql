@@ -158,6 +158,10 @@ BEGIN
 END
 $ammar_schema$;
 
+ALTER TABLE public.ammar_market_requests
+  ADD COLUMN IF NOT EXISTS project_expense_id uuid
+  REFERENCES public.project_expenses(id) ON DELETE SET NULL;
+
 CREATE TABLE IF NOT EXISTS public.ammar_market_request_items (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   request_id uuid NOT NULL REFERENCES public.ammar_market_requests(id) ON DELETE CASCADE,
@@ -298,7 +302,7 @@ CREATE TABLE IF NOT EXISTS public.ammar_commission_rules (
   rate_percent numeric(5,2) NOT NULL DEFAULT 5.00
     CHECK (rate_percent >= 0 AND rate_percent <= 100),
   payer_side text NOT NULL DEFAULT 'provider'
-    CHECK (payer_side IN ('provider','customer','platform_split')),
+    CHECK (payer_side IN ('provider','customer')),
   is_active boolean NOT NULL DEFAULT true,
   effective_from timestamptz NOT NULL DEFAULT now(),
   created_at timestamptz NOT NULL DEFAULT now()
@@ -361,6 +365,24 @@ CREATE INDEX IF NOT EXISTS ammar_agreements_parties_idx
   ON public.ammar_agreements(client_id, provider_id, status);
 CREATE INDEX IF NOT EXISTS ammar_disputes_request_idx
   ON public.ammar_disputes(request_id, status, created_at DESC);
+
+CREATE OR REPLACE FUNCTION public.ammar_market_product_price_stamp()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = public, pg_temp
+AS $
+BEGIN
+  IF NEW.price IS DISTINCT FROM OLD.price THEN
+    NEW.price_updated_at := now();
+  END IF;
+  RETURN NEW;
+END;
+$;
+
+DROP TRIGGER IF EXISTS ammar_market_product_price_stamp_trigger ON public.ammar_market_products;
+CREATE TRIGGER ammar_market_product_price_stamp_trigger
+BEFORE UPDATE ON public.ammar_market_products
+FOR EACH ROW EXECUTE FUNCTION public.ammar_market_product_price_stamp();
 
 CREATE OR REPLACE FUNCTION public.ammar_ecosystem_touch_updated_at()
 RETURNS trigger
@@ -726,6 +748,7 @@ DECLARE
   v_payer uuid;
   v_amount numeric(14,2);
   v_currency text;
+  v_project_expense_id uuid;
 BEGIN
   SELECT * INTO r FROM public.ammar_market_requests WHERE id = p_request_id FOR UPDATE;
   IF NOT FOUND THEN RAISE EXCEPTION 'Request not found'; END IF;
@@ -774,6 +797,25 @@ BEGIN
   VALUES (r.id, auth.uid(), 'status_' || p_next_status,
           coalesce(nullif(trim(p_note),''), 'تم تحديث حالة الطلب إلى ' || p_next_status || '.'),
           jsonb_build_object('from', r.status, 'to', p_next_status));
+
+  IF p_next_status = 'completed' AND r.project_id IS NOT NULL AND r.project_expense_id IS NULL THEN
+    INSERT INTO public.project_expenses(
+      project_id, description, amount, currency, spent_on, notes
+    )
+    VALUES (
+      r.project_id,
+      left('شراء مواد بناء من عَمِّر - طلب ' || left(r.id::text, 8), 240),
+      r.agreed_total,
+      r.currency,
+      CURRENT_DATE,
+      'AMMAR market request: ' || r.id::text || '. Automatically recorded after buyer confirmed receipt.'
+    )
+    RETURNING id INTO v_project_expense_id;
+
+    UPDATE public.ammar_market_requests
+    SET project_expense_id = v_project_expense_id
+    WHERE id = r.id;
+  END IF;
 
   IF p_next_status = 'completed' THEN
     SELECT rate_percent, payer_side INTO v_rate, v_payer_side
@@ -1087,8 +1129,11 @@ FOR INSERT TO authenticated WITH CHECK (
 CREATE POLICY ammar_service_requests_select ON public.ammar_service_requests
 FOR SELECT TO authenticated USING (
   requester_id = auth.uid()
-  OR EXISTS (SELECT 1 FROM public.ammar_service_providers sp
-             WHERE sp.owner_id = auth.uid() AND sp.status = 'active')
+  OR (
+    status = 'open'
+    AND EXISTS (SELECT 1 FROM public.ammar_service_providers sp
+                WHERE sp.owner_id = auth.uid() AND sp.status = 'active')
+  )
 );
 CREATE POLICY ammar_service_requests_insert ON public.ammar_service_requests
 FOR INSERT TO authenticated WITH CHECK (
@@ -1226,7 +1271,7 @@ GRANT INSERT (supplier_id,title,category,brand,description,unit,price,currency,
   quantity_available,availability,image_path,is_active)
 ON public.ammar_market_products TO authenticated;
 GRANT UPDATE (title,category,brand,description,unit,price,currency,
-  quantity_available,availability,image_path,is_active,price_updated_at)
+  quantity_available,availability,image_path,is_active)
 ON public.ammar_market_products TO authenticated;
 
 GRANT INSERT (owner_id,business_name,provider_type,contact_name,contact_phone,
@@ -1266,6 +1311,7 @@ REVOKE ALL ON public.ammar_commission_ledger, public.ammar_commission_rules FROM
 GRANT SELECT ON public.ammar_commission_rules TO authenticated;
 GRANT SELECT ON public.ammar_commission_ledger TO authenticated;
 
+REVOKE ALL ON FUNCTION public.ammar_market_product_price_stamp() FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.ammar_market_quote_created() FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.ammar_create_market_request(uuid,uuid,numeric,text,text) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.ammar_is_conversation_member(uuid) FROM PUBLIC;
