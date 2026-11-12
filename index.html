@@ -152,7 +152,7 @@ function logActivity(eventType,summary,entityType,entityId,metadata){
 }
 function workspaceTabs(){
  const tabs=[['tasks','المهام'],['progress','التقدم'],['quotes','العروض'],['expenses','المصروفات'],['finance','المالية'],['documents','الملفات'],['team','الفريق'],['comments','التعليقات'],['activity','سجل النشاط'],['overview','الملخص']];
- return '<div class="actions" style="margin:14px 0;gap:6px">'+tabs.map(([k,v])=>'<button class="btn '+(moduleTab===k?'primary':'quiet')+'" type="button" data-module-tab="'+k+'">'+v+'</button>').join('')+'</div><div id="modulePanel"></div>';
+ return '<div class="actions" style="margin:14px 0;gap:6px">'+tabs.map(([k,v])=>'<button class="btn '+(moduleTab===k?'primary':'quiet')+'" type="button" data-module-tab="'+k+'">'+v+'</button>').join('')+'<button class="btn light" type="button" data-export-project>تصدير التقرير</button></div><div id="modulePanel"></div>';
 }
 function renderWorkspace(){if(!activeProject)return;$('detailContent').innerHTML=workspaceTabs();renderModulePanel();}
 
@@ -278,7 +278,36 @@ async function submitModule(form){
  await logActivity(editingId?kind+'_updated':eventType,(editingId?'تم تعديل سجل. ':'')+summary,kind,editingId);await loadProjectModules();
 }
 
+function csvCell(value){
+ const raw=String(value==null?'':value);
+ return '"'+raw.replace(/"/g,'""')+'"';
+}
+function exportProjectReport(){
+ if(!activeProject)return;
+ const rows=[['AMMAR - Project Report'],['Project',activeProject.title],['Location',activeProject.property_location],['Property type',activeProject.property_type],['Status',projectStatusLabels[activeProject.status]||activeProject.status],['Start date',activeProject.start_date],['Target end date',activeProject.target_end_date],['Budget',activeProject.budget_amount,activeProject.budget_currency],[],['TASKS','Title','Status','Assigned to','Due date']];
+ (moduleData.tasks||[]).forEach(x=>rows.push(['TASKS',x.title,x.status,assigneeLabel(x.assigned_to),x.due_date]));
+ rows.push([],['EXPENSES','Description','Amount','Currency','Date','Notes']);
+ (moduleData.expenses||[]).forEach(x=>rows.push(['EXPENSES',x.description,x.amount,x.currency,x.spent_on,x.notes]));
+ rows.push([],['QUOTES','Supplier','Title','Amount','Currency','Status','Details']);
+ (moduleData.quotes||[]).forEach(x=>rows.push(['QUOTES',x.supplier_name,x.title,x.amount,x.currency,x.status,x.details]));
+ rows.push([],['PAYMENTS','Description','Amount','Currency','Due date','Paid date','Status','Reference']);
+ (moduleData.payments||[]).forEach(x=>rows.push(['PAYMENTS',x.description,x.amount,x.currency,x.due_date,x.paid_on,x.status,x.reference]));
+ rows.push([],['PROGRESS','Progress','Note','Created']);
+ (moduleData.updates||[]).forEach(x=>rows.push(['PROGRESS',x.progress+'%',x.note,x.created_at]));
+ rows.push([],['TEAM','Email / User ID','Role']);
+ (moduleData.members||[]).forEach(x=>rows.push(['TEAM',x.member_email||x.user_id,memberRoleLabels[x.member_role]||x.member_role]));
+ rows.push([],['COMMENTS','Author','Comment','Created']);
+ (moduleData.comments||[]).forEach(x=>rows.push(['COMMENTS',x.author_id,x.message,x.created_at]));
+ rows.push([],['ACTIVITY','Actor','Event','Summary','Created']);
+ (moduleData.activity||[]).forEach(x=>rows.push(['ACTIVITY',x.actor_id,x.event_type,x.summary,x.created_at]));
+ const csv='\\uFEFF'+rows.map(r=>r.map(csvCell).join(',')).join('\\r\\n');
+ const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});
+ const url=URL.createObjectURL(blob),a=document.createElement('a');
+ const safe=(activeProject.title||'project').replace(/[^a-z0-9_-]+/gi,'_').slice(0,60)||'project';
+ a.href=url;a.download='AMMAR_'+safe+'_report.csv';document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);
+}
 async function handleModuleClick(e){
+ const exportButton=e.target.closest('[data-export-project]');if(exportButton){exportProjectReport();return;}
  const tab=e.target.closest('[data-module-tab]');if(tab){moduleTab=tab.dataset.moduleTab;renderWorkspace();return;}
  const cp=e.target.closest('[data-copy-invite]');if(cp&&lastInviteUrl){await navigator.clipboard.writeText(lastInviteUrl);message($('appMessage'),'تم نسخ رابط الدعوة.','success');return;}
  const sh=e.target.closest('[data-share-invite]');if(sh&&lastInviteUrl){if(navigator.share)await navigator.share({title:'دعوة إلى مشروع عَمِّر',url:lastInviteUrl});else{await navigator.clipboard.writeText(lastInviteUrl);message($('appMessage'),'تم نسخ رابط الدعوة.','success');}return;}
