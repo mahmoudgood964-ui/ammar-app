@@ -36,7 +36,7 @@ RETURNING id AS quote_id \gset
 
 RESET ROLE;
 SELECT set_config('ammar.test.request_id', :'request_id', false);
-DO $ BEGIN
+DO $$ BEGIN
   IF (SELECT status FROM public.ammar_market_requests WHERE id=current_setting('ammar.test.request_id')::uuid) <> 'quoted' THEN
     RAISE EXCEPTION 'Quote trigger did not set request status to quoted';
   END IF;
@@ -114,6 +114,8 @@ SELECT set_config('request.jwt.claim.sub','22222222-2222-4222-8222-222222222222'
 INSERT INTO public.ammar_service_offers(request_id,provider_id,created_by,amount,currency,duration_days)
 VALUES (:'service_request_id',:'provider_id','22222222-2222-4222-8222-222222222222',50000,'SDG',14)
 RETURNING id AS service_offer_id \gset
+SELECT set_config('ammar.test.service_offer_id', :'service_offer_id', false);
+SELECT set_config('ammar.test.service_request_id', :'service_request_id', false);
 
 RESET ROLE;
 SET ROLE authenticated;
@@ -165,7 +167,7 @@ RESET ROLE;
 SELECT set_config('ammar.test.request_id', :'request_id', false);
 SELECT set_config('ammar.test.service_offer_id', :'service_offer_id', false);
 SELECT set_config('ammar.test.service_request_id', :'service_request_id', false);
-DO $
+DO $$
 DECLARE v_expenses integer; v_commission numeric; v_notifications integer;
 BEGIN
   SELECT count(*) INTO v_expenses FROM public.project_expenses
