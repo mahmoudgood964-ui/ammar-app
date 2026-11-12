@@ -22,6 +22,7 @@
 .modal-backdrop{position:fixed;inset:0;background:rgba(10,26,19,.48);z-index:20;display:grid;place-items:center;padding:18px}.modal{background:#fff;border-radius:18px;width:min(100%,600px);max-height:85vh;overflow:auto;padding:22px;box-shadow:0 25px 80px #0003}.modal-head{display:flex;justify-content:space-between;align-items:center;gap:12px}.modal-head h3{margin:0;color:var(--gd)}.modal-close{border:0;background:#f0f3f1;border-radius:50%;width:34px;height:34px;font-size:18px}.detail-row{padding:12px 0;border-bottom:1px solid var(--line)}.detail-row:last-child{border:0}.detail-label{font-size:11px;color:var(--muted);margin-bottom:3px}.detail-value{white-space:pre-wrap;overflow-wrap:anywhere}.mobile-nav{display:none}
 @media(max-width:900px){.layout{grid-template-columns:190px minmax(0,1fr);padding:16px;gap:16px}.project-grid{grid-template-columns:1fr}}
 @media(max-width:680px){.topbar{height:62px;padding:0 16px}.top-user .email-label{display:none}.layout{display:block;padding:13px 13px 86px}.sidebar{display:none}.heading{align-items:center}.heading h2{font-size:21px}.heading .btn{font-size:12px;padding:10px}.stats{gap:8px}.stat{padding:13px 11px}.stat-value{font-size:23px}.panel{padding:14px}.toolbar{width:100%}.search-input{max-width:none}.form-card{padding:16px}.form-grid{display:block}.mobile-nav{display:flex;position:fixed;bottom:0;right:0;left:0;z-index:10;background:#fff;border-top:1px solid var(--line);padding:7px 8px calc(7px + env(safe-area-inset-bottom));justify-content:space-around}.mobile-nav .nav-btn{width:auto;min-width:70px;display:flex;flex-direction:column;gap:2px;padding:6px 8px;font-size:10px;text-align:center;margin:0}.mobile-nav .nav-icon{font-size:17px}.auth-card{padding:23px}}
+.workspace-section{margin-top:14px}.notification-badge{display:inline-grid;place-items:center;min-width:20px;height:20px;padding:0 5px;border-radius:20px;background:#b42318;color:#fff;font-size:11px}.notification-item,.timeline-item{padding:12px 0;border-bottom:1px solid var(--line)}.notification-item:last-child,.timeline-item:last-child{border:0}.timeline-item strong{display:block}.timeline-item small{color:var(--muted)}.member-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 0;border-bottom:1px solid var(--line);flex-wrap:wrap}.member-meta{min-width:0}.member-meta strong{display:block;overflow-wrap:anywhere}.member-meta small{color:var(--muted)}.inline-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.inline-form .full{grid-column:1/-1}.inline-form input,.inline-form select{width:100%;border:1px solid #d9e2dc;border-radius:9px;padding:10px;background:#fff;color:var(--ink)}.finance-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.finance-metric{background:#f5f8f6;border-radius:12px;padding:13px}.finance-metric strong{display:block;font-size:20px;color:var(--gd);overflow-wrap:anywhere}.team-role{max-width:160px;padding:8px;border:1px solid var(--line);border-radius:8px}@media(max-width:680px){.inline-form{display:block}.finance-grid{grid-template-columns:1fr}.notification-toggle{font-size:11px;padding:8px}.topbar{gap:8px}.top-user{gap:6px}}
 </style>
 </head>
 <body>
@@ -39,7 +40,7 @@
 </main></div>
 
 <div id="appShell" hidden>
-<header class="topbar"><div class="brand"><div class="brand-mark">ع</div><div><h1>عَمِّر | AMMAR</h1><small>إدارة مشاريع ترميم وصيانة العقارات</small></div></div><div class="top-user"><span class="email-label" id="headerEmail"></span><span class="avatar" id="userAvatar">ع</span></div></header>
+<header class="topbar"><div class="brand"><div class="brand-mark">ع</div><div><h1>عَمِّر | AMMAR</h1><small>إدارة مشاريع ترميم وصيانة العقارات</small></div></div><div class="top-user"><button class="btn light notification-toggle" type="button" data-action="notifications">الإشعارات <span id="notificationCount" class="notification-badge" hidden>0</span></button><span class="email-label" id="headerEmail"></span><span class="avatar" id="userAvatar">ع</span></div></header>
 <div class="layout">
 <aside class="sidebar"><div class="side-label">مساحة العمل</div><button class="nav-btn active" type="button" data-view="dashboard"><span class="nav-icon">⌂</span>الرئيسية</button><button class="nav-btn" type="button" data-view="projects"><span class="nav-icon">▤</span>مشاريعي</button><button class="nav-btn" type="button" data-view="form"><span class="nav-icon">＋</span>إنشاء مشروع</button><div class="sidebar-bottom"><div class="side-label">الحساب</div><button class="nav-btn" type="button" data-action="logout"><span class="nav-icon">↪</span>تسجيل الخروج</button></div></aside>
 <main class="content"><div id="appMessage" class="message" role="status" aria-live="polite"></div>
@@ -57,7 +58,12 @@
   <div class="field full"><label for="projectDescription">وصف المشروع</label><textarea id="projectDescription" name="description" maxlength="5000" placeholder="اكتب وصفاً واضحاً للأعمال المطلوبة وحالة العقار..."></textarea></div>
   <div class="field"><label for="projectLocation">موقع العقار</label><input id="projectLocation" name="location" maxlength="240" placeholder="المدينة / الحي / العنوان"></div>
   <div class="field"><label for="projectType">نوع العقار</label><input id="projectType" name="type" maxlength="120" placeholder="سكني، تجاري، إداري..."></div>
-  <div class="field full"><label for="projectBudget">الميزانية التقديرية</label><input id="projectBudget" name="budget" maxlength="120" placeholder="مثال: 250,000 جنيه سوداني"><div class="hint">اكتب المبلغ والعملة كما يناسبك؛ لا نفرض قيمة أو عملة افتراضية.</div></div>
+  <div class="field full"><label for="projectBudget">وصف الميزانية (اختياري)</label><input id="projectBudget" name="budget" maxlength="120" placeholder="مثال: ضمن الميزانية المعتمدة"><div class="hint">أدخل القيمة والعملة أدناه لقياس المصروفات دون خلط العملات.</div></div>
+  <div class="field"><label for="projectBudgetAmount">قيمة الميزانية المعتمدة</label><input id="projectBudgetAmount" name="budget_amount" type="number" min="0" step="0.01" placeholder="مثال: 250000"></div>
+  <div class="field"><label for="projectBudgetCurrency">عملة الميزانية</label><input id="projectBudgetCurrency" name="budget_currency" maxlength="12" placeholder="SDG / SAR / USD"></div>
+  <div class="field"><label for="projectStatus">حالة المشروع</label><select id="projectStatus" name="status" class="search-input"><option value="planning">قيد التخطيط</option><option value="approved">معتمد</option><option value="in_progress">قيد التنفيذ</option><option value="on_hold">متوقف مؤقتاً</option><option value="completed">مكتمل</option><option value="cancelled">ملغي</option></select></div>
+  <div class="field"><label for="projectStartDate">تاريخ البداية</label><input id="projectStartDate" name="start_date" type="date"></div>
+  <div class="field"><label for="projectTargetDate">تاريخ التسليم المستهدف</label><input id="projectTargetDate" name="target_end_date" type="date"></div>
  </div><div class="form-actions"><button id="saveProjectButton" class="btn primary" type="submit">حفظ المشروع</button><button id="cancelProjectButton" class="btn quiet" type="button">إلغاء</button></div></form><div id="formMessage" class="message" role="status" aria-live="polite"></div></section>
  <div class="notice">يمكنك تعديل المعلومات الأساسية لاحقاً. لا توجد خاصية حذف نهائي حالياً حتى لا تفقد بيانات المشاريع بالخطأ.</div>
 </section>
@@ -65,7 +71,7 @@
 <nav class="mobile-nav" aria-label="التنقل الرئيسي"><button class="nav-btn active" type="button" data-view="dashboard"><span class="nav-icon">⌂</span>الرئيسية</button><button class="nav-btn" type="button" data-view="projects"><span class="nav-icon">▤</span>مشاريعي</button><button class="nav-btn" type="button" data-view="form"><span class="nav-icon">＋</span>مشروع جديد</button><button class="nav-btn" type="button" data-action="logout"><span class="nav-icon">↪</span>خروج</button></nav>
 </div>
 
-<div id="detailBackdrop" class="modal-backdrop" hidden><section class="modal" role="dialog" aria-modal="true" aria-labelledby="detailTitle"><div class="modal-head"><h3 id="detailTitle">تفاصيل المشروع</h3><button id="closeDetail" class="modal-close" type="button" aria-label="إغلاق">×</button></div><div id="detailContent"></div><div class="form-actions"><button id="detailEdit" class="btn primary" type="button">تعديل البيانات الأساسية</button><button id="detailCloseButton" class="btn quiet" type="button">إغلاق</button></div></section></div>
+<div id="detailBackdrop" class="modal-backdrop" hidden><section class="modal" role="dialog" aria-modal="true" aria-labelledby="detailTitle"><div class="modal-head"><h3 id="detailTitle">تفاصيل المشروع</h3><button id="closeDetail" class="modal-close" type="button" aria-label="إغلاق">×</button></div><div id="detailContent"></div><div class="form-actions"><button id="detailEdit" class="btn primary" type="button">تعديل بيانات المشروع</button><button id="detailCloseButton" class="btn quiet" type="button">إغلاق</button></div></section></div><div id="notificationBackdrop" class="modal-backdrop" hidden><section class="modal" role="dialog" aria-modal="true" aria-labelledby="notificationTitle"><div class="modal-head"><h3 id="notificationTitle">الإشعارات</h3><button id="closeNotifications" class="modal-close" type="button" aria-label="إغلاق">×</button></div><div id="notificationsContent"><div class="empty">جارٍ التحميل...</div></div></section></div>
 
 <script>
 (function(){
@@ -74,7 +80,10 @@ const SUPABASE_URL='https://uutwijowzewmvvrzsaww.supabase.co';
 const SUPABASE_KEY='sb_publishable_o-zC0NdMggZbPPY2l1REhA_w8Sbvjw_';
 const APP_URL='https://ammar-app.vercel.app/';
 const $=id=>document.getElementById(id);
-let client=null,currentUser=null,projectsCache=[],editingProjectId=null,recoveryMode=false,lastViewedProjectId=null,activeProject=null,moduleTab='tasks',moduleData={tasks:[],expenses:[],quotes:[],updates:[],documents:[]};
+let client=null,currentUser=null,projectsCache=[],editingProjectId=null,recoveryMode=false,lastViewedProjectId=null,activeProject=null,moduleTab='tasks',pendingInviteToken=new URLSearchParams(location.search).get('invite')||localStorage.getItem('ammar_pending_invite')||null,inviteAccepting=false,lastInviteUrl='',moduleData={tasks:[],expenses:[],quotes:[],updates:[],documents:[],payments:[],activity:[],comments:[],members:[],invitations:[]};
+if(pendingInviteToken)localStorage.setItem('ammar_pending_invite',pendingInviteToken);
+const projectStatusLabels={planning:'قيد التخطيط',approved:'معتمد',in_progress:'قيد التنفيذ',on_hold:'متوقف مؤقتاً',completed:'مكتمل',cancelled:'ملغي'};
+const memberRoleLabels={manager:'مدير مشروع',supervisor:'مشرف',engineer:'مهندس',accountant:'محاسب',worker:'منفذ',viewer:'مشاهدة فقط'};
 
 function message(el,text,type){el.textContent=text||'';el.className='message'+(text?' '+(type||'info'):'');}
 function busy(button,on,label){if(!button)return;if(on){button.dataset.old=button.textContent;button.disabled=true;button.textContent=label||'جارٍ التنفيذ...';}else{button.disabled=false;if(button.dataset.old)button.textContent=button.dataset.old;delete button.dataset.old;}}
@@ -83,13 +92,48 @@ function authPanel(name){['login','signup','reset'].forEach(p=>$(p+'Panel').hidd
 function showAuth(text,type){currentUser=null;$('appShell').hidden=true;$('authShell').hidden=false;authPanel('login');if(text)message($('authMessage'),text,type||'info');}
 function showRecovery(){recoveryMode=true;authPanel('reset');$('resetRequestForm').hidden=true;$('newPasswordForm').hidden=false;message($('authMessage'),'أدخل كلمة المرور الجديدة.','info');}
 function activeView(name){['dashboard','projects','form'].forEach(v=>$(v+'View').classList.toggle('active',v===name));document.querySelectorAll('[data-view]').forEach(b=>b.classList.toggle('active',b.dataset.view===name));if(name==='projects')renderProjects();if(name==='dashboard')renderDashboard();}
-function showApp(user){if(recoveryMode)return;currentUser=user||currentUser;if(!currentUser)return;$('authShell').hidden=true;$('appShell').hidden=false;$('headerEmail').textContent=currentUser.email||'';$('userAvatar').textContent=(currentUser.email||'ع').trim().charAt(0).toUpperCase();activeView('dashboard');loadProjects();}
-function goForm(project){editingProjectId=project?String(project.id):null;$('projectForm').reset();$('formHeading').textContent=project?'تعديل بيانات المشروع':'إنشاء مشروع جديد';$('saveProjectButton').textContent=project?'حفظ التعديلات':'حفظ المشروع';if(project){$('projectTitle').value=project.title||'';$('projectDescription').value=project.description||'';$('projectLocation').value=project.property_location||'';$('projectType').value=project.property_type||'';$('projectBudget').value=project.budget==null?'':String(project.budget);}message($('formMessage'),'');activeView('form');$('projectTitle').focus();}
+function showApp(user){if(recoveryMode)return;currentUser=user||currentUser;if(!currentUser)return;$('authShell').hidden=true;$('appShell').hidden=false;$('headerEmail').textContent=currentUser.email||'';$('userAvatar').textContent=(currentUser.email||'ع').trim().charAt(0).toUpperCase();activeView('dashboard');loadProjects();loadNotifications();if(pendingInviteToken)acceptPendingInvitation();}
+function goForm(project){
+ editingProjectId=project?String(project.id):null;$('projectForm').reset();
+ $('formHeading').textContent=project?'تعديل بيانات المشروع':'إنشاء مشروع جديد';
+ $('saveProjectButton').textContent=project?'حفظ التعديلات':'حفظ المشروع';
+ if(project){
+  $('projectTitle').value=project.title||'';$('projectDescription').value=project.description||'';
+  $('projectLocation').value=project.property_location||'';$('projectType').value=project.property_type||'';
+  $('projectBudget').value=project.budget==null?'':String(project.budget);
+  $('projectBudgetAmount').value=project.budget_amount==null?'':String(project.budget_amount);
+  $('projectBudgetCurrency').value=project.budget_currency||'';
+  $('projectStatus').value=project.status||'planning';$('projectStartDate').value=project.start_date||'';
+  $('projectTargetDate').value=project.target_end_date||'';
+ }else{$('projectStatus').value='planning';}
+ message($('formMessage'),'');activeView('form');$('projectTitle').focus();
+}
+
 function dateText(value){if(!value)return'غير متاح';const d=new Date(value);if(Number.isNaN(d.getTime()))return'غير متاح';try{return new Intl.DateTimeFormat('ar',{year:'numeric',month:'short',day:'numeric'}).format(d);}catch(e){return d.toLocaleDateString();}}
 function row(label,value){return'<div class="detail-row"><div class="detail-label">'+esc(label)+'</div><div class="detail-value">'+esc(value||'غير محدد')+'</div></div>';}
-function details(project){if(!project)return;activeProject=project;lastViewedProjectId=String(project.id);moduleTab='tasks';$('detailTitle').textContent=project.title||'تفاصيل المشروع';$('detailBackdrop').hidden=false;renderWorkspace();loadProjectModules();}
-function workspaceTabs(){return '<div class="actions" style="margin:14px 0;gap:6px">'+[['tasks','المهام'],['progress','التقدم'],['quotes','عروض الأسعار'],['expenses','المصروفات'],['documents','الملفات'],['overview','ملخص']].map(([k,v])=>'<button class="btn '+(moduleTab===k?'primary':'quiet')+'" type="button" data-module-tab="'+k+'">'+v+'</button>').join('')+'</div><div id="modulePanel"></div>';}
+function details(project){
+ if(!project)return;activeProject=project;lastViewedProjectId=String(project.id);moduleTab='tasks';
+ $('detailTitle').textContent=project.title||'تفاصيل المشروع';
+ $('detailEdit').hidden=String(project.client_id)!==String(currentUser.id);
+ $('detailBackdrop').hidden=false;renderWorkspace();loadProjectModules();
+}
+function currentProjectRole(){
+ if(!activeProject||!currentUser)return null;
+ if(String(activeProject.client_id)===String(currentUser.id))return 'owner';
+ const m=(moduleData.members||[]).find(x=>String(x.user_id)===String(currentUser.id));
+ return m?m.member_role:'viewer';
+}
+function logActivity(eventType,summary,entityType,entityId,metadata){
+ if(!activeProject||!client)return Promise.resolve();
+ return client.from('project_activity').insert({project_id:activeProject.id,actor_id:currentUser.id,event_type:eventType,summary,entity_type:entityType||null,entity_id:entityId==null?null:String(entityId),metadata:metadata||{}})
+ .then(r=>{if(r.error)console.warn('AMMAR activity log:',r.error.message);});
+}
+function workspaceTabs(){
+ const tabs=[['tasks','المهام'],['progress','التقدم'],['quotes','العروض'],['expenses','المصروفات'],['finance','المالية'],['documents','الملفات'],['team','الفريق'],['comments','التعليقات'],['activity','سجل النشاط'],['overview','الملخص']];
+ return '<div class="actions" style="margin:14px 0;gap:6px">'+tabs.map(([k,v])=>'<button class="btn '+(moduleTab===k?'primary':'quiet')+'" type="button" data-module-tab="'+k+'">'+v+'</button>').join('')+'</div><div id="modulePanel"></div>';
+}
 function renderWorkspace(){if(!activeProject)return;$('detailContent').innerHTML=workspaceTabs();renderModulePanel();}
+
 function moduleRows(items,kind){
  if(!items||!items.length)return '<div class="empty">لا توجد سجلات بعد.</div>';
  return items.map(x=>{
@@ -103,105 +147,228 @@ function moduleRows(items,kind){
   return '<article class="project-card"><h4>'+esc(x.title)+'</h4><p>'+esc(x.notes||'')+'</p><p class="muted">'+esc(x.mime_type||'ملف')+' · '+esc(x.file_size||'')+' بايت</p><div class="actions"><button class="btn light" type="button" data-download-doc="'+esc(x.id)+'">فتح / تنزيل</button>'+del+'</div></article>';
  }).join('');
 }
-function moduleForm(kind){if(kind==='tasks')return '<form data-module-form="tasks"><div class="field"><label>اسم المهمة *</label><input name="title" maxlength="180" required></div><div class="field"><label>التفاصيل</label><textarea name="details"></textarea></div><div class="form-grid"><div class="field"><label>المسؤول</label><input name="assigned_to" maxlength="160"></div><div class="field"><label>تاريخ الاستحقاق</label><input name="due_date" type="date"></div></div><button class="btn primary" type="submit">إضافة المهمة</button></form>';
-if(kind==='expenses')return '<form data-module-form="expenses"><div class="field"><label>وصف المصروف *</label><input name="description" maxlength="240" required></div><div class="form-grid"><div class="field"><label>المبلغ *</label><input name="amount" type="number" min="0" step="0.01" required></div><div class="field"><label>العملة</label><input name="currency" maxlength="12" placeholder="مثال: SDG"></div><div class="field"><label>التاريخ</label><input name="spent_on" type="date"></div></div><div class="field"><label>ملاحظات</label><textarea name="notes"></textarea></div><button class="btn primary" type="submit">تسجيل المصروف</button></form>';
-if(kind==='quotes')return '<form data-module-form="quotes"><div class="field"><label>اسم المورد *</label><input name="supplier_name" maxlength="180" required></div><div class="field"><label>عنوان العرض *</label><input name="title" maxlength="180" required></div><div class="form-grid"><div class="field"><label>قيمة العرض</label><input name="amount" type="number" min="0" step="0.01"></div><div class="field"><label>العملة</label><input name="currency" maxlength="12"></div></div><div class="field"><label>التفاصيل</label><textarea name="details"></textarea></div><button class="btn primary" type="submit">إضافة عرض السعر</button></form>';
-if(kind==='progress')return '<form data-module-form="progress"><div class="field"><label>نسبة الإنجاز: <output id="progressOutput">0%</output></label><input name="progress" type="range" min="0" max="100" value="0" oninput="document.getElementById(\'progressOutput\').value=this.value+\'%\'"></div><div class="field"><label>ملاحظات التقدم</label><textarea name="note" maxlength="2000"></textarea></div><button class="btn primary" type="submit">حفظ تحديث التقدم</button></form>';
-if(kind==='documents')return '<form data-module-form="documents"><div class="field"><label>اسم الملف *</label><input name="title" maxlength="180" required></div><div class="field"><label>اختر صورة أو مستند (حتى 15 MB) *</label><input name="file" type="file" accept="image/jpeg,image/png,image/webp,application/pdf,.doc,.docx,.xls,.xlsx" required></div><div class="field"><label>ملاحظات</label><textarea name="notes"></textarea></div><button class="btn primary" type="submit">رفع الملف</button></form>';}
-function renderModulePanel(){const box=$('modulePanel');if(!box||!activeProject)return;const key=moduleTab;if(key==='overview'){const total=moduleData.expenses.reduce((s,x)=>s+Number(x.amount||0),0);const last=moduleData.updates[0];box.innerHTML='<div class="panel">'+row('المشروع',activeProject.title)+row('الموقع',activeProject.property_location)+row('نوع العقار',activeProject.property_type)+row('الميزانية',activeProject.budget)+row('إجمالي المهام',moduleData.tasks.length)+row('المهام المكتملة',moduleData.tasks.filter(x=>x.status==='done').length)+row('إجمالي المصروفات المسجلة',total)+row('آخر نسبة إنجاز',last?last.progress+'%':'لم تسجل بعد')+'</div>';return;}const list=key==='progress'?'updates':key;const label={tasks:'المهام',progress:'سجل التقدم',quotes:'عروض الأسعار',expenses:'المصروفات',documents:'الصور والمستندات'}[key];box.innerHTML='<section class="panel"><div class="panel-head"><h3>'+label+'</h3><span class="muted">'+(moduleData[list]||[]).length+' سجل</span></div>'+moduleForm(key)+'</section><section class="panel"><div class="panel-head"><h3>السجلات المسجلة</h3></div><div class="project-grid">'+moduleRows(moduleData[list]||[],list)+'</div></section>';}
-async function loadProjectModules(){if(!activeProject||!client)return;const map={tasks:'project_tasks',expenses:'project_expenses',quotes:'project_quotes',updates:'project_updates',documents:'project_documents'};try{const pairs=await Promise.all(Object.entries(map).map(async([k,t])=>{const r=await client.from(t).select('*').eq('project_id',activeProject.id).order('created_at',{ascending:false});if(r.error)throw r.error;return[k,r.data||[]];}));pairs.forEach(([k,v])=>moduleData[k]=v);renderModulePanel();}catch(e){$('modulePanel').innerHTML='<div class="message error">تعذر تحميل وحدات إدارة المشروع. يجب أولاً تطبيق ملف قاعدة البيانات المرفق في مجلد supabase/migrations داخل Supabase SQL Editor. التفاصيل: '+esc(e.message||'خطأ غير معروف')+'</div>';}}
-async function submitModule(form){const kind=form.dataset.moduleForm,fd=new FormData(form),v=Object.fromEntries(fd.entries()),editingId=form.dataset.editId||null;let table,payload;if(kind==='tasks'){table='project_tasks';payload={project_id:activeProject.id,title:v.title.trim(),details:v.details.trim()||null,assigned_to:v.assigned_to.trim()||null,due_date:v.due_date||null};}else if(kind==='expenses'){table='project_expenses';payload={project_id:activeProject.id,description:v.description.trim(),amount:Number(v.amount),currency:v.currency.trim()||null,spent_on:v.spent_on||new Date().toISOString().slice(0,10),notes:v.notes.trim()||null};}else if(kind==='quotes'){table='project_quotes';payload={project_id:activeProject.id,supplier_name:v.supplier_name.trim(),title:v.title.trim(),amount:v.amount===''?null:Number(v.amount),currency:v.currency.trim()||null,details:v.details.trim()||null};}else if(kind==='progress'){table='project_updates';payload={project_id:activeProject.id,progress:Number(v.progress),note:v.note.trim()||null,created_by:currentUser.id};}else if(kind==='documents'){const file=fd.get('file');if(!file||!file.size)throw new Error('اختر ملفاً صالحاً.');if(file.size>15*1024*1024)throw new Error('حجم الملف يتجاوز 15 MB.');const safe=file.name.replace(/[^a-zA-Z0-9._-]/g,'_');const path=currentUser.id+'/'+activeProject.id+'/'+Date.now()+'_'+safe;const up=await client.storage.from('ammar-project-files').upload(path,file,{upsert:false,contentType:file.type||'application/octet-stream'});if(up.error)throw up.error;table='project_documents';payload={project_id:activeProject.id,title:v.title.trim(),file_path:path,mime_type:file.type||null,file_size:file.size,notes:v.notes.trim()||null,created_by:currentUser.id};}else return;const query=editingId?client.from(table).update(payload).eq('id',editingId).eq('project_id',activeProject.id):client.from(table).insert(payload);const r=await query;if(r.error)throw r.error;delete form.dataset.editId;const submit=form.querySelector('button[type="submit"]');if(submit)submit.textContent=({tasks:'إضافة المهمة',expenses:'تسجيل المصروف',quotes:'إضافة عرض السعر'})[kind]||'حفظ';await loadProjectModules();}
-async function handleModuleClick(e){
- const tab=e.target.closest('[data-module-tab]');
- if(tab){moduleTab=tab.dataset.moduleTab;renderWorkspace();return;}
- const edit=e.target.closest('[data-edit-module]');
- if(edit){
-  const kind=edit.dataset.editModule,id=edit.dataset.id;
-  const item=(moduleData[kind]||[]).find(x=>String(x.id)===String(id));
-  if(!item)return;
-  moduleTab=kind;renderWorkspace();
-  const form=$('modulePanel').querySelector('[data-module-form="'+kind+'"]');
-  if(!form)return;
-  form.dataset.editId=id;
-  Object.entries(item).forEach(([key,value])=>{if(form.elements[key]&&value!=null)form.elements[key].value=String(value);});
-  const button=form.querySelector('button[type="submit"]');
-  if(button)button.textContent='حفظ التعديلات';
-  form.scrollIntoView({behavior:'smooth',block:'start'});
-  return;
- }
- const del=e.target.closest('[data-delete-module]');
- if(del){
-  const kind=del.dataset.deleteModule,id=del.dataset.id;
-  const labels={tasks:'المهمة',expenses:'المصروف',quotes:'عرض السعر',documents:'الملف'};
-  if(!confirm('هل تريد حذف '+(labels[kind]||'السجل')+' نهائياً؟ لا يمكن التراجع عن ذلك.'))return;
-  const item=(moduleData[kind]||[]).find(x=>String(x.id)===String(id));
-  if(!item)return;
-  if(kind==='documents'){
-   const removed=await client.storage.from('ammar-project-files').remove([item.file_path]);
-   if(removed.error)throw removed.error;
-  }
-  const tables={tasks:'project_tasks',expenses:'project_expenses',quotes:'project_quotes',documents:'project_documents'};
-  const result=await client.from(tables[kind]).delete().eq('id',id).eq('project_id',activeProject.id);
-  if(result.error)throw result.error;
-  await loadProjectModules();
-  message($('appMessage'),'تم حذف السجل بنجاح.','success');
-  return;
- }
- const quote=e.target.closest('[data-quote-status]');
- if(quote){
-  const result=await client.from('project_quotes').update({status:quote.value}).eq('id',quote.dataset.quoteStatus).eq('project_id',activeProject.id);
-  if(result.error)throw result.error;
-  await loadProjectModules();
-  message($('appMessage'),'تم تحديث حالة عرض السعر.','success');
-  return;
- }
- const dl=e.target.closest('[data-download-doc]');
- if(dl){
-  const doc=moduleData.documents.find(x=>String(x.id)===String(dl.dataset.downloadDoc));
-  if(!doc)return;
-  const result=await client.storage.from('ammar-project-files').createSignedUrl(doc.file_path,60);
-  if(result.error)throw result.error;
-  window.open(result.data.signedUrl,'_blank','noopener');
- }
+function moduleForm(kind){
+ if(kind==='tasks')return '<form data-module-form="tasks"><div class="field"><label>اسم المهمة *</label><input name="title" maxlength="180" required></div><div class="field"><label>التفاصيل</label><textarea name="details"></textarea></div><div class="form-grid"><div class="field"><label>المسؤول</label><input name="assigned_to" maxlength="160"></div><div class="field"><label>تاريخ الاستحقاق</label><input name="due_date" type="date"></div></div><button class="btn primary" type="submit">إضافة المهمة</button></form>';
+ if(kind==='expenses')return '<form data-module-form="expenses"><div class="field"><label>وصف المصروف *</label><input name="description" maxlength="240" required></div><div class="form-grid"><div class="field"><label>المبلغ *</label><input name="amount" type="number" min="0" step="0.01" required></div><div class="field"><label>العملة</label><input name="currency" maxlength="12"></div><div class="field"><label>التاريخ</label><input name="spent_on" type="date"></div></div><div class="field"><label>ملاحظات</label><textarea name="notes"></textarea></div><button class="btn primary" type="submit">تسجيل المصروف</button></form>';
+ if(kind==='quotes')return '<form data-module-form="quotes"><div class="field"><label>اسم المورد *</label><input name="supplier_name" maxlength="180" required></div><div class="field"><label>عنوان العرض *</label><input name="title" maxlength="180" required></div><div class="form-grid"><div class="field"><label>قيمة العرض</label><input name="amount" type="number" min="0" step="0.01"></div><div class="field"><label>العملة</label><input name="currency" maxlength="12"></div></div><div class="field"><label>التفاصيل</label><textarea name="details"></textarea></div><button class="btn primary" type="submit">إضافة عرض السعر</button></form>';
+ if(kind==='progress')return '<form data-module-form="progress"><div class="field"><label>نسبة الإنجاز: <output id="progressOutput">0%</output></label><input name="progress" type="range" min="0" max="100" value="0" oninput="document.getElementById(\'progressOutput\').value=this.value+\'%\'"></div><div class="field"><label>ملاحظات التقدم</label><textarea name="note" maxlength="2000"></textarea></div><button class="btn primary" type="submit">حفظ تحديث التقدم</button></form>';
+ if(kind==='payments')return '<form data-module-form="payments"><div class="field"><label>وصف الدفعة أو المستحق *</label><input name="description" maxlength="240" required></div><div class="form-grid"><div class="field"><label>المبلغ *</label><input name="amount" type="number" min="0" step="0.01" required></div><div class="field"><label>العملة</label><input name="currency" maxlength="12"></div><div class="field"><label>تاريخ الاستحقاق</label><input name="due_date" type="date"></div><div class="field"><label>تاريخ الدفع</label><input name="paid_on" type="date"></div><div class="field"><label>الحالة</label><select name="status"><option value="planned">مجدول</option><option value="paid">مدفوع</option><option value="cancelled">ملغي</option></select></div><div class="field"><label>طريقة الدفع</label><input name="payment_method" maxlength="80"></div><div class="field"><label>رقم مرجعي</label><input name="reference" maxlength="120"></div></div><div class="field"><label>ملاحظات</label><textarea name="notes"></textarea></div><button class="btn primary" type="submit">تسجيل الدفعة</button></form>';
+ if(kind==='documents')return '<form data-module-form="documents"><div class="field"><label>اسم الملف *</label><input name="title" maxlength="180" required></div><div class="field"><label>اختر صورة أو مستند (حتى 15 MB) *</label><input name="file" type="file" accept="image/jpeg,image/png,image/webp,application/pdf,.doc,.docx,.xls,.xlsx" required></div><div class="field"><label>ملاحظات</label><textarea name="notes"></textarea></div><button class="btn primary" type="submit">رفع الملف</button></form>';
+ return '';
 }
 
-function card(p){const id=esc(p.id);return'<article class="project-card"><h4>'+esc(p.title||'مشروع بدون عنوان')+'</h4><p>'+esc(p.description||'لا يوجد وصف مضاف.')+'</p><div class="meta"><span class="pill">'+esc(p.property_location||'الموقع غير محدد')+'</span><span class="pill">'+esc(p.property_type||'نوع العقار غير محدد')+'</span></div><p><strong>الميزانية:</strong> '+esc(p.budget==null||p.budget===''?'غير محددة':String(p.budget))+'</p><p><strong>أُنشئ:</strong> '+esc(dateText(p.created_at))+'</p><div class="actions"><button class="btn light" type="button" data-action="details" data-id="'+id+'">التفاصيل</button><button class="btn quiet" type="button" data-action="edit" data-id="'+id+'">تعديل</button></div></article>';}
+function renderTeamPanel(){
+ const owner=String(activeProject.client_id)===String(currentUser.id),members=moduleData.members||[],invites=moduleData.invitations||[];
+ let s='<section class="panel"><div class="panel-head"><h3>فريق المشروع</h3><span class="muted">'+(members.length+1)+' عضو</span></div><div class="member-row"><div class="member-meta"><strong>مالك المشروع</strong><small>'+esc(activeProject.client_id)+'</small></div><span class="status-pill">المالك</span></div>';
+ s+=members.map(m=>'<div class="member-row"><div class="member-meta"><strong>'+esc(m.user_id)+'</strong><small>انضم: '+esc(dateText(m.created_at))+'</small></div><div class="actions"><select class="team-role" data-member-role="'+esc(m.user_id)+'" '+(!owner?'disabled':'')+'>'+Object.entries(memberRoleLabels).map(([k,v])=>'<option value="'+k+'" '+(m.member_role===k?'selected':'')+'>'+v+'</option>').join('')+'</select>'+(owner?'<button class="btn quiet" type="button" data-remove-member="'+esc(m.user_id)+'">إزالة</button>':'')+'</div></div>').join('');
+ if(!members.length)s+='<div class="empty">لم تتم إضافة أعضاء بعد. ادعُ أول عضو للبدء بالعمل الجماعي.</div>';
+ s+='</section>';
+ if(owner){
+  s+='<section class="panel"><div class="panel-head"><h3>دعوة عضو جديد</h3><span class="muted">الرابط صالح 7 أيام</span></div><form id="teamInviteForm" class="inline-form"><div><label class="muted">البريد الإلكتروني</label><input name="email" type="email" autocomplete="email" required placeholder="person@example.com"></div><div><label class="muted">الدور</label><select name="role">'+Object.entries(memberRoleLabels).map(([k,v])=>'<option value="'+k+'">'+v+'</option>').join('')+'</select></div><div class="full"><button class="btn primary" type="submit">إنشاء رابط الدعوة</button></div></form><div id="inviteResult" class="message"></div>';
+  if(lastInviteUrl)s+='<div class="notice" style="overflow-wrap:anywhere">رابط الدعوة: <a href="'+esc(lastInviteUrl)+'">'+esc(lastInviteUrl)+'</a><div class="actions"><button class="btn light" type="button" data-copy-invite>نسخ الرابط</button><button class="btn quiet" type="button" data-share-invite>مشاركة</button></div></div>';
+  s+='</section>';
+ }
+ if(invites.length)s+='<section class="panel"><h3>الدعوات السابقة</h3>'+invites.map(i=>'<div class="member-row"><div class="member-meta"><strong>'+esc(i.email)+'</strong><small>'+esc(memberRoleLabels[i.member_role]||i.member_role)+' · تنتهي '+esc(dateText(i.expires_at))+'</small></div><span class="pill">'+esc(({pending:'بانتظار القبول',accepted:'مقبولة',revoked:'ملغاة',expired:'منتهية'})[i.status]||i.status)+'</span></div>').join('')+'</section>';
+ return s;
+}
+function renderActivityPanel(){
+ const a=moduleData.activity||[];
+ return '<section class="panel"><div class="panel-head"><h3>سجل النشاط والتدقيق</h3><span class="muted">'+a.length+' حدث</span></div>'+(a.length?a.map(x=>'<div class="timeline-item"><strong>'+esc(x.summary)+'</strong><small>'+esc(x.event_type)+' · '+esc(dateText(x.created_at))+' · '+esc(x.actor_id||'النظام')+'</small></div>').join(''):'<div class="empty">ستظهر هنا التغييرات والقرارات المسجلة في المشروع.</div>')+'</section>';
+}
+function renderCommentsPanel(){
+ const a=moduleData.comments||[];
+ return '<section class="panel"><div class="panel-head"><h3>تعليقات الفريق</h3><span class="muted">'+a.length+' تعليق</span></div><form id="projectCommentForm"><div class="field"><textarea name="message" maxlength="4000" required placeholder="اكتب ملاحظة أو قراراً أو سؤالاً للفريق..."></textarea></div><button class="btn primary" type="submit">إضافة التعليق</button></form><div class="workspace-section">'+(a.length?a.map(x=>'<div class="timeline-item"><strong>'+esc(x.message)+'</strong><small>'+esc(x.author_id)+' · '+esc(dateText(x.created_at))+'</small></div>').join(''):'<div class="empty">لا توجد تعليقات بعد.</div>')+'</div></section>';
+}
+function renderFinancePanel(){
+ const exp=moduleData.expenses||[],pay=moduleData.payments||[],budget=Number(activeProject.budget_amount||0),cur=activeProject.budget_currency||'';
+ const by={};exp.forEach(x=>{const c=x.currency||'غير محددة';by[c]=(by[c]||0)+Number(x.amount||0);});
+ const paid={};pay.filter(x=>x.status==='paid').forEach(x=>{const c=x.currency||'غير محددة';paid[c]=(paid[c]||0)+Number(x.amount||0);});
+ const spent=cur?(by[cur]||0):null;
+ const metrics='<div class="finance-grid"><div class="finance-metric"><span class="muted">الميزانية</span><strong>'+esc(budget?budget.toLocaleString('en-US')+' '+cur:'غير محددة')+'</strong></div><div class="finance-metric"><span class="muted">المصروفات بنفس العملة</span><strong>'+esc(spent===null?'حدد عملة الميزانية':spent.toLocaleString('en-US')+' '+cur)+'</strong></div><div class="finance-metric"><span class="muted">المتبقي</span><strong>'+esc(spent===null||!budget?'غير محسوب':(budget-spent).toLocaleString('en-US')+' '+cur)+'</strong></div></div>';
+ const byRows=Object.entries(by).map(([c,v])=>'<div class="member-row"><span>مصروفات '+esc(c)+'</span><strong>'+esc(v.toLocaleString('en-US'))+'</strong></div>').join('');
+ const paidRows=Object.entries(paid).map(([c,v])=>'<div class="member-row"><span>مدفوع '+esc(c)+'</span><strong>'+esc(v.toLocaleString('en-US'))+'</strong></div>').join('');
+ const rows=pay.length?pay.map(x=>'<div class="member-row"><div class="member-meta"><strong>'+esc(x.description)+'</strong><small>'+esc(x.amount)+' '+esc(x.currency||'')+' · استحقاق '+esc(x.due_date||'غير محدد')+'</small></div><div class="actions"><select class="team-role" data-payment-status="'+esc(x.id)+'"><option value="planned" '+(x.status==='planned'?'selected':'')+'>مجدول</option><option value="paid" '+(x.status==='paid'?'selected':'')+'>مدفوع</option><option value="cancelled" '+(x.status==='cancelled'?'selected':'')+'>ملغي</option></select><button class="btn quiet" type="button" data-delete-payment="'+esc(x.id)+'">حذف</button></div></div>').join(''):'<div class="empty">لا توجد دفعات بعد.</div>';
+ return '<section class="panel"><div class="panel-head"><h3>المؤشرات المالية</h3><span class="muted">لا نخلط العملات المختلفة</span></div>'+metrics+byRows+paidRows+'</section><section class="panel"><h3>تسجيل دفعة أو مستحق</h3>'+moduleForm('payments')+'</section><section class="panel"><h3>الدفعات والمستحقات</h3>'+rows+'</section>';
+}
+function renderModulePanel(){
+ const box=$('modulePanel');if(!box||!activeProject)return;const k=moduleTab;
+ if(k==='team'){box.innerHTML=renderTeamPanel();return;}
+ if(k==='activity'){box.innerHTML=renderActivityPanel();return;}
+ if(k==='comments'){box.innerHTML=renderCommentsPanel();return;}
+ if(k==='finance'){box.innerHTML=renderFinancePanel();return;}
+ if(k==='overview'){
+  const done=moduleData.tasks.filter(x=>x.status==='done').length,last=moduleData.updates[0];
+  box.innerHTML='<div class="panel">'+row('حالة المشروع',projectStatusLabels[activeProject.status]||'قيد التخطيط')+row('البداية',activeProject.start_date)+row('التسليم المستهدف',activeProject.target_end_date)+row('الميزانية الرقمية',activeProject.budget_amount==null?'غير محددة':activeProject.budget_amount+' '+(activeProject.budget_currency||''))+row('الموقع',activeProject.property_location)+row('نوع العقار',activeProject.property_type)+row('إجمالي المهام',moduleData.tasks.length)+row('المهام المكتملة',done)+row('إنجاز المهام',moduleData.tasks.length?Math.round(done/moduleData.tasks.length*100)+'%':'لا توجد مهام')+row('إجمالي المصروفات المسجلة',moduleData.expenses.reduce((s,x)=>s+Number(x.amount||0),0))+row('آخر نسبة إنجاز',last?last.progress+'%':'لم تسجل بعد')+row('أعضاء الفريق',moduleData.members.length+1)+'</div>';return;
+ }
+ const list=k==='progress'?'updates':k,label={tasks:'المهام',progress:'سجل التقدم',quotes:'عروض الأسعار',expenses:'المصروفات',documents:'الصور والمستندات'}[k];
+ box.innerHTML='<section class="panel"><div class="panel-head"><h3>'+label+'</h3><span class="muted">'+(moduleData[list]||[]).length+' سجل</span></div>'+moduleForm(k)+'</section><section class="panel"><div class="panel-head"><h3>السجلات المسجلة</h3></div><div class="project-grid">'+moduleRows(moduleData[list]||[],list)+'</div></section>';
+}
+
+async function loadProjectModules(){
+ if(!activeProject||!client)return;
+ const map={tasks:'project_tasks',expenses:'project_expenses',quotes:'project_quotes',updates:'project_updates',documents:'project_documents',payments:'project_payments',activity:'project_activity',comments:'project_comments',members:'project_members',invitations:'project_invitations'};
+ try{
+  const pairs=await Promise.all(Object.entries(map).map(async([k,t])=>{
+   if(k==='invitations'&&String(activeProject.client_id)!==String(currentUser.id))return[k,[]];
+   let q=client.from(t).select('*').eq('project_id',activeProject.id);
+   if(!['members','invitations'].includes(k))q=q.order('created_at',{ascending:false}).limit(100);
+   const r=await q;if(r.error)throw r.error;return[k,r.data||[]];
+  }));
+  pairs.forEach(([k,v])=>moduleData[k]=v);renderWorkspace();
+ }catch(e){$('modulePanel').innerHTML='<div class="message error">تعذر تحميل وحدات المشروع. تأكد من تطبيق ترحيل قاعدة البيانات الجديد. التفاصيل: '+esc(e.message||'خطأ غير معروف')+'</div>';}
+}
+
+async function submitModule(form){
+ const kind=form.dataset.moduleForm,fd=new FormData(form),v=Object.fromEntries(fd.entries());let table,payload,eventType,summary;
+ if(kind==='tasks'){table='project_tasks';payload={project_id:activeProject.id,title:v.title.trim(),details:v.details.trim()||null,assigned_to:v.assigned_to.trim()||null,due_date:v.due_date||null};eventType='task_created';summary='تمت إضافة مهمة: '+v.title.trim();}
+ else if(kind==='expenses'){table='project_expenses';payload={project_id:activeProject.id,description:v.description.trim(),amount:Number(v.amount),currency:v.currency.trim()||null,spent_on:v.spent_on||new Date().toISOString().slice(0,10),notes:v.notes.trim()||null};eventType='expense_recorded';summary='تم تسجيل مصروف: '+v.description.trim();}
+ else if(kind==='quotes'){table='project_quotes';payload={project_id:activeProject.id,supplier_name:v.supplier_name.trim(),title:v.title.trim(),amount:v.amount===''?null:Number(v.amount),currency:v.currency.trim()||null,details:v.details.trim()||null};eventType='quote_added';summary='تمت إضافة عرض سعر: '+v.title.trim();}
+ else if(kind==='progress'){table='project_updates';payload={project_id:activeProject.id,progress:Number(v.progress),note:v.note.trim()||null,created_by:currentUser.id};eventType='progress_updated';summary='تم تحديث نسبة الإنجاز إلى '+v.progress+'%';}
+ else if(kind==='payments'){table='project_payments';payload={project_id:activeProject.id,description:v.description.trim(),amount:Number(v.amount),currency:v.currency.trim()||null,due_date:v.due_date||null,paid_on:v.paid_on||null,status:v.status||'planned',payment_method:v.payment_method.trim()||null,reference:v.reference.trim()||null,notes:v.notes.trim()||null,created_by:currentUser.id};eventType='payment_recorded';summary='تم تسجيل دفعة: '+v.description.trim();}
+ else if(kind==='documents'){
+  const file=fd.get('file');if(!file||!file.size)throw new Error('اختر ملفاً صالحاً.');if(file.size>15*1024*1024)throw new Error('حجم الملف يتجاوز 15 MB.');
+  const allowed=['image/jpeg','image/png','image/webp','application/pdf','application/msword','application/vnd.openxmlformats-officedocument.wordprocessingml.document','application/vnd.ms-excel','application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'];
+  if(file.type&&!allowed.includes(file.type))throw new Error('نوع الملف غير مسموح.');
+  const safe=file.name.replace(/[^a-zA-Z0-9._-]/g,'_'),path=currentUser.id+'/'+activeProject.id+'/'+Date.now()+'_'+safe;
+  const up=await client.storage.from('ammar-project-files').upload(path,file,{upsert:false,contentType:file.type||'application/octet-stream'});if(up.error)throw up.error;
+  table='project_documents';payload={project_id:activeProject.id,title:v.title.trim(),file_path:path,mime_type:file.type||null,file_size:file.size,notes:v.notes.trim()||null,created_by:currentUser.id};eventType='document_uploaded';summary='تم رفع ملف: '+v.title.trim();
+ }else return;
+ const editingId=form.dataset.editId||null,r=editingId?await client.from(table).update(payload).eq('id',editingId).eq('project_id',activeProject.id):await client.from(table).insert(payload);
+ if(r.error)throw r.error;delete form.dataset.editId;
+ const btn=form.querySelector('button[type="submit"]');if(btn)btn.textContent=({tasks:'إضافة المهمة',expenses:'تسجيل المصروف',quotes:'إضافة عرض السعر',payments:'تسجيل الدفعة'})[kind]||'حفظ';
+ await logActivity(editingId?kind+'_updated':eventType,(editingId?'تم تعديل سجل. ':'')+summary,kind,editingId);await loadProjectModules();
+}
+
+async function handleModuleClick(e){
+ const tab=e.target.closest('[data-module-tab]');if(tab){moduleTab=tab.dataset.moduleTab;renderWorkspace();return;}
+ const cp=e.target.closest('[data-copy-invite]');if(cp&&lastInviteUrl){await navigator.clipboard.writeText(lastInviteUrl);message($('appMessage'),'تم نسخ رابط الدعوة.','success');return;}
+ const sh=e.target.closest('[data-share-invite]');if(sh&&lastInviteUrl){if(navigator.share)await navigator.share({title:'دعوة إلى مشروع عَمِّر',url:lastInviteUrl});else{await navigator.clipboard.writeText(lastInviteUrl);message($('appMessage'),'تم نسخ رابط الدعوة.','success');}return;}
+ const rm=e.target.closest('[data-remove-member]');
+ if(rm){if(!confirm('إزالة هذا العضو من المشروع؟'))return;const r=await client.rpc('ammar_remove_project_member',{p_project_id:String(activeProject.id),p_user_id:rm.dataset.removeMember});if(r.error)throw r.error;await logActivity('member_removed','تمت إزالة عضو من الفريق','team',rm.dataset.removeMember);await loadProjectModules();message($('appMessage'),'تمت إزالة العضو.','success');return;}
+ const dp=e.target.closest('[data-delete-payment]');
+ if(dp){if(!confirm('حذف سجل الدفعة نهائياً؟'))return;const r=await client.from('project_payments').delete().eq('id',dp.dataset.deletePayment).eq('project_id',activeProject.id);if(r.error)throw r.error;await logActivity('payment_deleted','تم حذف سجل دفعة','payment',dp.dataset.deletePayment);await loadProjectModules();message($('appMessage'),'تم حذف الدفعة.','success');return;}
+ const edit=e.target.closest('[data-edit-module]');
+ if(edit){const kind=edit.dataset.editModule,id=edit.dataset.id,item=(moduleData[kind]||[]).find(x=>String(x.id)===String(id));if(!item)return;moduleTab=kind;renderWorkspace();const form=$('modulePanel').querySelector('[data-module-form="'+kind+'"]');if(!form)return;form.dataset.editId=id;Object.entries(item).forEach(([key,value])=>{if(form.elements[key]&&value!=null)form.elements[key].value=String(value);});const btn=form.querySelector('button[type="submit"]');if(btn)btn.textContent='حفظ التعديلات';form.scrollIntoView({behavior:'smooth',block:'start'});return;}
+ const del=e.target.closest('[data-delete-module]');
+ if(del){const kind=del.dataset.deleteModule,id=del.dataset.id,labels={tasks:'المهمة',expenses:'المصروف',quotes:'عرض السعر',documents:'الملف'};if(!confirm('هل تريد حذف '+(labels[kind]||'السجل')+' نهائياً؟ لا يمكن التراجع عن ذلك.'))return;const item=(moduleData[kind]||[]).find(x=>String(x.id)===String(id));if(!item)return;if(kind==='documents'){const removed=await client.storage.from('ammar-project-files').remove([item.file_path]);if(removed.error)throw removed.error;}const tables={tasks:'project_tasks',expenses:'project_expenses',quotes:'project_quotes',documents:'project_documents'},result=await client.from(tables[kind]).delete().eq('id',id).eq('project_id',activeProject.id);if(result.error)throw result.error;await logActivity(kind+'_deleted','تم حذف سجل من قسم '+kind,kind,id);await loadProjectModules();message($('appMessage'),'تم حذف السجل بنجاح.','success');return;}
+ const dl=e.target.closest('[data-download-doc]');if(dl){const doc=moduleData.documents.find(x=>String(x.id)===String(dl.dataset.downloadDoc));if(!doc)return;const r=await client.storage.from('ammar-project-files').createSignedUrl(doc.file_path,120);if(r.error)throw r.error;window.open(r.data.signedUrl,'_blank','noopener');}
+}
+async function createTeamInvitation(form){
+ const fd=new FormData(form),email=String(fd.get('email')||'').trim(),role=String(fd.get('role')||'viewer');
+ const r=await client.rpc('ammar_create_project_invitation',{p_project_id:String(activeProject.id),p_email:email,p_role:role});if(r.error)throw r.error;
+ const token=r.data&&r.data.token;if(!token)throw new Error('لم يرجع النظام رمز الدعوة.');
+ lastInviteUrl=APP_URL+'?invite='+encodeURIComponent(token);await logActivity('invitation_created','تم إنشاء دعوة إلى '+email,'team',null,{email,role});form.reset();renderWorkspace();
+}
+async function postComment(form){
+ const txt=String(new FormData(form).get('message')||'').trim();if(!txt)return;
+ const r=await client.from('project_comments').insert({project_id:activeProject.id,author_id:currentUser.id,message:txt});if(r.error)throw r.error;
+ await logActivity('comment_added','أضاف عضو تعليقاً جديداً','comment',null);form.reset();await loadProjectModules();message($('appMessage'),'تمت إضافة التعليق.','success');
+}
+async function acceptPendingInvitation(){
+ if(!pendingInviteToken||!currentUser||inviteAccepting)return;inviteAccepting=true;
+ try{
+  const r=await client.rpc('ammar_accept_project_invitation',{p_token:pendingInviteToken});if(r.error)throw r.error;
+  localStorage.removeItem('ammar_pending_invite');pendingInviteToken=null;const u=new URL(location.href);u.searchParams.delete('invite');history.replaceState({},'',u.pathname+u.search+u.hash);
+  await loadProjects();await loadNotifications();message($('appMessage'),'تم قبول الدعوة وإضافة المشروع إلى مساحة عملك.','success');
+ }catch(e){message($('appMessage'),'تعذر قبول الدعوة: '+(e.message||'سجّل الدخول بالبريد الذي تلقى الدعوة واحتفظ بالرابط.'),'error');}
+ finally{inviteAccepting=false;}
+}
+async function loadNotifications(){
+ if(!client||!currentUser)return;
+ try{const r=await client.from('project_notifications').select('id,project_id,title,body,created_at,read_at').eq('user_id',currentUser.id).order('created_at',{ascending:false}).limit(30);if(r.error)throw r.error;const unread=(r.data||[]).filter(x=>!x.read_at).length;$('notificationCount').textContent=String(unread);$('notificationCount').hidden=!unread;}
+ catch(e){console.warn('AMMAR notifications:',e.message);}
+}
+async function openNotifications(){
+ $('notificationBackdrop').hidden=false;$('notificationsContent').innerHTML='<div class="empty">جارٍ تحميل الإشعارات...</div>';
+ try{const r=await client.from('project_notifications').select('*').eq('user_id',currentUser.id).order('created_at',{ascending:false}).limit(30);if(r.error)throw r.error;const items=r.data||[];$('notificationsContent').innerHTML=items.length?items.map(x=>'<div class="notification-item"><strong>'+esc(x.title)+'</strong><div>'+esc(x.body||'')+'</div><small class="muted">'+esc(dateText(x.created_at))+'</small></div>').join(''):'<div class="empty">لا توجد إشعارات بعد.</div>';const ids=items.filter(x=>!x.read_at).map(x=>x.id);if(ids.length){const u=await client.from('project_notifications').update({read_at:new Date().toISOString()}).in('id',ids).eq('user_id',currentUser.id);if(u.error)throw u.error;await loadNotifications();}}
+ catch(e){$('notificationsContent').innerHTML='<div class="message error">تعذر تحميل الإشعارات: '+esc(e.message||'خطأ')+'</div>';}
+}
+
+function card(p){
+ const id=esc(p.id),owner=String(p.client_id)===String(currentUser.id),status=projectStatusLabels[p.status]||'قيد التخطيط';
+ return '<article class="project-card"><h4>'+esc(p.title||'مشروع بدون عنوان')+'</h4><p>'+esc(p.description||'لا يوجد وصف مضاف.')+'</p><div class="meta"><span class="pill">'+esc(p.property_location||'الموقع غير محدد')+'</span><span class="pill">'+esc(p.property_type||'نوع العقار غير محدد')+'</span><span class="status-pill">'+esc(status)+'</span>'+(owner?'':'<span class="pill">مشروع مشترك</span>')+'</div><p><strong>الميزانية:</strong> '+esc(p.budget==null||p.budget===''?'غير محددة':String(p.budget))+'</p><p><strong>أُنشئ:</strong> '+esc(dateText(p.created_at))+'</p><div class="actions"><button class="btn light" type="button" data-action="details" data-id="'+id+'">التفاصيل</button>'+(owner?'<button class="btn quiet" type="button" data-action="edit" data-id="'+id+'">تعديل</button>':'')+'</div></article>';
+}
+
 function sorted(){return projectsCache.slice().sort((a,b)=>(new Date(b.created_at||0).getTime()||0)-(new Date(a.created_at||0).getTime()||0));}
 function renderDashboard(){const s=sorted();$('statProjects').textContent=String(s.length);$('statLatest').textContent=s.length?(s[0].title||'مشروع بدون عنوان'):'لا يوجد';$('recentProjects').innerHTML=s.length?s.slice(0,4).map(card).join(''):'<div class="empty"><strong>لا توجد مشاريع حتى الآن</strong><p>ابدأ بإضافة أول مشروع لترميم أو صيانة عقار.</p><button class="btn primary" type="button" data-view="form">إنشاء أول مشروع</button></div>';}
 function renderProjects(){const q=($('projectSearch').value||'').trim().toLowerCase();const found=sorted().filter(p=>[p.title,p.description,p.property_location,p.property_type,p.budget].join(' ').toLowerCase().includes(q));$('projectCount').textContent='عرض '+found.length+' من '+projectsCache.length+' مشروع';$('allProjects').innerHTML=found.length?found.map(card).join(''):(projectsCache.length?'<div class="empty">لا توجد نتائج مطابقة لبحثك.</div>':'<div class="empty"><strong>قائمة المشاريع فارغة</strong><p>أنشئ مشروعك الأول وستظهر بياناته هنا.</p><button class="btn primary" type="button" data-view="form">＋ إنشاء مشروع</button></div>');}
-async function loadProjects(){if(!client||!currentUser)return;$('statConnection').textContent='جارٍ التحميل';$('recentProjects').innerHTML='<div class="empty">جارٍ تحميل المشاريع...</div>';$('allProjects').innerHTML='<div class="empty">جارٍ تحميل المشاريع...</div>';try{const r=await client.from('projects').select('*').eq('client_id',currentUser.id);if(r.error)throw r.error;projectsCache=Array.isArray(r.data)?r.data:[];$('statConnection').textContent='متصل';message($('appMessage'),'');renderDashboard();renderProjects();return true;}catch(e){$('statConnection').textContent='تعذر الاتصال';const m='تعذر تحميل المشاريع. '+(e.message||'تحقق من الاتصال والصلاحيات.');$('recentProjects').innerHTML='<div class="empty">'+esc(m)+'<br><button class="btn light" type="button" data-action="refresh">إعادة المحاولة</button></div>';$('allProjects').innerHTML='<div class="empty">'+esc(m)+'<br><button class="btn light" type="button" data-action="refresh">إعادة المحاولة</button></div>';message($('appMessage'),'لم نتمكن من جلب المشاريع. لن نعرض بيانات تجريبية بدلاً من بياناتك.','error');return false;}}
+async function loadProjects(){
+ if(!client||!currentUser)return false;
+ $('statConnection').textContent='جارٍ التحميل';$('recentProjects').innerHTML='<div class="empty">جارٍ تحميل المشاريع...</div>';$('allProjects').innerHTML='<div class="empty">جارٍ تحميل المشاريع...</div>';
+ try{
+  const own=await client.from('projects').select('*').eq('client_id',currentUser.id);if(own.error)throw own.error;
+  const ms=await client.from('project_members').select('project_id').eq('user_id',currentUser.id);if(ms.error)throw ms.error;
+  const ids=[...new Set((ms.data||[]).map(x=>String(x.project_id)).filter(Boolean))];let shared=[];
+  if(ids.length){const sh=await client.from('projects').select('*').in('id',ids);if(sh.error)throw sh.error;shared=sh.data||[];}
+  const seen=new Set();projectsCache=[...(own.data||[]),...shared].filter(p=>{const id=String(p.id);if(seen.has(id))return false;seen.add(id);return true;});
+  $('statConnection').textContent='متصل';message($('appMessage'),'');renderDashboard();renderProjects();return true;
+ }catch(e){
+  $('statConnection').textContent='تعذر الاتصال';const msg='تعذر تحميل المشاريع. '+(e.message||'تحقق من الاتصال والصلاحيات.');
+  $('recentProjects').innerHTML='<div class="empty">'+esc(msg)+'<br><button class="btn light" type="button" data-action="refresh">إعادة المحاولة</button></div>';$('allProjects').innerHTML='<div class="empty">'+esc(msg)+'<br><button class="btn light" type="button" data-action="refresh">إعادة المحاولة</button></div>';
+  message($('appMessage'),'تعذر تحميل المشاريع. قد تحتاج إلى تطبيق ترحيل التعاون الجديد في Supabase.','error');return false;
+ }}
+
 async function login(e){e.preventDefault();const b=$('loginButton'),email=$('loginEmail').value.trim(),password=$('loginPassword').value;if(!email||!password){message($('authMessage'),'أدخل البريد الإلكتروني وكلمة المرور.','error');return;}busy(b,true,'جارٍ تسجيل الدخول...');message($('authMessage'),'يتم التحقق من بيانات الحساب...');try{const r=await client.auth.signInWithPassword({email,password});if(r.error)throw r.error;recoveryMode=false;showApp(r.data.user);message($('authMessage'),'');}catch(err){message($('authMessage'),'تعذر تسجيل الدخول: '+(err.message||'حدث خطأ غير متوقع.'),'error');}finally{busy(b,false);}}
 async function signup(e){e.preventDefault();const b=$('signupButton'),email=$('signupEmail').value.trim(),password=$('signupPassword').value,confirm=$('signupConfirm').value;if(password.length<8){message($('authMessage'),'كلمة المرور يجب أن تتكون من 8 أحرف على الأقل.','error');return;}if(password!==confirm){message($('authMessage'),'كلمتا المرور غير متطابقتين.','error');return;}busy(b,true,'جارٍ إنشاء الحساب...');message($('authMessage'),'يتم إنشاء الحساب...');try{const r=await client.auth.signUp({email,password,options:{emailRedirectTo:APP_URL}});if(r.error)throw r.error;if(r.data&&r.data.session){showApp(r.data.user);message($('authMessage'),'');}else{$('loginEmail').value=email;authPanel('login');message($('authMessage'),'تم إنشاء طلب الحساب. أكّد بريدك من الرسالة التي تصلك، ثم سجّل الدخول. افحص الرسائل غير المرغوب فيها إذا لم تجدها.','success');}}catch(err){message($('authMessage'),'تعذر إنشاء الحساب: '+(err.message||'حدث خطأ غير متوقع.'),'error');}finally{busy(b,false);}}
 async function resetRequest(e){e.preventDefault();const b=$('resetRequestButton'),email=$('resetEmail').value.trim();if(!email){message($('authMessage'),'أدخل بريدك الإلكتروني.','error');return;}busy(b,true,'جارٍ الإرسال...');try{const r=await client.auth.resetPasswordForEmail(email,{redirectTo:APP_URL});if(r.error)throw r.error;message($('authMessage'),'إذا كان البريد مرتبطاً بحساب، فستصلك رسالة لاستعادة كلمة المرور. افحص الوارد والرسائل غير المرغوب فيها.','success');}catch(err){message($('authMessage'),'تعذر طلب الاستعادة: '+(err.message||'حدث خطأ غير متوقع.'),'error');}finally{busy(b,false);}}
 async function saveNewPassword(e){e.preventDefault();const b=$('savePasswordButton'),password=$('newPassword').value,confirm=$('newPasswordConfirm').value;if(password.length<8){message($('authMessage'),'كلمة المرور يجب أن تتكون من 8 أحرف على الأقل.','error');return;}if(password!==confirm){message($('authMessage'),'كلمتا المرور غير متطابقتين.','error');return;}busy(b,true,'جارٍ حفظ كلمة المرور...');try{const s=await client.auth.getSession();if(s.error||!s.data.session)throw new Error('رابط الاستعادة غير صالح أو انتهت صلاحيته. اطلب رابطاً جديداً.');const r=await client.auth.updateUser({password});if(r.error)throw r.error;await client.auth.signOut();recoveryMode=false;$('newPasswordForm').reset();$('resetRequestForm').hidden=false;$('newPasswordForm').hidden=true;showAuth('تم تغيير كلمة المرور. سجّل الدخول باستخدام الكلمة الجديدة.','success');}catch(err){message($('authMessage'),'تعذر تغيير كلمة المرور: '+(err.message||'حدث خطأ غير متوقع.'),'error');}finally{busy(b,false);}}
-async function saveProject(e){e.preventDefault();if(!currentUser){showAuth('انتهت الجلسة. سجّل الدخول من جديد.','error');return;}const b=$('saveProjectButton'),title=$('projectTitle').value.trim();if(!title){message($('formMessage'),'عنوان المشروع مطلوب.','error');$('projectTitle').focus();return;}const data={title,description:$('projectDescription').value.trim()||null,property_location:$('projectLocation').value.trim()||null,property_type:$('projectType').value.trim()||null,budget:$('projectBudget').value.trim()||null};busy(b,true,editingProjectId?'جارٍ حفظ التعديلات...':'جارٍ إنشاء المشروع...');message($('formMessage'),'يتم حفظ البيانات في قاعدة البيانات...');try{let r;if(editingProjectId){r=await client.from('projects').update(data).eq('id',editingProjectId).eq('client_id',currentUser.id).select('id');if(r.error)throw r.error;if(!r.data||!r.data.length)throw new Error('لم يتم تعديل أي سجل. قد لا تسمح صلاحيات قاعدة البيانات بالتعديل أو أن المشروع غير تابع لحسابك.');}else{r=await client.from('projects').insert(Object.assign({},data,{client_id:currentUser.id}));if(r.error)throw r.error;}editingProjectId=null;$('projectForm').reset();message($('formMessage'),'تم حفظ المشروع بنجاح. جارٍ تحديث القائمة...','success');const refreshed=await loadProjects();activeView('projects');if(refreshed)message($('appMessage'),'تم حفظ المشروع وتحديث القائمة.','success');else message($('appMessage'),'تم حفظ المشروع، لكن تعذر تحديث القائمة. استخدم زر التحديث لإعادة المحاولة.','error');}catch(err){message($('formMessage'),'تعذر حفظ المشروع: '+(err.message||'حدث خطأ غير متوقع.'),'error');}finally{busy(b,false);}}
+async function saveProject(e){
+ e.preventDefault();if(!currentUser){showAuth('انتهت الجلسة. سجّل الدخول من جديد.','error');return;}
+ const b=$('saveProjectButton'),title=$('projectTitle').value.trim(),amount=$('projectBudgetAmount').value.trim();
+ if(!title){message($('formMessage'),'عنوان المشروع مطلوب.','error');$('projectTitle').focus();return;}
+ if(amount!==''&&(!Number.isFinite(Number(amount))||Number(amount)<0)){message($('formMessage'),'أدخل قيمة ميزانية رقمية صحيحة.','error');return;}
+ const data={title,description:$('projectDescription').value.trim()||null,property_location:$('projectLocation').value.trim()||null,property_type:$('projectType').value.trim()||null,budget:$('projectBudget').value.trim()||null,budget_amount:amount===''?null:Number(amount),budget_currency:$('projectBudgetCurrency').value.trim().toUpperCase()||null,status:$('projectStatus').value||'planning',start_date:$('projectStartDate').value||null,target_end_date:$('projectTargetDate').value||null};
+ busy(b,true,editingProjectId?'جارٍ حفظ التعديلات...':'جارٍ إنشاء المشروع...');message($('formMessage'),'يتم حفظ البيانات في قاعدة البيانات...');
+ try{
+  const wasEdit=!!editingProjectId;let r;
+  if(wasEdit){r=await client.from('projects').update(data).eq('id',editingProjectId).eq('client_id',currentUser.id).select('id');if(r.error)throw r.error;if(!r.data||!r.data.length)throw new Error('لم يتم تعديل السجل. تأكد أنك مالك المشروع.');}
+  else{r=await client.from('projects').insert(Object.assign({},data,{client_id:currentUser.id})).select('id');if(r.error)throw r.error;}
+  const projectId=wasEdit?editingProjectId:(r.data&&r.data[0]?r.data[0].id:null);editingProjectId=null;$('projectForm').reset();message($('formMessage'),'تم حفظ المشروع بنجاح.','success');await loadProjects();
+  const saved=projectsCache.find(p=>String(p.id)===String(projectId));if(saved){activeProject=saved;await logActivity(wasEdit?'project_updated':'project_created',wasEdit?'تم تحديث بيانات المشروع':'تم إنشاء المشروع','project',saved.id);}
+  activeView('projects');message($('appMessage'),'تم حفظ المشروع وتحديث القائمة.','success');
+ }catch(err){message($('formMessage'),'تعذر حفظ المشروع: '+(err.message||'حدث خطأ غير متوقع.'),'error');}
+ finally{busy(b,false);}
+}
+
 async function logout(){try{const r=await client.auth.signOut();if(r.error)throw r.error;recoveryMode=false;showAuth('تم تسجيل الخروج بأمان.','success');}catch(e){message($('appMessage'),'تعذر تسجيل الخروج: '+(e.message||'حدث خطأ غير متوقع.'),'error');}}
-function clickApp(e){const vb=e.target.closest('[data-view]');if(vb){if(vb.dataset.view==='form')goForm(null);else activeView(vb.dataset.view);return;}const ab=e.target.closest('[data-action]');if(!ab)return;const action=ab.dataset.action;if(action==='logout'){logout();return;}if(action==='refresh'){loadProjects();return;}const p=projectsCache.find(x=>String(x.id)===String(ab.dataset.id));if(action==='details')details(p);if(action==='edit'&&p)goForm(p);}
+function clickApp(e){
+ const vb=e.target.closest('[data-view]');if(vb){if(vb.dataset.view==='form')goForm(null);else activeView(vb.dataset.view);return;}
+ const ab=e.target.closest('[data-action]');if(!ab)return;const action=ab.dataset.action;
+ if(action==='logout'){logout();return;}if(action==='refresh'){loadProjects();return;}if(action==='notifications'){openNotifications();return;}
+ const p=projectsCache.find(x=>String(x.id)===String(ab.dataset.id));if(action==='details')details(p);if(action==='edit'&&p&&String(p.client_id)===String(currentUser.id))goForm(p);
+}
+
 function init(){if(!window.supabase||typeof window.supabase.createClient!=='function'){message($('authMessage'),'تعذر تحميل مكتبة الاتصال. تحقق من الإنترنت ثم أعد تحميل الصفحة.','error');return;}try{client=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY,{auth:{autoRefreshToken:true,persistSession:true,detectSessionInUrl:true}});}catch(e){message($('authMessage'),'تعذر تهيئة الاتصال: '+e.message,'error');return;}
  client.auth.onAuthStateChange((event,session)=>{if(event==='PASSWORD_RECOVERY')showRecovery();else if(event==='SIGNED_OUT'){recoveryMode=false;showAuth('تم تسجيل الخروج.');}else if(event==='SIGNED_IN'&&session&&!recoveryMode)showApp(session.user);});
  $('loginForm').addEventListener('submit',login);$('signupForm').addEventListener('submit',signup);$('resetRequestForm').addEventListener('submit',resetRequest);$('newPasswordForm').addEventListener('submit',saveNewPassword);$('projectForm').addEventListener('submit',saveProject);$('projectSearch').addEventListener('input',renderProjects);
  $('cancelProjectButton').addEventListener('click',()=>{editingProjectId=null;$('projectForm').reset();activeView('projects');});
- $('closeDetail').addEventListener('click',()=>$('detailBackdrop').hidden=true);$('detailCloseButton').addEventListener('click',()=>$('detailBackdrop').hidden=true);$('detailBackdrop').addEventListener('click',e=>{if(e.target===$('detailBackdrop'))$('detailBackdrop').hidden=true;});
+ $('closeDetail').addEventListener('click',()=>$('detailBackdrop').hidden=true);$('detailCloseButton').addEventListener('click',()=>$('detailBackdrop').hidden=true);$('detailBackdrop').addEventListener('click',e=>{if(e.target===$('detailBackdrop'))$('detailBackdrop').hidden=true;});$('closeNotifications').addEventListener('click',()=>$('notificationBackdrop').hidden=true);$('notificationBackdrop').addEventListener('click',e=>{if(e.target===$('notificationBackdrop'))$('notificationBackdrop').hidden=true;});
  $('detailEdit').addEventListener('click',()=>{const p=projectsCache.find(x=>String(x.id)===String(lastViewedProjectId));$('detailBackdrop').hidden=true;if(p)goForm(p);});
  $('detailContent').addEventListener('click',e=>{handleModuleClick(e).catch(err=>message($('appMessage'),'تعذر تنفيذ العملية: '+(err.message||'خطأ غير معروف'),'error'));});
- $('detailContent').addEventListener('submit',e=>{const form=e.target.closest('[data-module-form]');if(!form)return;e.preventDefault();const submit=form.querySelector('button[type="submit"]');busy(submit,true,'جارٍ الحفظ...');submitModule(form).then(()=>{message($('appMessage'),'تم حفظ البيانات بنجاح.','success');}).catch(err=>{message($('appMessage'),'تعذر حفظ البيانات: '+(err.message||'خطأ غير معروف'),'error');}).finally(()=>busy(submit,false));});
+ $('detailContent').addEventListener('submit',e=>{
+  const mf=e.target.closest('[data-module-form]'),inv=e.target.closest('#teamInviteForm'),com=e.target.closest('#projectCommentForm');
+  if(!mf&&!inv&&!com)return;e.preventDefault();const form=mf||inv||com,btn=form.querySelector('button[type="submit"]');busy(btn,true,'جارٍ الحفظ...');
+  const work=mf?submitModule(mf):inv?createTeamInvitation(inv):postComment(com);
+  work.then(()=>{if(mf)message($('appMessage'),'تم حفظ البيانات بنجاح.','success');}).catch(err=>message($('appMessage'),'تعذر تنفيذ العملية: '+(err.message||'خطأ غير معروف'),'error')).finally(()=>busy(btn,false));
+ });
  $('detailContent').addEventListener('change',async e=>{
- const task=e.target.closest('[data-task-status]');
- const quote=e.target.closest('[data-quote-status]');
- if(!task&&!quote)return;
+ const mr=e.target.closest('[data-member-role]');
+ if(mr){try{const r=await client.rpc('ammar_update_project_member_role',{p_project_id:String(activeProject.id),p_user_id:mr.dataset.memberRole,p_role:mr.value});if(r.error)throw r.error;await logActivity('member_role_changed','تم تحديث دور عضو في الفريق','team',mr.dataset.memberRole,{role:mr.value});await loadProjectModules();message($('appMessage'),'تم تحديث صلاحية العضو.','success');}catch(err){message($('appMessage'),'تعذر تحديث الدور: '+(err.message||'خطأ'),'error');await loadProjectModules();}return;}
+ const ps=e.target.closest('[data-payment-status]');
+ if(ps){try{const r=await client.from('project_payments').update({status:ps.value,updated_at:new Date().toISOString(),paid_on:ps.value==='paid'?new Date().toISOString().slice(0,10):null}).eq('id',ps.dataset.paymentStatus).eq('project_id',activeProject.id);if(r.error)throw r.error;await logActivity('payment_status_changed','تم تحديث حالة دفعة','payment',ps.dataset.paymentStatus,{status:ps.value});await loadProjectModules();message($('appMessage'),'تم تحديث حالة الدفعة.','success');}catch(err){message($('appMessage'),'تعذر تحديث الدفعة: '+(err.message||'خطأ'),'error');}return;}
+ const task=e.target.closest('[data-task-status]'),quote=e.target.closest('[data-quote-status]');if(!task&&!quote)return;
  try{
-  const r=task
-   ?await client.from('project_tasks').update({status:task.value,updated_at:new Date().toISOString()}).eq('id',task.dataset.taskStatus).eq('project_id',activeProject.id)
-   :await client.from('project_quotes').update({status:quote.value}).eq('id',quote.dataset.quoteStatus).eq('project_id',activeProject.id);
+  const r=task?await client.from('project_tasks').update({status:task.value,updated_at:new Date().toISOString()}).eq('id',task.dataset.taskStatus).eq('project_id',activeProject.id):await client.from('project_quotes').update({status:quote.value}).eq('id',quote.dataset.quoteStatus).eq('project_id',activeProject.id);
   if(r.error)throw r.error;
-  await loadProjectModules();
-  message($('appMessage'),task?'تم تحديث حالة المهمة.':'تم تحديث حالة عرض السعر.','success');
+  await logActivity(task?'task_status_changed':'quote_status_changed',task?'تم تحديث حالة مهمة':'تم تحديث حالة عرض سعر',task?'task':'quote',task?task.dataset.taskStatus:quote.dataset.quoteStatus,{status:task?task.value:quote.value});
+  await loadProjectModules();message($('appMessage'),task?'تم تحديث حالة المهمة.':'تم تحديث حالة عرض السعر.','success');
  }catch(err){message($('appMessage'),'تعذر تحديث الحالة: '+(err.message||'خطأ'),'error');}
-});
+ });
+
  document.querySelectorAll('[data-auth-panel]').forEach(b=>b.addEventListener('click',()=>{const name=b.dataset.authPanel;if(name==='reset'){$('resetRequestForm').hidden=false;$('newPasswordForm').hidden=true;$('resetEmail').value=$('loginEmail').value.trim();}authPanel(name);}));
  $('appShell').addEventListener('click',clickApp);
  const hp=new URLSearchParams(location.hash.replace(/^#/,'')).get('type'),qp=new URLSearchParams(location.search).get('type');const hashError=new URLSearchParams(location.hash.replace(/^#/,'')).get('error_description')||new URLSearchParams(location.search).get('error_description');
- if(hp==='recovery'||qp==='recovery'){recoveryMode=true;authPanel('reset');$('resetRequestForm').hidden=true;$('newPasswordForm').hidden=false;message($('authMessage'),'جارٍ التحقق من رابط الاستعادة...');}
+ if(hp==='recovery'||qp==='recovery'){recoveryMode=true;authPanel('reset');$('resetRequestForm').hidden=true;$('newPasswordForm').hidden=false;message($('authMessage'),'جارٍ التحقق من رابط الاستعادة...');}if(pendingInviteToken&&!recoveryMode)message($('authMessage'),'تم فتح رابط دعوة. سجّل الدخول أو أنشئ حساباً بالبريد الذي تلقى الدعوة.','info');
  client.auth.getSession().then(r=>{if(r.error){showAuth('تعذر التحقق من الجلسة: '+r.error.message,'error');return;}if(recoveryMode){if(r.data.session)showRecovery();else message($('authMessage'),'رابط الاستعادة غير صالح أو منتهي. اطلب رابطاً جديداً.','error');}else if(r.data.session)showApp(r.data.session.user);else if(hashError)showAuth('تعذر إكمال رابط البريد: '+hashError,'error');else showAuth();}).catch(e=>showAuth('حدث خطأ أثناء فتح التطبيق: '+e.message,'error'));
 }
 init();
