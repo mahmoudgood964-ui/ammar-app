@@ -442,7 +442,7 @@
       const actions=`<div class="eco-message-actions">
         <button type="button" data-eco-reply="${esc(m.id)}">رد</button>
         <button type="button" ${pinned?'data-eco-unpin':'data-eco-pin'}="${esc(m.id)}">${pinned?'إزالة التثبيت':'تثبيت'}</button>
-        <button type="button" data-eco-report="${esc(m.id)}">إبلاغ</button>
+        ${m.sender_id!==user.id?`<button type="button" data-eco-report="${esc(m.id)}">إبلاغ</button>`:''}
         <button type="button" data-eco-forward="${esc(m.id)}">إعادة توجيه</button>
         ${c.data.context_type==='project'?`<button type="button" data-eco-to-task="${esc(m.id)}">تحويل لمهمة</button><button type="button" data-eco-to-change="${esc(m.id)}">طلب تغيير</button>`:''}
       </div>`;
@@ -532,6 +532,7 @@ async function servicesHtml(){
 
   async function startConversation(other,context,contextId,subject){
     if(!other||other===user.id)throw new Error('بيانات الطرف الآخر غير صالحة.');
+    replyToMessageId=null;
     const r=await db.rpc('ammar_start_conversation',{p_other_user:other,p_context_type:context,p_context_id:String(contextId),p_subject:subject||null});
     if(r.error)throw r.error;
     activeConversation=r.data;await chooseTabAsync('messages');switchRealtime(activeConversation);
@@ -587,7 +588,7 @@ async function servicesHtml(){
       if(b.dataset.ecoBlock){
         if(!b.dataset.ecoBlock)throw new Error('لم يتم تحديد الطرف الآخر.');
         if(!window.confirm('حظر هذا الحساب؟ لن يتمكن الطرفان من إرسال رسائل جديدة لبعضهما.'))return;
-        const r=await db.from('ammar_user_blocks').upsert({blocker_id:user.id,blocked_id:b.dataset.ecoBlock},{onConflict:'blocker_id,blocked_id'});
+        const r=await db.from('ammar_user_blocks').insert({blocker_id:user.id,blocked_id:b.dataset.ecoBlock});
         if(r.error)throw r.error;tell('تم حظر الحساب.','success');await render();return;
       }
       if(b.hasAttribute('data-eco-presence-toggle')){
@@ -631,13 +632,13 @@ async function servicesHtml(){
         await startConversation(b.dataset.owner,'market_product',b.dataset.ecoContact,'استفسار عن: '+(p?.title||'منتج'));return;
       }
       if(b.dataset.ecoOpenChat){
-        activeConversation=b.dataset.ecoOpenChat;await render();switchRealtime(activeConversation);return;
+        activeConversation=b.dataset.ecoOpenChat;replyToMessageId=null;await render();switchRealtime(activeConversation);return;
       }
       if(b.dataset.ecoToggleProduct){
         const res=await db.from('ammar_market_products').update({is_active:b.dataset.active!=='true'}).eq('id',b.dataset.ecoToggleProduct);
         if(res.error)throw res.error;await render();tell('تم تحديث حالة المنتج.','success');return;
       }
-      if(b.dataset.ecoOpenChat){activeConversation=b.dataset.ecoOpenChat;await render();switchRealtime(activeConversation);return;}
+      if(b.dataset.ecoOpenChat){activeConversation=b.dataset.ecoOpenChat;replyToMessageId=null;await render();switchRealtime(activeConversation);return;}
       if(b.dataset.ecoAcceptQuote){
         const r=await db.rpc('ammar_accept_market_quote',{p_quote_id:b.dataset.ecoAcceptQuote});
         if(r.error)throw r.error;await render();tell('تم قبول العرض وتسجيل القيمة المتفق عليها.','success');return;
