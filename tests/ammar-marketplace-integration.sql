@@ -36,7 +36,9 @@ RETURNING id AS quote_id \gset
 
 RESET ROLE;
 SELECT set_config('ammar.test.request_id', :'request_id', false);
-DO $$ BEGIN
+SELECT set_config('ammar.test.service_offer_id', :'service_offer_id', false);
+SELECT set_config('ammar.test.service_request_id', :'service_request_id', false);
+DO $ BEGIN
   IF (SELECT status FROM public.ammar_market_requests WHERE id=current_setting('ammar.test.request_id')::uuid) <> 'quoted' THEN
     RAISE EXCEPTION 'Quote trigger did not set request status to quoted';
   END IF;
@@ -175,10 +177,10 @@ BEGIN
   IF v_commission <> 100 THEN RAISE EXCEPTION 'Expected 5%% materials commission of 100, got %',v_commission; END IF;
 
   SELECT commission_amount INTO v_commission FROM public.ammar_commission_ledger
-  WHERE source_type='service_offer' AND source_id=:'service_offer_id';
+  WHERE source_type='service_offer' AND source_id=current_setting('ammar.test.service_offer_id');
   IF v_commission <> 2500 THEN RAISE EXCEPTION 'Expected 5%% service commission of 2500, got %',v_commission; END IF;
 
-  IF (SELECT status FROM public.ammar_service_requests WHERE id=:'service_request_id') <> 'closed' THEN
+  IF (SELECT status FROM public.ammar_service_requests WHERE id=current_setting('ammar.test.service_request_id')::uuid) <> 'closed' THEN
     RAISE EXCEPTION 'Service request should be closed after buyer confirmation';
   END IF;
 
