@@ -247,15 +247,21 @@ function renderModulePanel(){
 async function loadProjectModules(){
  if(!activeProject||!client)return;
  const map={tasks:'project_tasks',expenses:'project_expenses',quotes:'project_quotes',updates:'project_updates',documents:'project_documents',payments:'project_payments',activity:'project_activity',comments:'project_comments',members:'project_members',invitations:'project_invitations'};
- try{
-  const pairs=await Promise.all(Object.entries(map).map(async([k,t])=>{
-   if(k==='invitations'&&String(activeProject.client_id)!==String(currentUser.id))return[k,[]];
+ const failures=[];
+ const pairs=await Promise.all(Object.entries(map).map(async([k,t])=>{
+  if(k==='invitations'&&String(activeProject.client_id)!==String(currentUser.id))return[k,[]];
+  try{
    let q=client.from(t).select(k==='invitations'?'id,project_id,email,member_role,status,expires_at,created_at':'*').eq('project_id',activeProject.id);
    if(!['members','invitations'].includes(k))q=q.order('created_at',{ascending:false}).limit(100);
    const r=await q;if(r.error)throw r.error;return[k,r.data||[]];
-  }));
-  pairs.forEach(([k,v])=>moduleData[k]=v);renderWorkspace();
- }catch(e){$('modulePanel').innerHTML='<div class="message error">تعذر تحميل وحدات المشروع. تأكد من تطبيق ترحيل قاعدة البيانات الجديد. التفاصيل: '+esc(e.message||'خطأ غير معروف')+'</div>';}
+  }catch(error){failures.push({module:k,error});return[k,[]];}
+ }));
+ pairs.forEach(([k,v])=>moduleData[k]=v);renderWorkspace();
+ if(failures.length){
+  const missing=failures.map(x=>x.module).join('، ');
+  const box=$('modulePanel');
+  if(box)box.insertAdjacentHTML('afterbegin','<div class="message error">بعض أقسام المشروع لم تُحمّل ('+esc(missing)+'). شغّل تحديث قاعدة البيانات الجديد مرة واحدة في Supabase لإكمال الفريق والمالية والتعليقات وسجل النشاط. بقية الأقسام المتاحة ستظل تعمل.</div>');
+ }
 }
 
 async function submitModule(form){
