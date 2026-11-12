@@ -42,6 +42,16 @@ placeholder="كلمة المرور" autocomplete="current-password">
 <button id="loginButton" type="button" onclick="login()">دخول</button>
 
 <span class="link" onclick="forgotPassword()">نسيت كلمة المرور؟</span>
+<span class="link" onclick="showSignup()">إنشاء حساب جديد</span>
+</section>
+
+<section id="signup" style="display:none">
+<h3>إنشاء حساب جديد</h3>
+<input id="signupEmail" type="email" placeholder="البريد الإلكتروني" autocomplete="email">
+<input id="signupPassword" type="password" placeholder="كلمة المرور (8 أحرف على الأقل)" autocomplete="new-password">
+<input id="signupConfirm" type="password" placeholder="تأكيد كلمة المرور" autocomplete="new-password">
+<button id="signupButton" type="button" onclick="signup()">إنشاء الحساب</button>
+<span class="link" onclick="showLogin()">العودة إلى تسجيل الدخول</span>
 </section>
 
 <section id="reset">
@@ -104,7 +114,7 @@ function showMessage(text){
 }
 
 function showOnly(sectionId){
-  ['login','reset','app'].forEach(id=>{
+  ['login','signup','reset','app'].forEach(id=>{
     document.getElementById(id).style.display =
       id === sectionId ? 'block' : 'none';
   });
@@ -220,6 +230,44 @@ if(!window.supabase || !window.supabase.createClient){
 
       showLogin('حدث خطأ أثناء فتح التطبيق: '+error.message);
 
+    }
+  }
+
+  function showSignup(){
+    recoveryMode = false;
+    showOnly('signup');
+    showMessage('أدخل بريدك الإلكتروني وأنشئ كلمة مرور آمنة.');
+  }
+
+  async function signup(){
+    const email = document.getElementById('signupEmail').value.trim();
+    const password = document.getElementById('signupPassword').value;
+    const confirmation = document.getElementById('signupConfirm').value;
+    const button = document.getElementById('signupButton');
+
+    if(!email || !password){ showMessage('أدخل البريد الإلكتروني وكلمة المرور.'); return; }
+    if(password.length < 8){ showMessage('كلمة المرور يجب أن تكون 8 أحرف على الأقل.'); return; }
+    if(password !== confirmation){ showMessage('كلمتا المرور غير متطابقتين.'); return; }
+
+    button.disabled = true;
+    showMessage('جارٍ إنشاء الحساب...');
+    try{
+      const {data,error} = await client.auth.signUp({
+        email,
+        password,
+        options:{ emailRedirectTo: APP_URL }
+      });
+      if(error){ showMessage('تعذر إنشاء الحساب: '+error.message); return; }
+      if(data.session){
+        recoveryMode = false;
+        showApp();
+      }else{
+        showLogin('تم إنشاء طلب الحساب. أرسلنا رابط تأكيد إلى بريدك الإلكتروني؛ أكّد البريد ثم سجّل الدخول.');
+      }
+    }catch(error){
+      showMessage('حدث خطأ أثناء إنشاء الحساب: '+error.message);
+    }finally{
+      button.disabled = false;
     }
   }
 
@@ -460,6 +508,8 @@ if(!window.supabase || !window.supabase.createClient){
     }
   }
 
+  window.showSignup = showSignup;
+  window.signup = signup;
   window.login = login;
   window.forgotPassword = forgotPassword;
   window.updatePassword = updatePassword;
