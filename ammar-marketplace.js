@@ -13,7 +13,8 @@
   };
 
   let db=null,user=null,supplier=null,provider=null,products=[],myProducts=[],projects=[];
-  let tab='market',activeConversation=null,messageChannel=null,refreshTimer=null,mounted=false;
+  let tab='market',activeConversation=null,messageChannel=null,refreshTimer=null,presenceTimer=null,mounted=false;
+  let replyToMessageId=null,availableConversations=[],showLastSeen=true;
 
   function styles(){
     if($('ammarEcosystemStyles'))return;
@@ -57,7 +58,16 @@
       .eco-bubble small{display:block;color:#718078;font-size:10px;margin-top:4px}
       .eco-chat-send{display:flex;gap:7px;padding:10px;border-top:1px solid var(--line);flex-wrap:wrap}
       .eco-chat-send input[type=text]{flex:1;min-width:100px;border:1px solid var(--line);border-radius:9px;padding:10px}
-      .eco-chat-send input[type=file]{max-width:118px}
+      .eco-chat-send input[type=file]{max-width:180px}
+      .eco-message-actions{display:flex;gap:5px;flex-wrap:wrap;margin-top:7px}
+      .eco-message-actions button{border:1px solid #dce6df;background:#fff;border-radius:7px;padding:4px 7px;font-size:10px;color:#486056}
+      .eco-chat-toolbar{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:8px}
+      .eco-chat-toolbar input,.eco-chat-toolbar select{border:1px solid var(--line);border-radius:8px;padding:8px;min-width:0}
+      .eco-chat-head-actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:7px}
+      .eco-chat-head-actions .btn{font-size:11px;padding:6px 9px}
+      .eco-reply-preview{border-right:3px solid var(--g);background:#f1f6f3;padding:6px 9px;margin:4px 0 8px;border-radius:7px;font-size:11px;color:#506159}
+      .eco-bubble video{max-width:240px;width:100%;border-radius:9px}
+      .eco-presence{font-size:11px;color:var(--muted);font-weight:400}
       .eco-subsection{margin-bottom:18px}.eco-subsection h3{font-size:16px;color:var(--gd);margin:0 0 11px}
       @media(max-width:760px){.eco-grid{grid-template-columns:1fr}.eco-messages{grid-template-columns:1fr}.eco-chat-list{max-height:190px}.eco-chat-pane{min-height:380px}.eco-form{grid-template-columns:1fr}.eco-form .wide{grid-column:auto}.eco-shell{padding:12px}.eco-header h2{font-size:21px}}
     `;
@@ -95,6 +105,8 @@
       </div>`;
     document.querySelector('#appShell .content').appendChild(view);
     view.addEventListener('click',click);view.addEventListener('submit',submit);
+    view.addEventListener('input',e=>{if(e.target.id==='ecoChatSearch')filterChatList();if(e.target.id==='ecoMessageSearch')filterMessageBubbles();});
+    view.addEventListener('change',e=>{if(e.target.id==='ecoChatFilter')filterChatList();});
     mounted=true;
   }
 
@@ -300,47 +312,169 @@
   }
 
   async function messagesHtml(){
-    const mine=await db.from('ammar_conversation_participants').select('conversation_id').eq('user_id',user.id).order('joined_at',{ascending:false}).limit(100);
+    const mine=await db.from('ammar_conversation_participants').select('conversation_id').eq('user_id',user.id).order('joined_at',{ascending:false}).limit(200);
     if(mine.error)throw mine.error;
     const ids=(mine.data||[]).map(x=>x.conversation_id);
     if(!ids.length)return '<div class="eco-empty">لا توجد محادثات بعد. ابدأ من زر «مراسلة المورد» أو من طلب شراء.</div>';
-    const [cr,pr]=await Promise.all([
+    const [cr,pr,prefs,unread]=await Promise.all([
       db.from('ammar_conversations').select('*').in('id',ids).order('last_message_at',{ascending:false}),
-      db.from('ammar_conversation_participants').select('conversation_id,user_id').in('conversation_id',ids)
+      db.from('ammar_conversation_participants').select('conversation_id,user_id').in('conversation_id',ids),
+      db.from('ammar_conversation_preferences').select('conversation_id,archived_at').eq('user_id',user.id).in('conversation_id',ids),
+      db.from('ammar_user_notifications').select('conversation_id').eq('user_id',user.id).is('read_at',null).in('conversation_id',ids)
     ]);
-    if(cr.error)throw cr.error;if(pr.error)throw pr.error;
+    if(cr.error)throw cr.error;if(pr.error)throw pr.error;if(prefs.error)throw prefs.error;if(unread.error)throw unread.error;
+    availableConversations=cr.data||[];
     const other=new Map();(pr.data||[]).forEach(x=>{if(x.user_id!==user.id)other.set(x.conversation_id,x.user_id);});
-    const list=(cr.data||[]).map(c=>`<button class="eco-chat-item ${activeConversation===c.id?'active':''}" type="button" data-eco-open-chat="${esc(c.id)}"><strong>${esc(c.subject||'محادثة عَمِّر')}</strong><small>${esc(c.context_type)} · الطرف الآخر ${short(other.get(c.id))} · ${esc(new Date(c.last_message_at).toLocaleString('ar'))}</small></button>`).join('');
+    const otherIds=[...new Set([...other.values()])];
+    let supplierOwners=new Set(),providerOwners=new Set();
+    if(otherIds.length){
+      const [s,p]=await Promise.all([
+        db.from('ammar_market_suppliers').select('owner_id').in('owner_id',otherIds),
+        db.from('ammar_service_providers').select('owner_id').in('owner_id',otherIds)
+      ]);
+      if(!s.error)supplierOwners=new Set((s.data||[]).map(x=>x.owner_id));
+      if(!p.error)providerOwners=new Set((p.data||[]).map(x=>x.owner_id));
+    }
+    const archived=new Set((prefs.data||[]).filter(x=>x.archived_at).map(x=>x.conversation_id));
+    const unreadCounts=new Map();(unread.data||[]).forEach(x=>unreadCounts.set(x.conversation_id,(unreadCounts.get(x.conversation_id)||0)+1));
+    const list=availableConversations.map(c=>{
+      const counterpart=other.get(c.id),isArchived=archived.has(c.id),count=unreadCounts.get(c.id)||0;
+      const role=c.context_type==='project'?'project':supplierOwners.has(counterpart)?'supplier':providerOwners.has(counterpart)?'contractor':'customer';
+      const label={project:'مشروع',supplier:'مورد',contractor:'مقاول / خدمة',customer:'عميل'}[role];
+      const search=[c.subject,c.context_type,label,counterpart].join(' ').toLowerCase();
+      return `<button class="eco-chat-item ${activeConversation===c.id?'active':''}" type="button"
+        data-eco-open-chat="${esc(c.id)}" data-eco-chat-item
+        data-role="${role}" data-unread="${count>0?'true':'false'}" data-archived="${isArchived?'true':'false'}"
+        data-search="${esc(search)}">
+        <strong>${esc(c.subject||'محادثة عَمِّر')} ${count?`<span class="notification-badge">${count}</span>`:''} ${isArchived?'<span class="eco-pill">مؤرشفة</span>':''}</strong>
+        <small>${label} · الطرف الآخر ${short(counterpart)} · ${esc(new Date(c.last_message_at).toLocaleString('ar'))}</small>
+      </button>`;
+    }).join('');
     const pane=activeConversation?await chatPane(activeConversation):'<div class="eco-empty">اختر محادثة لعرض الرسائل.</div>';
-    return `<div class="eco-messages"><aside class="eco-chat-list">${list}</aside><section class="eco-chat-pane">${pane}</section></div>`;
+    return `<div class="eco-chat-toolbar">
+      <input id="ecoChatSearch" type="search" placeholder="ابحث في المحادثات أو اسم الطرف..." aria-label="بحث المحادثات">
+      <select id="ecoChatFilter" aria-label="تصفية المحادثات">
+        <option value="all">كل المحادثات</option><option value="unread">غير المقروءة</option>
+        <option value="archived">المؤرشفة</option><option value="customer">العملاء</option>
+        <option value="supplier">الموردون</option><option value="contractor">المقاولون والخدمات</option>
+        <option value="project">محادثات المشاريع</option>
+      </select>
+    </div>
+    <div class="eco-messages"><aside class="eco-chat-list">${list||'<div class="eco-empty">لا توجد محادثات.</div>'}</aside><section class="eco-chat-pane">${pane}</section></div>`;
+  }
+
+  function filterChatList(){
+    const q=($('ecoChatSearch')?.value||'').trim().toLowerCase();
+    const f=$('ecoChatFilter')?.value||'all';
+    document.querySelectorAll('[data-eco-chat-item]').forEach(el=>{
+      const archived=el.dataset.archived==='true',unread=el.dataset.unread==='true';
+      const matchQuery=!q||(el.dataset.search||'').includes(q)||el.textContent.toLowerCase().includes(q);
+      let matchFilter=true;
+      if(f==='unread')matchFilter=unread&&!archived;
+      else if(f==='archived')matchFilter=archived;
+      else if(f==='all')matchFilter=!archived;
+      else matchFilter=el.dataset.role===f&&!archived;
+      el.hidden=!(matchQuery&&matchFilter);
+    });
+  }
+
+  function filterMessageBubbles(){
+    const q=($('ecoMessageSearch')?.value||'').trim().toLowerCase();
+    document.querySelectorAll('#ecoChatBody .eco-bubble').forEach(el=>{
+      el.hidden=!!q&&!el.textContent.toLowerCase().includes(q);
+    });
   }
 
   async function chatPane(id){
     const c=await db.from('ammar_conversations').select('*').eq('id',id).maybeSingle();
     if(c.error)throw c.error;if(!c.data)return '<div class="eco-empty">المحادثة غير متاحة.</div>';
-    const r=await db.from('ammar_messages').select('*').eq('conversation_id',id).order('created_at',{ascending:true}).limit(300);
+    const r=await db.from('ammar_messages').select('*').eq('conversation_id',id).order('created_at',{ascending:true}).limit(500);
     if(r.error)throw r.error;
-    const marked=await db.rpc('ammar_mark_conversation_read',{p_conversation_id:id});
+    const members=await db.from('ammar_conversation_participants').select('user_id').eq('conversation_id',id);
+    if(members.error)throw members.error;
+    const other=(members.data||[]).find(x=>x.user_id!==user.id)?.user_id||null;
+    const pref=await db.from('ammar_conversation_preferences').select('archived_at').eq('conversation_id',id).eq('user_id',user.id).maybeSingle();
+    if(pref.error)throw pref.error;
+    const marked=await db.rpc('ammar_mark_conversation_delivered',{p_conversation_id:id});
     if(marked.error)throw marked.error;
-    const read=await db.from('ammar_user_notifications').update({read_at:new Date().toISOString()}).eq('user_id',user.id).eq('conversation_id',id).is('read_at',null);
+    const read=await db.rpc('ammar_mark_conversation_read',{p_conversation_id:id});
     if(read.error)throw read.error;
+    const messageIds=(r.data||[]).map(x=>x.id);
+    let receipts=[],pins=[];
+    if(messageIds.length){
+      const rr=await db.from('ammar_message_receipts').select('message_id,user_id,delivered_at,read_at').in('message_id',messageIds);
+      if(rr.error)throw rr.error;receipts=rr.data||[];
+    }
+    const pr=await db.from('ammar_pinned_messages').select('message_id').eq('conversation_id',id);
+    if(pr.error)throw pr.error;pins=(pr.data||[]).map(x=>x.message_id);
+    let presenceText='';
+    if(other){
+      const presence=await db.rpc('ammar_get_conversation_presence',{p_conversation_id:id,p_other_user:other});
+      if(!presence.error&&presence.data?.length){
+        const last=new Date(presence.data[0].last_seen_at),age=Date.now()-last.getTime();
+        presenceText=age<120000?'متصل الآن':'آخر ظهور '+last.toLocaleString('ar');
+      }else presenceText='آخر الظهور مخفي';
+    }
     await refreshUnreadCount();
+    const byId=new Map((r.data||[]).map(x=>[x.id,x]));
+    const forwardOptions=availableConversations.filter(x=>x.id!==id).map(x=>`<option value="${esc(x.id)}">${esc(x.subject||'محادثة')} · ${esc(x.context_type)}</option>`).join('');
     const bubbles=await Promise.all((r.data||[]).map(async m=>{
       let body=esc(m.body||'');
+      if(m.message_type==='location'&&m.location_lat!=null&&m.location_lng!=null){
+        const mapUrl='https://www.google.com/maps?q='+encodeURIComponent(m.location_lat+','+m.location_lng);
+        body+=`<div><a href="${esc(mapUrl)}" target="_blank" rel="noopener">📍 ${esc(m.location_label||'موقع مشترك')} (${esc(m.location_lat)}, ${esc(m.location_lng)})</a></div>`;
+      }
       if(m.file_path){
         const signed=await db.storage.from('ammar-chat-files').createSignedUrl(m.file_path,3600);
         if(!signed.error&&signed.data?.signedUrl){
-          body+=m.message_type==='image'?`<div><img src="${esc(signed.data.signedUrl)}" alt="${esc(m.file_name||'صورة')}" style="max-width:220px;border-radius:9px"></div>`:`<div><a href="${esc(signed.data.signedUrl)}" target="_blank" rel="noopener">${esc(m.file_name||'فتح المرفق')}</a></div>`;
+          if(m.message_type==='image')body+=`<div><img src="${esc(signed.data.signedUrl)}" alt="${esc(m.file_name||'صورة')}" loading="lazy" style="max-width:220px;border-radius:9px"></div>`;
+          else if(m.message_type==='video')body+=`<div><video controls preload="metadata"><source src="${esc(signed.data.signedUrl)}" type="${esc(m.mime_type||'video/mp4')}"></video></div>`;
+          else body+=`<div><a href="${esc(signed.data.signedUrl)}" target="_blank" rel="noopener">${esc(m.file_name||'فتح المرفق')}</a></div>`;
         }else body+='<div class="muted">تعذر فتح المرفق.</div>';
       }
-      return `<div class="eco-bubble ${m.sender_id===user.id?'mine':''}">${body}<small>${m.sender_id===user.id?'أنت':'الطرف الآخر'} · ${esc(new Date(m.created_at).toLocaleString('ar'))}</small></div>`;
+      if(m.reply_to_id){
+        const parent=byId.get(m.reply_to_id);
+        body=`<div class="eco-reply-preview">رد على: ${esc(parent?.body||parent?.file_name||'رسالة سابقة')}</div>`+body;
+      }
+      const received=receipts.filter(x=>x.message_id===m.id);
+      const state=m.sender_id!==user.id?'':received.some(x=>x.read_at)?' · تمت القراءة':received.some(x=>x.delivered_at)?' · تم التسليم':' · أُرسلت';
+      const pinned=pins.includes(m.id);
+      const actions=`<div class="eco-message-actions">
+        <button type="button" data-eco-reply="${esc(m.id)}">رد</button>
+        <button type="button" ${pinned?'data-eco-unpin':'data-eco-pin'}="${esc(m.id)}">${pinned?'إزالة التثبيت':'تثبيت'}</button>
+        <button type="button" data-eco-report="${esc(m.id)}">إبلاغ</button>
+        <button type="button" data-eco-forward="${esc(m.id)}">إعادة توجيه</button>
+        ${c.data.context_type==='project'?`<button type="button" data-eco-to-task="${esc(m.id)}">تحويل لمهمة</button><button type="button" data-eco-to-change="${esc(m.id)}">طلب تغيير</button>`:''}
+      </div>`;
+      return `<div class="eco-bubble ${m.sender_id===user.id?'mine':''}" data-eco-message="${esc(m.id)}">
+        ${pinned?'<span class="eco-pill">مثبتة</span>':''}${body}
+        <small>${m.sender_id===user.id?'أنت':'الطرف الآخر'} · ${esc(new Date(m.created_at).toLocaleString('ar'))}${state}</small>${actions}
+      </div>`;
     }));
-    return `<div class="eco-chat-head">${esc(c.data.subject||'محادثة عَمِّر')} <span class="muted">· ${esc(c.data.context_type)}</span></div>
+    const archived=!!pref.data?.archived_at;
+    const replyMessage=replyToMessageId?byId.get(replyToMessageId):null;
+    const replyHtml=replyMessage?`<div id="ecoReplyHint" class="eco-reply-preview">الرد على: ${esc(replyMessage.body||replyMessage.file_name||'رسالة')} <button type="button" data-eco-clear-reply>إلغاء</button></div>`:'';
+    return `<div class="eco-chat-head">${esc(c.data.subject||'محادثة عَمِّر')} <span class="eco-presence">· ${esc(c.data.context_type)} ${presenceText?'· '+esc(presenceText):''}</span>
+      <div class="eco-chat-head-actions">
+        <button class="btn quiet" type="button" data-eco-archive="${esc(id)}" data-archived="${archived?'true':'false'}">${archived?'إلغاء الأرشفة':'أرشفة'}</button>
+        <button class="btn quiet" type="button" data-eco-block="${esc(other||'')}">حظر الطرف</button>
+        <button class="btn quiet" type="button" data-eco-presence-toggle>${showLastSeen?'إخفاء آخر ظهور':'إظهار آخر ظهور'}</button>
+      </div></div>
+      <div class="eco-chat-toolbar"><input id="ecoMessageSearch" type="search" placeholder="ابحث داخل الرسائل...">
+        ${forwardOptions?`<select id="ecoForwardTarget"><option value="">وجهة إعادة التوجيه...</option>${forwardOptions}</select>`:''}
+      </div>
       <div id="ecoChatBody" class="eco-chat-body">${bubbles.join('')||'<div class="eco-empty">ابدأ المحادثة برسالة واضحة.</div>'}</div>
-      <form id="ecoSendMessageForm" class="eco-chat-send"><input type="text" name="body" maxlength="5000" placeholder="اكتب رسالتك..." autocomplete="off"><input type="file" name="attachment" accept="image/jpeg,image/png,image/webp,application/pdf,.doc,.docx,.xls,.xlsx"><button class="btn primary" type="submit">إرسال</button></form>`;
+      ${replyHtml}
+      <form id="ecoSendMessageForm" class="eco-chat-send">
+        <input type="hidden" name="reply_to_id" value="${esc(replyToMessageId||'')}">
+        <input type="text" name="body" maxlength="5000" placeholder="اكتب رسالتك..." autocomplete="off">
+        <input type="file" name="attachment" accept="image/jpeg,image/png,image/webp,application/pdf,.doc,.docx,.xls,.xlsx,video/mp4,video/webm,video/quicktime">
+        <button class="btn light" type="button" data-eco-location>مشاركة الموقع</button>
+        <button class="btn primary" type="submit">إرسال</button>
+      </form>`;
   }
 
-  async function servicesHtml(){
+async function servicesHtml(){
     const p=provider;
     const profile=`<section class="eco-card eco-subsection"><h3>${p?'ملف مقدم الخدمة':'إنشاء ملف مقاول أو مقدم خدمة'}</h3>
       <form id="ecoProviderForm" class="eco-form">
@@ -418,9 +552,72 @@
 
   async function click(e){
     const t=e.target.closest('[data-eco-tab]');if(t){chooseTab(t.dataset.ecoTab);return;}
-    const b=e.target.closest('[data-eco-action],[data-eco-buy],[data-eco-contact],[data-eco-toggle-product],[data-eco-open-chat],[data-eco-accept-quote],[data-eco-submit-quote],[data-eco-advance],[data-eco-order-chat],[data-eco-create-agreement],[data-eco-service-offer],[data-eco-accept-service],[data-eco-service-chat],[data-eco-service-agreement],[data-eco-complete-service],[data-eco-accept-agreement],[data-eco-submit-review]');
+    const b=e.target.closest('[data-eco-action],[data-eco-buy],[data-eco-contact],[data-eco-toggle-product],[data-eco-open-chat],[data-eco-accept-quote],[data-eco-submit-quote],[data-eco-advance],[data-eco-order-chat],[data-eco-create-agreement],[data-eco-service-offer],[data-eco-accept-service],[data-eco-service-chat],[data-eco-service-agreement],[data-eco-complete-service],[data-eco-accept-agreement],[data-eco-submit-review],[data-eco-reply],[data-eco-clear-reply],[data-eco-pin],[data-eco-unpin],[data-eco-report],[data-eco-forward],[data-eco-archive],[data-eco-block],[data-eco-presence-toggle],[data-eco-location],[data-eco-to-task],[data-eco-to-change]');
     if(!b)return;
     try{
+      if(b.dataset.ecoReply){replyToMessageId=b.dataset.ecoReply;await render();return;}
+      if(b.hasAttribute('data-eco-clear-reply')){replyToMessageId=null;await render();return;}
+      if(b.dataset.ecoPin){
+        const r=await db.from('ammar_pinned_messages').insert({conversation_id:activeConversation,message_id:b.dataset.ecoPin,pinned_by:user.id});
+        if(r.error)throw r.error;await render();tell('تم تثبيت الرسالة.','success');return;
+      }
+      if(b.dataset.ecoUnpin){
+        const r=await db.from('ammar_pinned_messages').delete().eq('conversation_id',activeConversation).eq('message_id',b.dataset.ecoUnpin).eq('pinned_by',user.id);
+        if(r.error)throw r.error;await render();tell('تم إلغاء تثبيت الرسالة.','success');return;
+      }
+      if(b.dataset.ecoReport){
+        const reason=window.prompt('ما سبب الإبلاغ عن هذه الرسالة؟');
+        if(!reason||reason.trim().length<5)return;
+        const r=await db.from('ammar_message_reports').insert({conversation_id:activeConversation,message_id:b.dataset.ecoReport,reporter_id:user.id,reason:reason.trim()});
+        if(r.error)throw r.error;tell('تم تسجيل البلاغ للمراجعة.','success');return;
+      }
+      if(b.dataset.ecoForward){
+        const target=$('ecoForwardTarget')?.value;
+        if(!target)throw new Error('اختر محادثة مستهدفة أولاً.');
+        const r=await db.rpc('ammar_forward_message',{p_message_id:b.dataset.ecoForward,p_target_conversation_id:target});
+        if(r.error)throw r.error;tell('تمت إعادة توجيه الرسالة.','success');return;
+      }
+      if(b.dataset.ecoArchive){
+        const archived=b.dataset.archived==='true';
+        const r=await db.from('ammar_conversation_preferences').upsert({
+          conversation_id:b.dataset.ecoArchive,user_id:user.id,archived_at:archived?null:new Date().toISOString(),updated_at:new Date().toISOString()
+        },{onConflict:'conversation_id,user_id'});
+        if(r.error)throw r.error;await render();tell(archived?'تمت إعادة المحادثة إلى القائمة.':'تمت أرشفة المحادثة.','success');return;
+      }
+      if(b.dataset.ecoBlock){
+        if(!b.dataset.ecoBlock)throw new Error('لم يتم تحديد الطرف الآخر.');
+        if(!window.confirm('حظر هذا الحساب؟ لن يتمكن الطرفان من إرسال رسائل جديدة لبعضهما.'))return;
+        const r=await db.from('ammar_user_blocks').upsert({blocker_id:user.id,blocked_id:b.dataset.ecoBlock},{onConflict:'blocker_id,blocked_id'});
+        if(r.error)throw r.error;tell('تم حظر الحساب.','success');await render();return;
+      }
+      if(b.hasAttribute('data-eco-presence-toggle')){
+        showLastSeen=!showLastSeen;
+        const r=await db.rpc('ammar_set_presence',{p_show_last_seen:showLastSeen});
+        if(r.error)throw r.error;await render();tell(showLastSeen?'أصبح آخر ظهور مرئياً.':'تم إخفاء آخر ظهور.','success');return;
+      }
+      if(b.hasAttribute('data-eco-location')){
+        if(!navigator.geolocation)throw new Error('المتصفح لا يدعم مشاركة الموقع.');
+        navigator.geolocation.getCurrentPosition(async pos=>{
+          try{
+            const loc={conversation_id:activeConversation,sender_id:user.id,message_type:'location',body:'موقع مشترك',location_lat:pos.coords.latitude,location_lng:pos.coords.longitude,location_label:'الموقع الحالي'};
+            const r=await db.from('ammar_messages').insert(loc);if(r.error)throw r.error;
+            await render();switchRealtime(activeConversation);
+          }catch(err){tell('تعذر مشاركة الموقع: '+(err.message||'خطأ'),'error');}
+        },err=>tell('تعذر الحصول على الموقع: '+err.message,'error'),{enableHighAccuracy:false,timeout:10000,maximumAge:60000});
+        return;
+      }
+      if(b.dataset.ecoToTask){
+        const r=await db.rpc('ammar_message_to_project_task',{p_message_id:b.dataset.ecoToTask});
+        if(r.error)throw r.error;tell('تم تحويل الرسالة إلى مهمة داخل المشروع.','success');return;
+      }
+      if(b.dataset.ecoToChange){
+        const title=window.prompt('عنوان طلب التغيير:','طلب تغيير من المحادثة');
+        if(!title)return;
+        const reason=window.prompt('اشرح التغيير المطلوب:', 'تم تحويل رسالة المشروع إلى طلب تغيير لمراجعته.');
+        if(!reason)return;
+        const r=await db.rpc('ammar_message_to_change_order',{p_message_id:b.dataset.ecoToChange,p_title:title,p_reason:reason,p_cost_impact:0,p_currency:'SDG',p_days_impact:0});
+        if(r.error)throw r.error;tell('تم إنشاء طلب تغيير للمراجعة.','success');return;
+      }
       if(b.dataset.ecoAction==='refresh'){await render();tell('تم تحديث البيانات.','success');return;}
       if(b.dataset.ecoBuy){
         const p=products.find(x=>x.id===b.dataset.ecoBuy),qty=Number($('ecoQty-'+b.dataset.ecoBuy)?.value||0);
@@ -550,15 +747,23 @@
       }else if(form.id==='ecoSendMessageForm'){
         if(!activeConversation)throw new Error('اختر محادثة أولاً.');
         const body=(d.body||'').trim(),file=form.querySelector('input[name=attachment]')?.files?.[0]||null;
+        const replyTo=d.reply_to_id||null;
         if(!body&&!file)throw new Error('اكتب رسالة أو اختر مرفقاً.');
-        if(body){const m=await db.from('ammar_messages').insert({conversation_id:activeConversation,sender_id:user.id,message_type:'text',body});if(m.error)throw m.error;}
+        if(body){
+          const m=await db.from('ammar_messages').insert({conversation_id:activeConversation,sender_id:user.id,message_type:'text',body,reply_to_id:replyTo});
+          if(m.error)throw m.error;
+        }
         if(file){
-          if(file.size>25*1024*1024)throw new Error('الحد الأقصى للمرفق 25 ميجابايت.');
+          if(file.size>50*1024*1024)throw new Error('الحد الأقصى للمرفق 50 ميجابايت.');
           const safe=file.name.replace(/[^a-zA-Z0-9._-]/g,'_'),path=`${activeConversation}/${user.id}/${Date.now()}-${safe}`;
           const up=await db.storage.from('ammar-chat-files').upload(path,file,{upsert:false,contentType:file.type||'application/octet-stream'});if(up.error)throw up.error;
           const image=/^image\/(jpeg|png|webp)$/.test(file.type);
-          const m=await db.from('ammar_messages').insert({conversation_id:activeConversation,sender_id:user.id,message_type:image?'image':'file',file_path:path,file_name:file.name,mime_type:file.type||null});if(m.error)throw m.error;
+          const video=/^video\/(mp4|webm|quicktime)$/.test(file.type);
+          const messageType=image?'image':video?'video':'file';
+          const m=await db.from('ammar_messages').insert({conversation_id:activeConversation,sender_id:user.id,message_type:messageType,file_path:path,file_name:file.name,mime_type:file.type||null,reply_to_id:replyTo});
+          if(m.error)throw m.error;
         }
+        replyToMessageId=null;
         await render();switchRealtime(activeConversation);
       }
     }catch(err){tell('تعذر الحفظ: '+(err.message||'خطأ غير معروف'),'error');}
@@ -574,12 +779,17 @@
 
   function start(sessionUser){
     user=sessionUser;if(!user)return;mount();if(!mounted)return;
+    db.from('ammar_user_presence').select('show_last_seen').eq('user_id',user.id).maybeSingle()
+      .then(r=>{if(!r.error&&r.data)showLastSeen=r.data.show_last_seen!==false;})
+      .finally(()=>db.rpc('ammar_set_presence',{p_show_last_seen:showLastSeen}).then(()=>{}).catch(()=>{}));
     Promise.all([loadProfiles(),loadProjects()]).then(()=>render()).catch(err=>{
       const p=$('ecoPanel');
       if(p)p.innerHTML=`<div class="eco-empty">لم يتم تهيئة السوق بعد. طبّق ترحيل <strong>202611120006_ammar_marketplace_messaging.sql</strong> في Supabase ثم أعد تحميل التطبيق.<br><small>${esc(err.message||'')}</small></div>`;
     });
     if(refreshTimer)clearInterval(refreshTimer);
+    if(presenceTimer)clearInterval(presenceTimer);
     refreshTimer=setInterval(()=>{if(user&&!document.hidden){refreshUnreadCount();if(tab==='messages')render().catch(()=>{});}},30000);
+    presenceTimer=setInterval(()=>{if(user&&!document.hidden)db.rpc('ammar_set_presence',{p_show_last_seen:showLastSeen}).then(()=>{}).catch(()=>{});},60000);
   }
 
   function boot(){
@@ -590,6 +800,7 @@
       else{
         user=null;activeConversation=null;
         if(refreshTimer)clearInterval(refreshTimer);
+        if(presenceTimer)clearInterval(presenceTimer);
         if(messageChannel)db.removeChannel(messageChannel).catch(()=>{});
         $('ammarEcosystemView')?.classList.remove('active');
       }
