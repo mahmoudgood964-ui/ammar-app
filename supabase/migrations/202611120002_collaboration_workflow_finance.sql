@@ -344,7 +344,6 @@ GRANT EXECUTE ON FUNCTION public.ammar_accept_project_invitation(text) TO authen
 GRANT EXECUTE ON FUNCTION public.ammar_update_project_member_role(text,uuid,text) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.ammar_remove_project_member(text,uuid) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.ammar_revoke_project_invitation(text,uuid) TO authenticated;
-
 CREATE OR REPLACE FUNCTION public.ammar_revoke_project_invitation(
   p_project_id text,
   p_invitation_id uuid
