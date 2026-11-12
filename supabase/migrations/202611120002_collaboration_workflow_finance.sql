@@ -323,12 +323,11 @@ BEGIN
   END LOOP;
 END $$;
 
-CREATE POLICY project_members_self_select ON public.project_members
-FOR SELECT TO authenticated USING (user_id=auth.uid());
-CREATE POLICY project_members_owner_select ON public.project_members
+DROP POLICY IF EXISTS project_members_self_select ON public.project_members;
+DROP POLICY IF EXISTS project_members_owner_select ON public.project_members;
+CREATE POLICY project_members_project_read ON public.project_members
 FOR SELECT TO authenticated USING (
-  EXISTS (SELECT 1 FROM public.projects p
-          WHERE p.id=project_members.project_id AND p.client_id=auth.uid())
+  public.ammar_project_role(project_id::text) IS NOT NULL
 );
 
 -- Project invitations are private and administered only through the SECURITY DEFINER RPCs.
@@ -354,7 +353,8 @@ CREATE POLICY project_activity_member_select ON public.project_activity
 FOR SELECT TO authenticated USING (public.ammar_project_role(project_id::text) IS NOT NULL);
 CREATE POLICY project_activity_member_insert ON public.project_activity
 FOR INSERT TO authenticated WITH CHECK (
-  public.ammar_project_role(project_id::text) IN ('owner','manager','supervisor','engineer','accountant','worker')
+  actor_id=auth.uid()
+  AND public.ammar_project_role(project_id::text) IN ('owner','manager','supervisor','engineer','accountant','worker')
 );
 
 ALTER TABLE public.project_comments ENABLE ROW LEVEL SECURITY;
