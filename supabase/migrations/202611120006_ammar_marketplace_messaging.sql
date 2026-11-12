@@ -1121,7 +1121,7 @@ FOR INSERT TO authenticated WITH CHECK (
     SELECT 1 FROM public.ammar_market_requests r
     JOIN public.ammar_market_suppliers s ON s.id = r.supplier_id
     WHERE r.id = request_id
-      AND r.supplier_id = supplier_id
+      AND r.supplier_id = ammar_market_quotes.supplier_id
       AND s.owner_id = auth.uid()
       AND r.status IN ('submitted','quoted')
   )
