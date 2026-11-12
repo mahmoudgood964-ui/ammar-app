@@ -64,8 +64,11 @@ for (const rpc of ['ammar_mark_conversation_delivered','ammar_mark_conversation_
   assert.ok(messagingPlus.includes('FUNCTION public.' + rpc), 'Missing advanced messaging RPC ' + rpc);
 }
 assert.ok(messagingPlus.includes("'video','location'"), 'Video and location messages are missing');
+assert.ok(messagingPlus.includes("'market_quote','agreement'"), 'Quote and agreement chat contexts are missing');
 assert.ok(messagingTests.includes('AMMAR ADVANCED MESSAGING TESTS PASSED'), 'Advanced messaging integration tests are missing');
 assert.ok(messagingTests.includes('بعد إلغاء الحظر'), 'Unblock/resume messaging test is missing');
+assert.ok(messagingTests.includes("'market_quote'"), 'Quote-linked conversation test is missing');
+assert.ok(messagingTests.includes("'agreement'"), 'Agreement-linked conversation test is missing');
 assert.ok(competitiveAudit.includes('عمار لمواد البناء'), 'Direct same-name building-materials competitor not documented');
 assert.ok(competitiveAudit.includes('BOQ'), 'Defensible project procurement differentiation is not documented');
 assert.ok(releaseAudit.includes('synthetic PostgreSQL'), 'Release audit must distinguish synthetic CI from production readiness');
@@ -73,7 +76,7 @@ assert.ok(releaseAudit.includes('synthetic PostgreSQL'), 'Release audit must dis
 for (const feature of [
   'data-eco-buy','data-eco-contact','data-eco-submit-quote','data-eco-accept-quote',
   'data-eco-service-offer','data-eco-accept-service','data-eco-service-chat',
-  'data-eco-complete-service','data-eco-submit-review','data-eco-unblock','data-eco-to-task','data-eco-to-change','contextCard','ammar_user_notifications','ammar-chat-files','ammar-market-files'
+  'data-eco-complete-service','data-eco-submit-review','data-eco-unblock','data-eco-to-task','data-eco-to-change','data-eco-quote-chat','data-eco-agreement-chat','contextCard','ammar_user_notifications','ammar-chat-files','ammar-market-files'
 ]) assert.ok(moduleSource.includes(feature), 'Missing UI feature ' + feature);
 
 console.log('AMMAR static application and migration checks passed.');
