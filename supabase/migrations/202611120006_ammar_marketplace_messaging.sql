@@ -903,15 +903,18 @@ BEGIN
     RAISE EXCEPTION 'Only an awarded service request can be completed';
   END IF;
 
-  SELECT so.*, sp.owner_id, sp.provider_type
-  INTO o, v_provider_owner, v_provider_type
-  FROM public.ammar_service_offers so
-  JOIN public.ammar_service_providers sp ON sp.id = so.provider_id
-  WHERE so.request_id = r.id AND so.status = 'accepted'
-  FOR UPDATE OF so;
+  SELECT * INTO o
+  FROM public.ammar_service_offers
+  WHERE request_id = r.id AND status = 'accepted'
+  FOR UPDATE;
   IF NOT FOUND THEN
     RAISE EXCEPTION 'An accepted service offer is required';
   END IF;
+
+  SELECT owner_id, provider_type
+  INTO v_provider_owner, v_provider_type
+  FROM public.ammar_service_providers
+  WHERE id = o.provider_id;
 
   UPDATE public.ammar_service_requests
   SET status = 'closed', updated_at = now()
