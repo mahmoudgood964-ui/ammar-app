@@ -5,12 +5,14 @@ SELECT id AS conversation_id
 FROM public.ammar_conversations
 WHERE context_type='market_request' AND subject='محادثة اختبار'
 ORDER BY created_at DESC LIMIT 1 \gset
+SELECT set_config('ammar.test.conversation_id', :'conversation_id', false);
 
 SELECT id AS source_message_id
 FROM public.ammar_messages
 WHERE conversation_id=:'conversation_id'
   AND body='رسالة اختبار من العميل.'
 ORDER BY created_at DESC LIMIT 1 \gset
+SELECT set_config('ammar.test.source_message_id', :'source_message_id', false);
 
 -- A new message creates an undelivered receipt for the other participant.
 SET ROLE authenticated;
@@ -18,6 +20,7 @@ SELECT set_config('request.jwt.claim.sub','11111111-1111-4111-8111-111111111111'
 INSERT INTO public.ammar_messages(conversation_id,sender_id,message_type,body)
 VALUES (:'conversation_id','11111111-1111-4111-8111-111111111111','text','رسالة لاختبار إيصال التسليم والقراءة.')
 RETURNING id AS receipt_message_id \gset
+SELECT set_config('ammar.test.receipt_message_id', :'receipt_message_id', false);
 
 -- Recipient marks delivery, then read.
 RESET ROLE;
