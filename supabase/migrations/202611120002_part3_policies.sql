@@ -45,9 +45,10 @@ END $$;
 
 DROP POLICY IF EXISTS project_members_self_select ON public.project_members;
 DROP POLICY IF EXISTS project_members_owner_select ON public.project_members;
-CREATE POLICY project_members_project_read ON public.project_members
+CREATE POLICY project_members_owner_or_self_select ON public.project_members
 FOR SELECT TO authenticated USING (
-  public.ammar_project_role(project_id::text) IS NOT NULL
+  user_id = auth.uid()
+  OR public.ammar_project_role(project_id::text) = 'owner'
 );
 
 -- Project invitations are private and administered only through the SECURITY DEFINER RPCs.
