@@ -259,6 +259,7 @@
         <article class="eco-card"><span class="eco-meta">بلاغات مفتوحة أو قيد التحقيق</span><h2>${openReports}</h2></article>
         <article class="eco-card"><span class="eco-meta">نزاعات مفتوحة</span><h2>${openDisputes}</h2></article>
       </div>
+      <section class="eco-subsection"><div class="eco-note"><strong>العمولات:</strong> لا توجد حالياً أي نسبة عمولة مفعّلة في النظام. لا تفعّل نسبة أو تعرض سعراً قبل اعتماد الشروط التجارية كتابةً.</div></section>
       <section class="eco-subsection"><h3>اعتماد الموردين ومقدمي الخدمات</h3>
         ${providerReviewCards(pendingProviders)}
       </section>
@@ -954,9 +955,9 @@ async function servicesHtml(){
         await startConversation(b.dataset.other,'service_offer',b.dataset.ecoServiceChat,'محادثة عرض خدمة');return;
       }
       if(b.dataset.ecoCompleteService){
-        if(!window.confirm('هل تؤكد اكتمال الخدمة واستلامها؟ سيُسجل المبلغ ضمن مصروفات المشروع وتُسجل عمولة عَمِّر المستحقة حسب إعدادات النشاط.'))return;
+        if(!window.confirm('هل تؤكد اكتمال الخدمة واستلامها؟ سيُسجّل المبلغ ضمن مصروفات المشروع. لا توجد حالياً عمولة مفعّلة؛ أي عمولة مستقبلية تتطلب اتفاقاً تجارياً واضحاً وتفعيل إعداد معتمد.'))return;
         const r=await db.rpc('ammar_complete_service_request',{p_request_id:b.dataset.ecoCompleteService});
-        if(r.error)throw r.error;await render();tell('تم تأكيد اكتمال الخدمة وتسجيل مصروف المشروع والعمولة المستحقة.','success');return;
+        if(r.error)throw r.error;await render();tell('تم تأكيد اكتمال الخدمة وتسجيل مصروف المشروع. لم يتم تحصيل أو تحويل أي أموال.','success');return;
       }
       if(b.dataset.ecoServiceAgreement){
         const id=b.dataset.ecoServiceAgreement;
