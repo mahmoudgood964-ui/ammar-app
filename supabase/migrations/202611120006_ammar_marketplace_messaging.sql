@@ -431,7 +431,7 @@ BEGIN
   IF p_other_user IS NULL OR p_other_user = v_user THEN
     RAISE EXCEPTION 'A different participant is required';
   END IF;
-  IF p_context_type NOT IN ('project','market_product','supplier','market_request','service_offer')
+  IF p_context_type IS NULL OR p_context_type NOT IN ('project','market_product','supplier','market_request','service_offer')
      OR coalesce(trim(p_context_id),'') = '' THEN
     RAISE EXCEPTION 'A valid conversation context is required';
   END IF;
@@ -593,6 +593,239 @@ BEGIN
 END;
 $$;
 
+CREATE OR REPLACE FUNCTION public.ammar_accept_market_quote(p_quote_id uuid)
+RETURNS uuid
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $
+DECLARE
+  q public.ammar_market_quotes%ROWTYPE;
+  r public.ammar_market_requests%ROWTYPE;
+BEGIN
+  SELECT * INTO q FROM public.ammar_market_quotes WHERE id = p_quote_id FOR UPDATE;
+  IF NOT FOUND THEN RAISE EXCEPTION 'Quote not found'; END IF;
+  SELECT * INTO r FROM public.ammar_market_requests WHERE id = q.request_id FOR UPDATE;
+  IF NOT FOUND OR r.buyer_id <> auth.uid() THEN
+    RAISE EXCEPTION 'Only the buyer can accept this quote';
+  END IF;
+  IF r.status NOT IN ('submitted','quoted') OR q.status <> 'proposed' THEN
+    RAISE EXCEPTION 'This quote can no longer be accepted';
+  END IF;
+
+  UPDATE public.ammar_market_quotes
+  SET status = CASE WHEN id = q.id THEN 'accepted' ELSE 'rejected' END
+  WHERE request_id = r.id AND status = 'proposed';
+
+  UPDATE public.ammar_market_requests
+  SET status = 'accepted', agreed_total = q.total_amount, currency = q.currency
+  WHERE id = r.id;
+
+  INSERT INTO public.ammar_transaction_events(request_id, actor_id, event_type, summary, payload)
+  VALUES (r.id, auth.uid(), 'quote_accepted', 'تم قبول عرض المورد.',
+          jsonb_build_object('quote_id', q.id, 'amount', q.total_amount, 'currency', q.currency));
+  RETURN r.id;
+END;
+$;
+
+CREATE OR REPLACE FUNCTION public.ammar_advance_market_request(
+  p_request_id uuid,
+  p_next_status text,
+  p_note text DEFAULT NULL
+)
+RETURNS text
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $
+DECLARE
+  r public.ammar_market_requests%ROWTYPE;
+  v_supplier_owner uuid;
+  v_is_buyer boolean;
+  v_is_supplier boolean;
+  v_rate numeric(5,2);
+  v_payer_side text;
+  v_payer uuid;
+  v_amount numeric(14,2);
+  v_currency text;
+BEGIN
+  SELECT * INTO r FROM public.ammar_market_requests WHERE id = p_request_id FOR UPDATE;
+  IF NOT FOUND THEN RAISE EXCEPTION 'Request not found'; END IF;
+
+  SELECT owner_id INTO v_supplier_owner
+  FROM public.ammar_market_suppliers WHERE id = r.supplier_id;
+  v_is_buyer := r.buyer_id = auth.uid();
+  v_is_supplier := v_supplier_owner = auth.uid();
+  IF NOT (v_is_buyer OR v_is_supplier) THEN
+    RAISE EXCEPTION 'Request access denied';
+  END IF;
+
+  IF p_next_status = 'cancelled' THEN
+    IF r.status IN ('completed','cancelled') THEN
+      RAISE EXCEPTION 'This request cannot be cancelled';
+    END IF;
+  ELSIF p_next_status = 'disputed' THEN
+    IF r.status IN ('completed','cancelled','disputed')
+       OR char_length(coalesce(trim(p_note),'')) < 10 THEN
+      RAISE EXCEPTION 'A dispute requires an active request and a reason of at least 10 characters';
+    END IF;
+    INSERT INTO public.ammar_disputes(request_id, raised_by, reason)
+    VALUES (r.id, auth.uid(), trim(p_note));
+  ELSIF p_next_status = 'fulfilling' THEN
+    IF NOT v_is_supplier OR r.status <> 'accepted' THEN
+      RAISE EXCEPTION 'Only the supplier can start fulfilment after acceptance';
+    END IF;
+  ELSIF p_next_status = 'delivered' THEN
+    IF NOT v_is_supplier OR r.status <> 'fulfilling' THEN
+      RAISE EXCEPTION 'Only the supplier can mark an accepted order as delivered';
+    END IF;
+  ELSIF p_next_status = 'completed' THEN
+    IF NOT v_is_buyer OR r.status <> 'delivered' OR r.agreed_total IS NULL THEN
+      RAISE EXCEPTION 'Only the buyer can complete a delivered order with an agreed total';
+    END IF;
+  ELSE
+    RAISE EXCEPTION 'Unsupported status transition';
+  END IF;
+
+  UPDATE public.ammar_market_requests
+  SET status = p_next_status,
+      completed_at = CASE WHEN p_next_status = 'completed' THEN now() ELSE completed_at END
+  WHERE id = r.id;
+
+  INSERT INTO public.ammar_transaction_events(request_id, actor_id, event_type, summary, payload)
+  VALUES (r.id, auth.uid(), 'status_' || p_next_status,
+          coalesce(nullif(trim(p_note),''), 'تم تحديث حالة الطلب إلى ' || p_next_status || '.'),
+          jsonb_build_object('from', r.status, 'to', p_next_status));
+
+  IF p_next_status = 'completed' THEN
+    SELECT rate_percent, payer_side INTO v_rate, v_payer_side
+    FROM public.ammar_commission_rules
+    WHERE activity_type = 'market_materials' AND is_active = true
+    LIMIT 1;
+    IF v_rate IS NOT NULL THEN
+      v_amount := r.agreed_total;
+      v_currency := r.currency;
+      v_payer := CASE WHEN v_payer_side = 'customer'
+                      THEN r.buyer_id ELSE v_supplier_owner END;
+      INSERT INTO public.ammar_commission_ledger(
+        request_id, gross_amount, currency, rate_percent,
+        commission_amount, payer_id, status
+      )
+      VALUES (
+        r.id, v_amount, v_currency, v_rate,
+        round(v_amount * v_rate / 100, 2), v_payer, 'due'
+      )
+      ON CONFLICT (request_id) DO NOTHING;
+    END IF;
+  END IF;
+
+  RETURN p_next_status;
+END;
+$;
+
+CREATE OR REPLACE FUNCTION public.ammar_accept_service_offer(p_offer_id uuid)
+RETURNS uuid
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $
+DECLARE
+  o public.ammar_service_offers%ROWTYPE;
+  r public.ammar_service_requests%ROWTYPE;
+BEGIN
+  SELECT * INTO o FROM public.ammar_service_offers WHERE id = p_offer_id FOR UPDATE;
+  IF NOT FOUND THEN RAISE EXCEPTION 'Offer not found'; END IF;
+  SELECT * INTO r FROM public.ammar_service_requests WHERE id = o.request_id FOR UPDATE;
+  IF NOT FOUND OR r.requester_id <> auth.uid() OR r.status <> 'open' OR o.status <> 'proposed' THEN
+    RAISE EXCEPTION 'Only the requester can accept an offer for an open request';
+  END IF;
+
+  UPDATE public.ammar_service_offers
+  SET status = CASE WHEN id = o.id THEN 'accepted' ELSE 'rejected' END
+  WHERE request_id = r.id AND status = 'proposed';
+  UPDATE public.ammar_service_requests SET status = 'awarded' WHERE id = r.id;
+
+  RETURN r.id;
+END;
+$;
+
+CREATE OR REPLACE FUNCTION public.ammar_validate_agreement()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $
+BEGIN
+  IF NEW.created_by <> auth.uid() OR auth.uid() NOT IN (NEW.client_id, NEW.provider_id) THEN
+    RAISE EXCEPTION 'Only a contract party can create this agreement';
+  END IF;
+
+  IF NEW.source_type = 'project' THEN
+    IF NEW.project_id IS NULL OR public.ammar_project_role(NEW.project_id::text) IS NULL THEN
+      RAISE EXCEPTION 'Agreement must reference a project accessible to its creator';
+    END IF;
+    IF NOT EXISTS (
+      SELECT 1 FROM public.projects p
+      WHERE p.id = NEW.project_id
+        AND (
+          p.client_id = NEW.provider_id
+          OR EXISTS (SELECT 1 FROM public.project_members pm
+                     WHERE pm.project_id = p.id AND pm.user_id = NEW.provider_id)
+        )
+    ) AND NEW.provider_id <> (SELECT client_id FROM public.projects WHERE id = NEW.project_id) THEN
+      RAISE EXCEPTION 'The other party must be a member of the referenced project';
+    END IF;
+  ELSIF NEW.source_type = 'market_request' THEN
+    IF NOT EXISTS (
+      SELECT 1 FROM public.ammar_market_requests r
+      JOIN public.ammar_market_suppliers s ON s.id = r.supplier_id
+      WHERE r.id::text = NEW.source_id
+        AND r.buyer_id = NEW.client_id
+        AND s.owner_id = NEW.provider_id
+        AND r.status = 'accepted'
+    ) THEN
+      RAISE EXCEPTION 'Agreement parties must match an accepted market request';
+    END IF;
+  ELSIF NEW.source_type = 'service_offer' THEN
+    IF NOT EXISTS (
+      SELECT 1 FROM public.ammar_service_offers o
+      JOIN public.ammar_service_requests r ON r.id = o.request_id
+      JOIN public.ammar_service_providers sp ON sp.id = o.provider_id
+      WHERE o.id::text = NEW.source_id
+        AND r.requester_id = NEW.client_id
+        AND sp.owner_id = NEW.provider_id
+        AND o.status = 'accepted'
+    ) THEN
+      RAISE EXCEPTION 'Agreement parties must match an accepted service offer';
+    END IF;
+  END IF;
+  RETURN NEW;
+END;
+$;
+
+DROP TRIGGER IF EXISTS ammar_validate_agreement_trigger ON public.ammar_agreements;
+CREATE TRIGGER ammar_validate_agreement_trigger
+BEFORE INSERT ON public.ammar_agreements
+FOR EACH ROW EXECUTE FUNCTION public.ammar_validate_agreement();
+
+CREATE OR REPLACE FUNCTION public.ammar_record_agreement_creation()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $
+BEGIN
+  INSERT INTO public.ammar_agreement_events(agreement_id, actor_id, event_type, note)
+  VALUES (NEW.id, NEW.created_by, 'created', 'تم إنشاء مسودة الاتفاق وإرسالها للطرف الآخر.');
+  RETURN NEW;
+END;
+$;
+
+DROP TRIGGER IF EXISTS ammar_agreement_created_trigger ON public.ammar_agreements;
+CREATE TRIGGER ammar_agreement_created_trigger
+AFTER INSERT ON public.ammar_agreements
+FOR EACH ROW EXECUTE FUNCTION public.ammar_record_agreement_creation();
+
 CREATE OR REPLACE FUNCTION public.ammar_notify_new_message()
 RETURNS trigger
 LANGUAGE plpgsql
@@ -706,17 +939,6 @@ FOR INSERT TO authenticated WITH CHECK (
               WHERE s.id = supplier_id AND s.status = 'active')
   AND (project_id IS NULL OR public.ammar_project_role(project_id::text) IS NOT NULL)
 );
-CREATE POLICY ammar_market_requests_update ON public.ammar_market_requests
-FOR UPDATE TO authenticated USING (
-  buyer_id = auth.uid()
-  OR EXISTS (SELECT 1 FROM public.ammar_market_suppliers s
-             WHERE s.id = supplier_id AND s.owner_id = auth.uid())
-) WITH CHECK (
-  buyer_id = auth.uid()
-  OR EXISTS (SELECT 1 FROM public.ammar_market_suppliers s
-             WHERE s.id = supplier_id AND s.owner_id = auth.uid())
-);
-
 CREATE POLICY ammar_market_items_select ON public.ammar_market_request_items
 FOR SELECT TO authenticated USING (
   EXISTS (
@@ -754,19 +976,6 @@ FOR INSERT TO authenticated WITH CHECK (
     WHERE r.id = request_id AND r.supplier_id = supplier_id AND s.owner_id = auth.uid()
   )
 );
-CREATE POLICY ammar_market_quotes_update ON public.ammar_market_quotes
-FOR UPDATE TO authenticated USING (
-  EXISTS (SELECT 1 FROM public.ammar_market_suppliers s
-          WHERE s.id = supplier_id AND s.owner_id = auth.uid())
-  OR EXISTS (SELECT 1 FROM public.ammar_market_requests r
-             WHERE r.id = request_id AND r.buyer_id = auth.uid())
-) WITH CHECK (
-  EXISTS (SELECT 1 FROM public.ammar_market_suppliers s
-          WHERE s.id = supplier_id AND s.owner_id = auth.uid())
-  OR EXISTS (SELECT 1 FROM public.ammar_market_requests r
-             WHERE r.id = request_id AND r.buyer_id = auth.uid())
-);
-
 CREATE POLICY ammar_service_requests_select ON public.ammar_service_requests
 FOR SELECT TO authenticated USING (
   requester_id = auth.uid()
@@ -778,10 +987,6 @@ FOR INSERT TO authenticated WITH CHECK (
   requester_id = auth.uid()
   AND (project_id IS NULL OR public.ammar_project_role(project_id::text) IS NOT NULL)
 );
-CREATE POLICY ammar_service_requests_update ON public.ammar_service_requests
-FOR UPDATE TO authenticated USING (requester_id = auth.uid())
-WITH CHECK (requester_id = auth.uid());
-
 CREATE POLICY ammar_service_offers_select ON public.ammar_service_offers
 FOR SELECT TO authenticated USING (
   EXISTS (SELECT 1 FROM public.ammar_service_requests r
@@ -797,19 +1002,6 @@ FOR INSERT TO authenticated WITH CHECK (
   AND EXISTS (SELECT 1 FROM public.ammar_service_requests r
               WHERE r.id = request_id AND r.status = 'open')
 );
-CREATE POLICY ammar_service_offers_update ON public.ammar_service_offers
-FOR UPDATE TO authenticated USING (
-  EXISTS (SELECT 1 FROM public.ammar_service_providers sp
-          WHERE sp.id = provider_id AND sp.owner_id = auth.uid())
-  OR EXISTS (SELECT 1 FROM public.ammar_service_requests r
-             WHERE r.id = request_id AND r.requester_id = auth.uid())
-) WITH CHECK (
-  EXISTS (SELECT 1 FROM public.ammar_service_providers sp
-          WHERE sp.id = provider_id AND sp.owner_id = auth.uid())
-  OR EXISTS (SELECT 1 FROM public.ammar_service_requests r
-             WHERE r.id = request_id AND r.requester_id = auth.uid())
-);
-
 CREATE POLICY ammar_conversations_select ON public.ammar_conversations
 FOR SELECT TO authenticated USING (public.ammar_is_conversation_member(id, auth.uid()));
 CREATE POLICY ammar_participants_select ON public.ammar_conversation_participants
@@ -821,7 +1013,9 @@ FOR SELECT TO authenticated USING (public.ammar_is_conversation_member(conversat
 CREATE POLICY ammar_messages_insert ON public.ammar_messages
 FOR INSERT TO authenticated WITH CHECK (
   sender_id = auth.uid()
+  AND message_type IN ('text','image','file')
   AND public.ammar_is_conversation_member(conversation_id, auth.uid())
+  AND (file_path IS NULL OR file_path LIKE conversation_id::text || '/' || auth.uid()::text || '/%')
 );
 
 CREATE POLICY ammar_notifications_select ON public.ammar_user_notifications
@@ -852,7 +1046,11 @@ FOR INSERT TO authenticated WITH CHECK (
     SELECT 1 FROM public.ammar_market_requests r
     JOIN public.ammar_market_suppliers s ON s.id = r.supplier_id
     WHERE r.id = request_id AND r.status = 'completed'
-      AND (r.buyer_id = auth.uid() AND s.owner_id = reviewed_user_id)
+      AND (
+        (r.buyer_id = auth.uid() AND s.owner_id = reviewed_user_id)
+        OR
+        (s.owner_id = auth.uid() AND r.buyer_id = reviewed_user_id)
+      )
   )
 );
 
@@ -893,11 +1091,12 @@ FOR INSERT TO authenticated WITH CHECK (
               WHERE r.id = request_id AND (r.buyer_id = auth.uid() OR s.owner_id = auth.uid()))
 );
 
-GRANT SELECT, INSERT, UPDATE ON
+GRANT SELECT ON
   public.ammar_market_suppliers,
   public.ammar_market_products,
   public.ammar_service_providers,
   public.ammar_market_requests,
+  public.ammar_market_request_items,
   public.ammar_market_quotes,
   public.ammar_service_requests,
   public.ammar_service_offers,
@@ -907,7 +1106,52 @@ GRANT SELECT, INSERT, UPDATE ON
   public.ammar_transaction_events
 TO authenticated;
 
-GRANT SELECT, INSERT ON public.ammar_market_request_items TO authenticated;
+-- Column-level writes keep provider verification and workflow state server-controlled.
+GRANT INSERT (owner_id,business_name,contact_name,contact_phone,whatsapp_phone,
+  governorate,city,area,market_name,address,description,logo_path)
+ON public.ammar_market_suppliers TO authenticated;
+GRANT UPDATE (business_name,contact_name,contact_phone,whatsapp_phone,
+  governorate,city,area,market_name,address,description,logo_path)
+ON public.ammar_market_suppliers TO authenticated;
+
+GRANT INSERT (supplier_id,title,category,brand,description,unit,price,currency,
+  quantity_available,availability,image_path,is_active)
+ON public.ammar_market_products TO authenticated;
+GRANT UPDATE (title,category,brand,description,unit,price,currency,
+  quantity_available,availability,image_path,is_active,price_updated_at)
+ON public.ammar_market_products TO authenticated;
+
+GRANT INSERT (owner_id,business_name,provider_type,contact_name,contact_phone,
+  governorate,city,area,address,description,portfolio_url)
+ON public.ammar_service_providers TO authenticated;
+GRANT UPDATE (business_name,provider_type,contact_name,contact_phone,
+  governorate,city,area,address,description,portfolio_url)
+ON public.ammar_service_providers TO authenticated;
+
+GRANT INSERT (buyer_id,supplier_id,project_id,delivery_governorate,
+  delivery_city,delivery_area,delivery_address,buyer_note,currency)
+ON public.ammar_market_requests TO authenticated;
+GRANT INSERT (request_id,product_id,product_title,unit,quantity,
+  requested_unit_price,buyer_note)
+ON public.ammar_market_request_items TO authenticated;
+GRANT INSERT (request_id,supplier_id,created_by,total_amount,currency,
+  delivery_days,valid_until,notes)
+ON public.ammar_market_quotes TO authenticated;
+
+GRANT INSERT (requester_id,project_id,service_type,title,description,
+  governorate,city,area,budget_min,budget_max,currency,target_start_date)
+ON public.ammar_service_requests TO authenticated;
+GRANT INSERT (request_id,provider_id,created_by,amount,currency,
+  duration_days,inclusions,exclusions,warranty_months)
+ON public.ammar_service_offers TO authenticated;
+
+GRANT INSERT (project_id,source_type,source_id,client_id,provider_id,
+  title,scope,amount,currency,schedule_text,terms,created_by)
+ON public.ammar_agreements TO authenticated;
+GRANT INSERT (request_id,reviewer_id,reviewed_user_id,rating,review_text)
+ON public.ammar_reviews TO authenticated;
+GRANT INSERT (request_id,raised_by,reason,evidence_note)
+ON public.ammar_disputes TO authenticated;
 GRANT SELECT ON public.ammar_conversations, public.ammar_conversation_participants,
   public.ammar_messages, public.ammar_user_notifications,
   public.ammar_agreement_events, public.ammar_commission_rules,
@@ -924,6 +1168,11 @@ REVOKE ALL ON FUNCTION public.ammar_is_conversation_member(uuid,uuid) FROM PUBLI
 REVOKE ALL ON FUNCTION public.ammar_start_conversation(uuid,text,text,text) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.ammar_mark_conversation_read(uuid) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.ammar_accept_agreement(uuid) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.ammar_accept_market_quote(uuid) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.ammar_advance_market_request(uuid,text,text) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.ammar_accept_service_offer(uuid) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.ammar_validate_agreement() FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.ammar_record_agreement_creation() FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.ammar_ecosystem_touch_updated_at() FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.ammar_notify_new_message() FROM PUBLIC;
 
@@ -931,6 +1180,9 @@ GRANT EXECUTE ON FUNCTION public.ammar_is_conversation_member(uuid,uuid) TO auth
 GRANT EXECUTE ON FUNCTION public.ammar_start_conversation(uuid,text,text,text) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.ammar_mark_conversation_read(uuid) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.ammar_accept_agreement(uuid) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.ammar_accept_market_quote(uuid) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.ammar_advance_market_request(uuid,text,text) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.ammar_accept_service_offer(uuid) TO authenticated;
 
 INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 VALUES (
@@ -958,6 +1210,7 @@ DROP POLICY IF EXISTS ammar_chat_files_member_insert ON storage.objects;
 CREATE POLICY ammar_chat_files_member_insert ON storage.objects
 FOR INSERT TO authenticated WITH CHECK (
   bucket_id = 'ammar-chat-files'
+  AND (storage.foldername(name))[2] = auth.uid()::text
   AND public.ammar_is_conversation_member((storage.foldername(name))[1]::uuid, auth.uid())
 );
 DROP POLICY IF EXISTS ammar_chat_files_member_delete ON storage.objects;
