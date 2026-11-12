@@ -405,8 +405,8 @@
       const rr=await db.from('ammar_message_receipts').select('message_id,user_id,delivered_at,read_at').in('message_id',messageIds);
       if(rr.error)throw rr.error;receipts=rr.data||[];
     }
-    const pr=await db.from('ammar_pinned_messages').select('message_id').eq('conversation_id',id);
-    if(pr.error)throw pr.error;pins=(pr.data||[]).map(x=>x.message_id);
+    const pr=await db.from('ammar_pinned_messages').select('message_id,pinned_by').eq('conversation_id',id);
+    if(pr.error)throw pr.error;pins=new Map((pr.data||[]).map(x=>[x.message_id,x.pinned_by]));
     let presenceText='';
     if(other){
       const presence=await db.rpc('ammar_get_conversation_presence',{p_conversation_id:id,p_other_user:other});
@@ -438,10 +438,11 @@
       }
       const received=receipts.filter(x=>x.message_id===m.id);
       const state=m.sender_id!==user.id?'':received.some(x=>x.read_at)?' · تمت القراءة':received.some(x=>x.delivered_at)?' · تم التسليم':' · أُرسلت';
-      const pinned=pins.includes(m.id);
+      const pinned=pins.has(m.id),pinnedByMe=pins.get(m.id)===user.id;
+      const pinControl=!pinned?`<button type="button" data-eco-pin="${esc(m.id)}">تثبيت</button>`:pinnedByMe?`<button type="button" data-eco-unpin="${esc(m.id)}">إزالة التثبيت</button>`:'<span class="eco-pill">مثبتة من الطرف الآخر</span>';
       const actions=`<div class="eco-message-actions">
         <button type="button" data-eco-reply="${esc(m.id)}">رد</button>
-        <button type="button" ${pinned?'data-eco-unpin':'data-eco-pin'}="${esc(m.id)}">${pinned?'إزالة التثبيت':'تثبيت'}</button>
+        ${pinControl}
         ${m.sender_id!==user.id?`<button type="button" data-eco-report="${esc(m.id)}">إبلاغ</button>`:''}
         <button type="button" data-eco-forward="${esc(m.id)}">إعادة توجيه</button>
         ${c.data.context_type==='project'?`<button type="button" data-eco-to-task="${esc(m.id)}">تحويل لمهمة</button><button type="button" data-eco-to-change="${esc(m.id)}">طلب تغيير</button>`:''}
@@ -453,13 +454,33 @@
     }));
     const archived=!!pref.data?.archived_at;
     const replyMessage=replyToMessageId?byId.get(replyToMessageId):null;
+    const blockState=other?await db.from('ammar_user_blocks').select('blocked_id').eq('blocker_id',user.id).eq('blocked_id',other).maybeSingle():{data:null,error:null};
+    if(blockState.error)throw blockState.error;
+    let contextCard='';
+    if(c.data.context_type==='market_product'){
+      const q=await db.from('ammar_market_products').select('title,category,brand,unit,price,currency,availability,quantity_available,supplier:ammar_market_suppliers(business_name,city,governorate)').eq('id',c.data.context_id).maybeSingle();
+      if(!q.error&&q.data){const s=Array.isArray(q.data.supplier)?q.data.supplier[0]:q.data.supplier;contextCard=`<div class="eco-note"><strong>المنتج المرتبط بالمحادثة</strong><p>${esc(q.data.title)} · ${esc(q.data.category)} · ${money(q.data.price,q.data.currency)} / ${esc(q.data.unit)}</p><small>${esc(s?.business_name||'المورد')} · ${esc(s?.city||'')} ${esc(s?.governorate||'')} · ${esc(q.data.availability||'')}</small></div>`;}
+    }else if(c.data.context_type==='market_request'){
+      const q=await db.from('ammar_market_requests').select('status,agreed_total,currency,delivery_city,supplier:ammar_market_suppliers(business_name)').eq('id',c.data.context_id).maybeSingle();
+      if(!q.error&&q.data){const s=Array.isArray(q.data.supplier)?q.data.supplier[0]:q.data.supplier;const items=await db.from('ammar_market_request_items').select('product_title,quantity,unit').eq('request_id',c.data.context_id);const itemText=!items.error?(items.data||[]).map(x=>esc(x.product_title)+' — '+esc(x.quantity)+' '+esc(x.unit)).join('، '):'';contextCard=`<div class="eco-note"><strong>طلب الشراء المرتبط</strong><p>${itemText||'تفاصيل الطلب'} · ${esc(statusText[q.data.status]||q.data.status)}</p><small>${esc(s?.business_name||'المورد')} · ${esc(q.data.delivery_city||'')} · ${q.data.agreed_total==null?'لم يعتمد السعر':money(q.data.agreed_total,q.data.currency)}</small></div>`;}
+    }else if(c.data.context_type==='service_offer'){
+      const q=await db.from('ammar_service_offers').select('amount,currency,status,duration_days,request:ammar_service_requests(title,service_type,city),provider:ammar_service_providers(business_name)').eq('id',c.data.context_id).maybeSingle();
+      if(!q.error&&q.data){const req=Array.isArray(q.data.request)?q.data.request[0]:q.data.request,sp=Array.isArray(q.data.provider)?q.data.provider[0]:q.data.provider;contextCard=`<div class="eco-note"><strong>عرض الخدمة المرتبط</strong><p>${esc(req?.title||'طلب خدمة')} · ${money(q.data.amount,q.data.currency)} · ${esc(q.data.duration_days??'—')} يوم</p><small>${esc(sp?.business_name||'مقدم الخدمة')} · ${esc(req?.city||'')} · ${esc(statusText[q.data.status]||q.data.status)}</small></div>`;}
+    }else if(c.data.context_type==='supplier'){
+      const q=await db.from('ammar_market_suppliers').select('business_name,market_name,city,governorate,description').eq('id',c.data.context_id).maybeSingle();
+      if(!q.error&&q.data)contextCard=`<div class="eco-note"><strong>ملف المورد</strong><p>${esc(q.data.business_name)} · ${esc(q.data.market_name||'')}</p><small>${esc(q.data.city||'')} · ${esc(q.data.governorate||'')} · ${esc(q.data.description||'')}</small></div>`;
+    }else if(c.data.context_type==='project'){
+      const q=await db.from('projects').select('title,status,budget_amount,budget_currency').eq('id',c.data.context_id).maybeSingle();
+      if(!q.error&&q.data)contextCard=`<div class="eco-note"><strong>المشروع المرتبط</strong><p>${esc(q.data.title)} · ${esc(statusText[q.data.status]||q.data.status||'')}</p><small>${q.data.budget_amount==null?'': 'الميزانية: '+money(q.data.budget_amount,q.data.budget_currency||'SDG')}</small></div>`;
+    }
     const replyHtml=replyMessage?`<div id="ecoReplyHint" class="eco-reply-preview">الرد على: ${esc(replyMessage.body||replyMessage.file_name||'رسالة')} <button type="button" data-eco-clear-reply>إلغاء</button></div>`:'';
     return `<div class="eco-chat-head">${esc(c.data.subject||'محادثة عَمِّر')} <span class="eco-presence">· ${esc(c.data.context_type)} ${presenceText?'· '+esc(presenceText):''}</span>
       <div class="eco-chat-head-actions">
         <button class="btn quiet" type="button" data-eco-archive="${esc(id)}" data-archived="${archived?'true':'false'}">${archived?'إلغاء الأرشفة':'أرشفة'}</button>
-        <button class="btn quiet" type="button" data-eco-block="${esc(other||'')}">حظر الطرف</button>
+        ${blockState.data?`<button class="btn quiet" type="button" data-eco-unblock="${esc(other||'')}">إلغاء الحظر</button>`:`<button class="btn quiet" type="button" data-eco-block="${esc(other||'')}">حظر الطرف</button>`}
         <button class="btn quiet" type="button" data-eco-presence-toggle>${showLastSeen?'إخفاء آخر ظهور':'إظهار آخر ظهور'}</button>
       </div></div>
+      ${contextCard}
       <div class="eco-chat-toolbar"><input id="ecoMessageSearch" type="search" placeholder="ابحث داخل الرسائل...">
         ${forwardOptions?`<select id="ecoForwardTarget"><option value="">وجهة إعادة التوجيه...</option>${forwardOptions}</select>`:''}
       </div>
@@ -553,7 +574,7 @@ async function servicesHtml(){
 
   async function click(e){
     const t=e.target.closest('[data-eco-tab]');if(t){chooseTab(t.dataset.ecoTab);return;}
-    const b=e.target.closest('[data-eco-action],[data-eco-buy],[data-eco-contact],[data-eco-toggle-product],[data-eco-open-chat],[data-eco-accept-quote],[data-eco-submit-quote],[data-eco-advance],[data-eco-order-chat],[data-eco-create-agreement],[data-eco-service-offer],[data-eco-accept-service],[data-eco-service-chat],[data-eco-service-agreement],[data-eco-complete-service],[data-eco-accept-agreement],[data-eco-submit-review],[data-eco-reply],[data-eco-clear-reply],[data-eco-pin],[data-eco-unpin],[data-eco-report],[data-eco-forward],[data-eco-archive],[data-eco-block],[data-eco-presence-toggle],[data-eco-location],[data-eco-to-task],[data-eco-to-change]');
+    const b=e.target.closest('[data-eco-action],[data-eco-buy],[data-eco-contact],[data-eco-toggle-product],[data-eco-open-chat],[data-eco-accept-quote],[data-eco-submit-quote],[data-eco-advance],[data-eco-order-chat],[data-eco-create-agreement],[data-eco-service-offer],[data-eco-accept-service],[data-eco-service-chat],[data-eco-service-agreement],[data-eco-complete-service],[data-eco-accept-agreement],[data-eco-submit-review],[data-eco-reply],[data-eco-clear-reply],[data-eco-pin],[data-eco-unpin],[data-eco-report],[data-eco-forward],[data-eco-archive],[data-eco-block],[data-eco-presence-toggle],[data-eco-location],[data-eco-to-task],[data-eco-to-change],[data-eco-unblock]');
     if(!b)return;
     try{
       if(b.dataset.ecoReply){replyToMessageId=b.dataset.ecoReply;await render();return;}
@@ -584,6 +605,10 @@ async function servicesHtml(){
           conversation_id:b.dataset.ecoArchive,user_id:user.id,archived_at:archived?null:new Date().toISOString(),updated_at:new Date().toISOString()
         },{onConflict:'conversation_id,user_id'});
         if(r.error)throw r.error;await render();tell(archived?'تمت إعادة المحادثة إلى القائمة.':'تمت أرشفة المحادثة.','success');return;
+      }
+      if(b.dataset.ecoUnblock){
+        const r=await db.from('ammar_user_blocks').delete().eq('blocker_id',user.id).eq('blocked_id',b.dataset.ecoUnblock);
+        if(r.error)throw r.error;await render();tell('تم إلغاء الحظر.','success');return;
       }
       if(b.dataset.ecoBlock){
         if(!b.dataset.ecoBlock)throw new Error('لم يتم تحديد الطرف الآخر.');
