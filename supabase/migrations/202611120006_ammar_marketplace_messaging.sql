@@ -393,22 +393,21 @@ END
 $ammar_touch$;
 
 CREATE OR REPLACE FUNCTION public.ammar_is_conversation_member(
-  p_conversation_id uuid,
-  p_user_id uuid DEFAULT auth.uid()
+  p_conversation_id uuid
 )
 RETURNS boolean
 LANGUAGE sql
 STABLE
 SECURITY DEFINER
 SET search_path = public, pg_temp
-AS $$
+AS $
   SELECT EXISTS (
     SELECT 1
     FROM public.ammar_conversation_participants cp
     WHERE cp.conversation_id = p_conversation_id
-      AND cp.user_id = p_user_id
+      AND cp.user_id = auth.uid()
   );
-$$;
+$;
 
 CREATE OR REPLACE FUNCTION public.ammar_start_conversation(
   p_other_user uuid,
@@ -541,7 +540,7 @@ SECURITY DEFINER
 SET search_path = public, pg_temp
 AS $$
 BEGIN
-  IF auth.uid() IS NULL OR NOT public.ammar_is_conversation_member(p_conversation_id, auth.uid()) THEN
+  IF auth.uid() IS NULL OR NOT public.ammar_is_conversation_member(p_conversation_id) THEN
     RAISE EXCEPTION 'Conversation access denied';
   END IF;
   UPDATE public.ammar_conversation_participants
@@ -646,8 +645,8 @@ BEGIN
       AND s.owner_id <> $1
     RETURNING id
   $query$, v_project_id_type)
-  USING auth.uid(), p_supplier_id, p_project_id, p_buyer_note, p_product_id, p_quantity
-  INTO v_request_id;
+  INTO v_request_id
+  USING auth.uid(), p_supplier_id, p_project_id, p_buyer_note, p_product_id, p_quantity;
 
   IF v_request_id IS NULL THEN
     RAISE EXCEPTION 'The selected product is unavailable or the supplier is inactive';
@@ -1112,18 +1111,18 @@ FOR INSERT TO authenticated WITH CHECK (
               WHERE r.id = request_id AND r.status = 'open')
 );
 CREATE POLICY ammar_conversations_select ON public.ammar_conversations
-FOR SELECT TO authenticated USING (public.ammar_is_conversation_member(id, auth.uid()));
+FOR SELECT TO authenticated USING (public.ammar_is_conversation_member(id));
 CREATE POLICY ammar_participants_select ON public.ammar_conversation_participants
-FOR SELECT TO authenticated USING (public.ammar_is_conversation_member(conversation_id, auth.uid()));
+FOR SELECT TO authenticated USING (public.ammar_is_conversation_member(conversation_id));
 CREATE POLICY ammar_participants_update_self ON public.ammar_conversation_participants
 FOR UPDATE TO authenticated USING (user_id = auth.uid()) WITH CHECK (user_id = auth.uid());
 CREATE POLICY ammar_messages_select ON public.ammar_messages
-FOR SELECT TO authenticated USING (public.ammar_is_conversation_member(conversation_id, auth.uid()));
+FOR SELECT TO authenticated USING (public.ammar_is_conversation_member(conversation_id));
 CREATE POLICY ammar_messages_insert ON public.ammar_messages
 FOR INSERT TO authenticated WITH CHECK (
   sender_id = auth.uid()
   AND message_type IN ('text','image','file')
-  AND public.ammar_is_conversation_member(conversation_id, auth.uid())
+  AND public.ammar_is_conversation_member(conversation_id)
   AND (file_path IS NULL OR file_path LIKE conversation_id::text || '/' || auth.uid()::text || '/%')
 );
 
@@ -1269,7 +1268,7 @@ GRANT SELECT ON public.ammar_commission_ledger TO authenticated;
 
 REVOKE ALL ON FUNCTION public.ammar_market_quote_created() FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.ammar_create_market_request(uuid,uuid,numeric,text,text) FROM PUBLIC;
-REVOKE ALL ON FUNCTION public.ammar_is_conversation_member(uuid,uuid) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.ammar_is_conversation_member(uuid) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.ammar_start_conversation(uuid,text,text,text) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.ammar_mark_conversation_read(uuid) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.ammar_accept_agreement(uuid) FROM PUBLIC;
@@ -1282,7 +1281,7 @@ REVOKE ALL ON FUNCTION public.ammar_ecosystem_touch_updated_at() FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.ammar_notify_new_message() FROM PUBLIC;
 
 GRANT EXECUTE ON FUNCTION public.ammar_create_market_request(uuid,uuid,numeric,text,text) TO authenticated;
-GRANT EXECUTE ON FUNCTION public.ammar_is_conversation_member(uuid,uuid) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.ammar_is_conversation_member(uuid) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.ammar_start_conversation(uuid,text,text,text) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.ammar_mark_conversation_read(uuid) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.ammar_accept_agreement(uuid) TO authenticated;
@@ -1310,21 +1309,21 @@ DROP POLICY IF EXISTS ammar_chat_files_member_select ON storage.objects;
 CREATE POLICY ammar_chat_files_member_select ON storage.objects
 FOR SELECT TO authenticated USING (
   bucket_id = 'ammar-chat-files'
-  AND public.ammar_is_conversation_member((storage.foldername(name))[1]::uuid, auth.uid())
+  AND public.ammar_is_conversation_member((storage.foldername(name))[1]::uuid)
 );
 DROP POLICY IF EXISTS ammar_chat_files_member_insert ON storage.objects;
 CREATE POLICY ammar_chat_files_member_insert ON storage.objects
 FOR INSERT TO authenticated WITH CHECK (
   bucket_id = 'ammar-chat-files'
   AND (storage.foldername(name))[2] = auth.uid()::text
-  AND public.ammar_is_conversation_member((storage.foldername(name))[1]::uuid, auth.uid())
+  AND public.ammar_is_conversation_member((storage.foldername(name))[1]::uuid)
 );
 DROP POLICY IF EXISTS ammar_chat_files_member_delete ON storage.objects;
 CREATE POLICY ammar_chat_files_member_delete ON storage.objects
 FOR DELETE TO authenticated USING (
   bucket_id = 'ammar-chat-files'
   AND (storage.foldername(name))[2] = auth.uid()::text
-  AND public.ammar_is_conversation_member((storage.foldername(name))[1]::uuid, auth.uid())
+  AND public.ammar_is_conversation_member((storage.foldername(name))[1]::uuid)
 );
 
 -- Public read-only product imagery; upload and replacement remain supplier-owned.
