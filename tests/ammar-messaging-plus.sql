@@ -13,6 +13,26 @@ WHERE conversation_id=:'conversation_id'
   AND body='رسالة اختبار من العميل.'
 ORDER BY created_at DESC LIMIT 1 \gset
 SELECT set_config('ammar.test.source_message_id', :'source_message_id', false);
+SELECT context_id AS request_id
+FROM public.ammar_conversations WHERE id=:'conversation_id' \gset
+SELECT id AS quote_id
+FROM public.ammar_market_quotes WHERE request_id=:'request_id'::uuid
+ORDER BY created_at DESC LIMIT 1 \gset
+SELECT id AS agreement_id
+FROM public.ammar_agreements
+WHERE source_type='market_request' AND source_id=:'request_id'
+ORDER BY created_at DESC LIMIT 1 \gset
+
+-- Quote- and agreement-scoped conversations are limited to the two transaction parties.
+SET ROLE authenticated;
+SELECT set_config('request.jwt.claim.sub','11111111-1111-4111-8111-111111111111',false);
+SELECT public.ammar_start_conversation(
+  '22222222-2222-4222-8222-222222222222','market_quote',:'quote_id','محادثة عرض السعر'
+) AS quote_conversation_id \gset
+SELECT public.ammar_start_conversation(
+  '22222222-2222-4222-8222-222222222222','agreement',:'agreement_id','محادثة الاتفاق'
+) AS agreement_conversation_id \gset
+RESET ROLE;
 
 -- A new message creates an undelivered receipt for the other participant.
 SET ROLE authenticated;
