@@ -201,7 +201,7 @@ const translations={
 'الأثر المالي:':'Cost impact:','المدة:':'Duration:','الحالة:':'Status:','ملاحظة القرار:':'Decision note:',
 'التصنيف:':'Category:','معتمد':'Approved','قيد التخطيط':'Planning','متوقف مؤقتاً':'On hold',
 'لا توجد نتائج مطابقة لبحثك.':'No matching results.','قائمة المشاريع فارغة':'Your project list is empty',
-'إعادة المحاولة':'Try again','جارٍ حفظ البيانات في قاعدة البيانات...':'Saving to the database...',
+'إعادة المحاولة':'Try again','مقارنة عروض المقاولين والموردين':'Contractor and supplier quotation comparison','أقل سعر مسجل':'Lowest submitted quotation','العروض المسجلة':'Submitted quotations','المقارنة السعرية تتم داخل العملة نفسها فقط. السعر الأقل لا يعني العرض الأفضل؛ راجع نطاق العمل والمدة والضمان والاستثناءات قبل الاختيار.':'Price comparisons are made only within the same currency. The lowest price is not necessarily the best offer; review scope, duration, warranty and exclusions.','إدخال عروضاً بعملة واضحة للمقارنة. لا تتم مقارنة أسعار بعملات مختلفة.':'Enter quotations with clear currencies. Different currencies are not compared.','إضافة قائمة فحص قياسية':'Add standard handover checklist','القائمة القياسية موجودة بالفعل.':'The standard checklist is already present.','جارٍ حفظ البيانات في قاعدة البيانات...':'Saving to the database...',
 'تم حفظ البيانات بنجاح.':'Saved successfully.','تم تحديث حالة الدفعة.':'Payment status updated.',
 'تم تحديث حالة المهمة.':'Task status updated.','تم تحديث حالة عرض السعر.':'Quotation status updated.'
 };
@@ -314,7 +314,7 @@ function renderWorkspace(){
  $('detailContent').innerHTML=workspaceTabs();renderModulePanel();
  if(moduleLoadWarnings.length){
   const box=$('modulePanel');
-  if(box)box.insertAdjacentHTML('afterbegin','<div class="message error">بعض أقسام المشروع لم تُحمّل ('+esc(moduleLoadWarnings.join('، '))+'). شغّل تحديث قاعدة البيانات الجديد مرة واحدة في Supabase لإكمال الفريق والمالية والتعليقات وسجل النشاط. بقية الأقسام المتاحة ستظل تعمل.</div>');
+  if(box)box.insertAdjacentHTML('afterbegin','<div class="message error">بعض أقسام المشروع لم تُحمّل ('+esc(moduleLoadWarnings.join('، '))+'). تأكد من تطبيق آخر ترحيل قاعدة بيانات في Supabase. بقية الأقسام المتاحة ستظل تعمل.</div>');
  }
 }
 
@@ -493,7 +493,7 @@ function exportProjectReport(){
  rows.push([],['EXPENSES','Description','Amount','Currency','Date','Notes']);
  (moduleData.expenses||[]).forEach(x=>rows.push(['EXPENSES',x.description,x.amount,x.currency,x.spent_on,x.notes]));
  rows.push([],['QUOTES','Supplier','Title','Amount','Currency','Status','Details']);
- (moduleData.quotes||[]).forEach(x=>rows.push(['QUOTES',x.supplier_name,x.title,x.amount,x.currency,x.status,x.details]));
+ (moduleData.quotes||[]).forEach(x=>rows.push(['QUOTES',x.supplier_name,x.title,x.amount,x.currency,x.status,x.contact_email,x.contact_phone,x.duration_days,x.warranty_months,x.valid_until,x.details,x.inclusions,x.exclusions]));
  rows.push([],['PAYMENTS','Description','Amount','Currency','Due date','Paid date','Status','Reference']);
  (moduleData.payments||[]).forEach(x=>rows.push(['PAYMENTS',x.description,x.amount,x.currency,x.due_date,x.paid_on,x.status,x.reference]));
  rows.push([],['PROGRESS','Progress','Note','Created']);
