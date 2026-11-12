@@ -28,6 +28,14 @@ ALTER TABLE public.ammar_messages
   CHECK (message_type IN ('text','image','file','video','location','system'));
 
 ALTER TABLE public.ammar_messages
+  ADD CONSTRAINT ammar_messages_content_007_check
+  CHECK (
+    (message_type IN ('text','system') AND body IS NOT NULL AND char_length(body) BETWEEN 1 AND 5000)
+    OR (message_type IN ('image','file','video') AND file_path IS NOT NULL)
+    OR (message_type='location' AND location_lat IS NOT NULL AND location_lng IS NOT NULL)
+  );
+
+ALTER TABLE public.ammar_messages
   ADD CONSTRAINT ammar_messages_location_coordinates_check
   CHECK (
     message_type <> 'location'
@@ -93,6 +101,7 @@ CREATE TABLE IF NOT EXISTS public.ammar_user_presence (
   updated_at timestamptz NOT NULL DEFAULT now()
 );
 
+CREATE INDEX IF NOT EXISTS ammar_messages_sender_created_idx ON public.ammar_messages(sender_id,created_at DESC);
 CREATE INDEX IF NOT EXISTS ammar_message_receipts_user_idx
   ON public.ammar_message_receipts(user_id,read_at,delivered_at);
 CREATE INDEX IF NOT EXISTS ammar_message_reports_status_idx
@@ -443,7 +452,9 @@ FOR INSERT TO authenticated WITH CHECK(
   reporter_id=auth.uid()
   AND public.ammar_is_conversation_member(conversation_id)
   AND EXISTS(SELECT 1 FROM public.ammar_messages m
-    WHERE m.id=message_id AND m.conversation_id=conversation_id AND m.sender_id<>auth.uid())
+    WHERE m.id=ammar_message_reports.message_id
+      AND m.conversation_id=ammar_message_reports.conversation_id
+      AND m.sender_id<>auth.uid())
 );
 
 CREATE POLICY ammar_pinned_messages_member_select ON public.ammar_pinned_messages
