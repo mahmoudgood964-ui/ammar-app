@@ -370,7 +370,8 @@
         return '<div class="eco-row"><div><strong>'+esc(sp?.business_name||'مقدم خدمة')+'</strong><div class="muted">'+money(o.amount,o.currency)+' · '+esc(o.duration_days==null?'المدة غير محددة':o.duration_days+' يوم')+' · '+esc(statusText[o.status]||o.status)+'</div></div><div class="eco-actions">'+actions+'</div></div>';
       }).join('');
       const offerForm=provider&&!own&&r.status==='open'?'<div class="eco-form"><div><label>عرضك المالي</label><input id="ecoSvcAmount-'+esc(r.id)+'" type="number" min="0" step="0.01"></div><div><label>مدة التنفيذ (يوم)</label><input id="ecoSvcDays-'+esc(r.id)+'" type="number" min="1"></div><div class="wide"><button class="btn primary" type="button" data-eco-service-offer="'+esc(r.id)+'">تقديم عرض</button></div></div>':'';
-      return '<article class="eco-card"><h3>'+esc(r.title)+'</h3><div class="eco-meta"><span class="eco-pill">'+esc(r.service_type)+'</span><span class="eco-pill">'+esc(r.city||'الموقع غير محدد')+'</span></div><p>'+esc(r.description)+'</p><p>الميزانية القصوى: '+(r.budget_max==null?'غير محددة':money(r.budget_max,r.currency))+'</p>'+offerForm+'<div class="eco-subsection"><strong>العروض المقدمة</strong>'+(offersHtml||'<p class="muted">لا توجد عروض بعد.</p>')+'</div></article>';
+      const completeAction=own&&r.status==='awarded'?'<button class="btn primary" type="button" data-eco-complete-service="'+esc(r.id)+'">تأكيد اكتمال الخدمة</button>':'';
+      return '<article class="eco-card"><h3>'+esc(r.title)+'</h3><div class="eco-meta"><span class="eco-pill">'+esc(r.service_type)+'</span><span class="eco-pill">'+esc(r.city||'الموقع غير محدد')+'</span><span class="eco-pill">'+esc(statusText[r.status]||r.status)+'</span></div><p>'+esc(r.description)+'</p><p>الميزانية القصوى: '+(r.budget_max==null?'غير محددة':money(r.budget_max,r.currency))+'</p>'+offerForm+'<div class="eco-subsection"><strong>العروض المقدمة</strong>'+(offersHtml||'<p class="muted">لا توجد عروض بعد.</p>')+'</div>'+completeAction+'</article>';
     }).join('');
     return `${profile}<section class="eco-card eco-subsection"><h3>نشر طلب خدمة أو مقاول</h3>
       <form id="ecoServiceRequestForm" class="eco-form">
@@ -417,7 +418,7 @@
 
   async function click(e){
     const t=e.target.closest('[data-eco-tab]');if(t){chooseTab(t.dataset.ecoTab);return;}
-    const b=e.target.closest('[data-eco-action],[data-eco-buy],[data-eco-contact],[data-eco-toggle-product],[data-eco-open-chat],[data-eco-accept-quote],[data-eco-submit-quote],[data-eco-advance],[data-eco-order-chat],[data-eco-create-agreement],[data-eco-service-offer],[data-eco-accept-service],[data-eco-service-chat],[data-eco-service-agreement],[data-eco-accept-agreement],[data-eco-submit-review]');
+    const b=e.target.closest('[data-eco-action],[data-eco-buy],[data-eco-contact],[data-eco-toggle-product],[data-eco-open-chat],[data-eco-accept-quote],[data-eco-submit-quote],[data-eco-advance],[data-eco-order-chat],[data-eco-create-agreement],[data-eco-service-offer],[data-eco-accept-service],[data-eco-service-chat],[data-eco-service-agreement],[data-eco-complete-service],[data-eco-accept-agreement],[data-eco-submit-review]');
     if(!b)return;
     try{
       if(b.dataset.ecoAction==='refresh'){await render();tell('تم تحديث البيانات.','success');return;}
@@ -484,6 +485,11 @@
       }
       if(b.dataset.ecoServiceChat){
         await startConversation(b.dataset.other,'service_offer',b.dataset.ecoServiceChat,'محادثة عرض خدمة');return;
+      }
+      if(b.dataset.ecoCompleteService){
+        if(!window.confirm('هل تؤكد اكتمال الخدمة واستلامها؟ سيُسجل المبلغ ضمن مصروفات المشروع وتُسجل عمولة عَمِّر المستحقة حسب إعدادات النشاط.'))return;
+        const r=await db.rpc('ammar_complete_service_request',{p_request_id:b.dataset.ecoCompleteService});
+        if(r.error)throw r.error;await render();tell('تم تأكيد اكتمال الخدمة وتسجيل مصروف المشروع والعمولة المستحقة.','success');return;
       }
       if(b.dataset.ecoServiceAgreement){
         const id=b.dataset.ecoServiceAgreement;
