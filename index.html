@@ -86,6 +86,9 @@ placeholder="تأكيد كلمة المرور" autocomplete="new-password">
 إنشاء المشروع
 </button>
 
+<h3 style="margin-top:28px">مشاريعي</h3>
+<div id="projects-list" aria-live="polite">جارٍ تحميل المشاريع...</div>
+
 <button type="button" class="secondary" onclick="logout()">
 تسجيل الخروج
 </button>
@@ -131,6 +134,7 @@ function showApp(){
   if(recoveryMode) return;
   showOnly('app');
   showMessage('تم تسجيل الدخول بنجاح');
+  loadProjects();
 }
 
 function showReset(){
@@ -420,6 +424,59 @@ if(!window.supabase || !window.supabase.createClient){
     }
   }
 
+  function escapeHtml(value){
+    return String(value ?? '').replace(/[&<>"']/g, character => ({
+      '&':'&amp;',
+      '<':'&lt;',
+      '>':'&gt;',
+      '"':'&quot;',
+      "'":'&#39;'
+    })[character]);
+  }
+
+  async function loadProjects(){
+    const list = document.getElementById('projects-list');
+    if(!list) return;
+    list.textContent = 'جارٍ تحميل المشاريع...';
+
+    try{
+      const {data:userData,error:userError} = await client.auth.getUser();
+      if(userError || !userData.user){
+        list.textContent = 'يرجى تسجيل الدخول لعرض المشاريع.';
+        return;
+      }
+
+      const {data,error} = await client
+        .from('projects')
+        .select('*')
+        .eq('client_id', userData.user.id);
+
+      if(error){
+        list.textContent = 'تعذر تحميل المشاريع: ' + error.message;
+        return;
+      }
+
+      if(!data || data.length === 0){
+        list.textContent = 'لا توجد مشاريع بعد. أنشئ أول مشروع من النموذج أعلاه.';
+        return;
+      }
+
+      list.innerHTML = data.map(project => `
+        <article style="border:1px solid #ddd;border-radius:10px;padding:14px;margin:10px 0">
+          <h4 style="margin:0 0 10px">${escapeHtml(project.title || 'مشروع بدون عنوان')}</h4>
+          <p><strong>الوصف:</strong> ${escapeHtml(project.description || 'غير محدد')}</p>
+          <p><strong>الموقع:</strong> ${escapeHtml(project.property_location || 'غير محدد')}</p>
+          <p><strong>نوع العقار:</strong> ${escapeHtml(project.property_type || 'غير محدد')}</p>
+          <p><strong>الميزانية:</strong> ${escapeHtml(project.budget || 'غير محددة')}</p>
+          <p><strong>رقم المشروع:</strong> ${escapeHtml(project.id || '—')}</p>
+        </article>
+      `).join('');
+
+    }catch(error){
+      list.textContent = 'حدث خطأ أثناء تحميل المشاريع: ' + error.message;
+    }
+  }
+
   async function createProject(){
 
     const title =
@@ -473,7 +530,8 @@ if(!window.supabase || !window.supabase.createClient){
         return;
       }
 
-      showMessage('تم إنشاء المشروع بنجاح.');
+      await loadProjects();
+      showMessage('تم إنشاء المشروع بنجاح. ستجد المشروع الآن ضمن قائمة مشاريعي أسفل النموذج.');
 
       document.querySelectorAll(
         '#app input, #app textarea'
