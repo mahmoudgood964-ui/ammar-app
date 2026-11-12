@@ -162,6 +162,18 @@ CREATE TRIGGER ammar_projects_completion_time
 BEFORE UPDATE OF status ON public.projects
 FOR EACH ROW EXECUTE FUNCTION public.ammar_set_project_completion_time();
 
+DO $
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conrelid='public.projects'::regclass AND conname='projects_ammar_budget_nonnegative') THEN
+    ALTER TABLE public.projects ADD CONSTRAINT projects_ammar_budget_nonnegative
+      CHECK (budget_amount IS NULL OR budget_amount >= 0) NOT VALID;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conrelid='public.projects'::regclass AND conname='projects_ammar_dates_check') THEN
+    ALTER TABLE public.projects ADD CONSTRAINT projects_ammar_dates_check
+      CHECK (start_date IS NULL OR target_end_date IS NULL OR target_end_date >= start_date) NOT VALID;
+  END IF;
+END $;
+
 -- Resolve project membership in a SECURITY DEFINER function to avoid RLS recursion.
 CREATE OR REPLACE FUNCTION public.ammar_project_role(p_project_id text)
 RETURNS text
@@ -523,3 +535,20 @@ REVOKE ALL ON public.project_invitations FROM authenticated;
 GRANT SELECT (id, project_id, email, member_role, status, expires_at, created_at) ON public.project_invitations TO authenticated;
 GRANT SELECT ON public.project_members TO authenticated;
 GRANT SELECT ON public.project_activity, public.project_comments, public.project_payments, public.project_notifications TO authenticated;
+
+-- Keep all SECURITY DEFINER entry points unavailable to anonymous/public callers.
+REVOKE EXECUTE ON FUNCTION public.ammar_project_role(text) FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.ammar_create_project_invitation(text,text,text) FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.ammar_accept_project_invitation(text) FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.ammar_update_project_member_role(text,uuid,text) FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.ammar_remove_project_member(text,uuid) FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.ammar_notify_project_activity() FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.ammar_touch_updated_at() FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.ammar_set_project_completion_time() FROM PUBLIC;
+
+GRANT EXECUTE ON FUNCTION public.ammar_project_role(text) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.ammar_create_project_invitation(text,text,text) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.ammar_accept_project_invitation(text) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.ammar_update_project_member_role(text,uuid,text) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.ammar_remove_project_member(text,uuid) TO authenticated;
+
