@@ -135,6 +135,12 @@ SET ROLE authenticated;
 SELECT set_config('request.jwt.claim.sub','22222222-2222-4222-8222-222222222222',false);
 SELECT public.ammar_accept_agreement(:'service_agreement_id');
 
+-- Only the buyer can confirm the completed service and trigger the expense/commission record.
+RESET ROLE;
+SET ROLE authenticated;
+SELECT set_config('request.jwt.claim.sub','11111111-1111-4111-8111-111111111111',false);
+SELECT public.ammar_complete_service_request(:'service_request_id');
+
 -- Outsider must not read the private conversation or its messages.
 RESET ROLE;
 SET ROLE authenticated;
@@ -162,11 +168,19 @@ DECLARE v_expenses integer; v_commission numeric; v_notifications integer;
 BEGIN
   SELECT count(*) INTO v_expenses FROM public.project_expenses
   WHERE project_id='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
-  IF v_expenses <> 1 THEN RAISE EXCEPTION 'Expected one linked project expense, got %',v_expenses; END IF;
+  IF v_expenses <> 2 THEN RAISE EXCEPTION 'Expected two linked project expenses (materials and service), got %',v_expenses; END IF;
 
   SELECT commission_amount INTO v_commission FROM public.ammar_commission_ledger
   WHERE request_id=current_setting('ammar.test.request_id')::uuid;
-  IF v_commission <> 100 THEN RAISE EXCEPTION 'Expected 5%% commission of 100, got %',v_commission; END IF;
+  IF v_commission <> 100 THEN RAISE EXCEPTION 'Expected 5%% materials commission of 100, got %',v_commission; END IF;
+
+  SELECT commission_amount INTO v_commission FROM public.ammar_commission_ledger
+  WHERE source_type='service_offer' AND source_id=:'service_offer_id';
+  IF v_commission <> 2500 THEN RAISE EXCEPTION 'Expected 5%% service commission of 2500, got %',v_commission; END IF;
+
+  IF (SELECT status FROM public.ammar_service_requests WHERE id=:'service_request_id') <> 'closed' THEN
+    RAISE EXCEPTION 'Service request should be closed after buyer confirmation';
+  END IF;
 
   SELECT count(*) INTO v_notifications FROM public.ammar_user_notifications
   WHERE user_id='22222222-2222-4222-8222-222222222222'
