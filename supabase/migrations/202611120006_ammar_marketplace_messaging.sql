@@ -400,14 +400,14 @@ LANGUAGE sql
 STABLE
 SECURITY DEFINER
 SET search_path = public, pg_temp
-AS $
+AS $$
   SELECT EXISTS (
     SELECT 1
     FROM public.ammar_conversation_participants cp
     WHERE cp.conversation_id = p_conversation_id
       AND cp.user_id = auth.uid()
   );
-$;
+$$;
 
 CREATE OR REPLACE FUNCTION public.ammar_start_conversation(
   p_other_user uuid,
@@ -909,7 +909,7 @@ RETURNS trigger
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public, pg_temp
-AS $
+AS $$
 BEGIN
   UPDATE public.ammar_market_requests
   SET status = 'quoted'
@@ -923,7 +923,7 @@ BEGIN
   );
   RETURN NEW;
 END;
-$;
+$$;
 
 DROP TRIGGER IF EXISTS ammar_market_quote_created_trigger ON public.ammar_market_quotes;
 CREATE TRIGGER ammar_market_quote_created_trigger
