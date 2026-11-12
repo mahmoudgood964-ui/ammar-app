@@ -8,6 +8,22 @@ CREATE TABLE auth.users (id uuid PRIMARY KEY,email text UNIQUE);
 CREATE OR REPLACE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql STABLE AS $$
  SELECT nullif(current_setting('request.jwt.claim.sub',true),'')::uuid
 $$;
+CREATE TABLE public.profiles (
+ id uuid PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+ role text NOT NULL DEFAULT 'client'
+);
+CREATE OR REPLACE FUNCTION public.is_admin()
+RETURNS boolean
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+ SELECT EXISTS (
+   SELECT 1 FROM public.profiles
+   WHERE id = (SELECT auth.uid()) AND role = 'admin'
+ )
+$$;
 CREATE TABLE public.projects (
  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
  client_id uuid NOT NULL REFERENCES auth.users(id),
