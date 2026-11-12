@@ -87,4 +87,13 @@ for (const feature of [
   'data-eco-complete-service','data-eco-submit-review','data-eco-unblock','data-eco-to-task','data-eco-to-change','data-eco-quote-chat','data-eco-agreement-chat','contextCard','ammar_user_notifications','ammar-chat-files','ammar-market-files'
 ]) assert.ok(moduleSource.includes(feature), 'Missing UI feature ' + feature);
 
+assert.ok(moduleSource.includes('data-eco-tab="partners"'), 'Exploratory partner directory tab is missing');
+assert.ok(moduleSource.includes('function partnerDirectoryHtml'), 'Partner directory renderer is missing');
+assert.ok(moduleSource.includes('جهة محتملة — غير معتمدة'), 'Partner prospects must be clearly marked unapproved');
+assert.ok(moduleSource.includes('لم تُنشأ لها حسابات داخل التطبيق'), 'Partner directory must not imply consent or account creation');
+assert.ok(moduleSource.includes('ecoPartnerSearch'), 'Partner directory search is missing');
+assert.ok(moduleSource.includes('UN-Habitat Sudan'), 'Housing support organization lead is missing');
+assert.ok(moduleSource.includes('ATC Group'), 'Construction company lead is missing');
+assert.ok(moduleSource.includes('info@ctiunited.com'), 'CTI public contact is missing');
+
 console.log('AMMAR static application and migration checks passed.');
