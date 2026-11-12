@@ -326,8 +326,8 @@ BEGIN
     IF v_role NOT IN ('owner','manager','supervisor','engineer','accountant','worker') THEN
       RAISE EXCEPTION 'Project role cannot open a payment dispute';
     END IF;
-    IF v_item.status IN ('payout_recorded','refunded','cancelled','disputed') THEN
-      RAISE EXCEPTION 'This milestone cannot be moved into a new dispute';
+    IF v_item.status NOT IN ('bank_confirmed','in_progress','completion_submitted','client_approved') THEN
+      RAISE EXCEPTION 'A dispute can only pause a milestone after bank receipt is confirmed';
     END IF;
     IF p_note IS NULL OR char_length(btrim(p_note)) < 8 THEN
       RAISE EXCEPTION 'A dispute reason is required';
@@ -361,8 +361,9 @@ BEGIN
     IF v_role NOT IN ('owner','manager','accountant') THEN
       RAISE EXCEPTION 'Finance permission required to record a refund';
     END IF;
-    IF v_item.status <> 'disputed' THEN
-      RAISE EXCEPTION 'A dispute must be open before recording a refund';
+    IF v_item.status <> 'disputed'
+       OR v_item.status_before_dispute NOT IN ('bank_confirmed','in_progress','completion_submitted','client_approved') THEN
+      RAISE EXCEPTION 'A confirmed bank receipt and an open dispute are required before recording a refund';
     END IF;
     IF p_refund_reference IS NULL
        OR char_length(btrim(p_refund_reference)) NOT BETWEEN 3 AND 120
