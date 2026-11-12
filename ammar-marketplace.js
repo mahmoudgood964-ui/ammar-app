@@ -68,7 +68,7 @@
     const sidebar=document.querySelector('.sidebar'),mobile=document.querySelector('.mobile-nav');
     const make=(small)=>{
       const b=document.createElement('button');b.type='button';b.className='nav-btn';b.dataset.ammarOpen='market';
-      b.innerHTML='<span class="nav-icon">▦</span>'+(small?'السوق':'السوق والرسائل');
+      b.innerHTML='<span class="nav-icon">▦</span>'+(small?'السوق':'السوق والرسائل')+' <span id="ecoUnreadCount" class="notification-badge" hidden>0</span>';
       return b;
     };
     if(sidebar&&!sidebar.querySelector('[data-ammar-open]'))sidebar.insertBefore(make(false),sidebar.querySelector('.sidebar-bottom')||null);
@@ -146,6 +146,13 @@
     const seen=new Set();projects=[...(own.data||[]),...shared].filter(p=>{const k=String(p.id);if(seen.has(k))return false;seen.add(k);return true;});
   }
 
+  async function refreshUnreadCount(){
+    const badge=$('ecoUnreadCount');if(!badge||!user)return;
+    const r=await db.from('ammar_user_notifications').select('id',{count:'exact',head:true}).eq('user_id',user.id).is('read_at',null);
+    if(r.error)return;
+    badge.textContent=String(r.count||0);badge.hidden=!r.count;
+  }
+
   function chooseTab(next){
     tab=next;document.querySelectorAll('[data-eco-tab]').forEach(b=>b.classList.toggle('active',b.dataset.ecoTab===next));
     render().catch(e=>tell('تعذر تحميل القسم: '+(e.message||'خطأ غير معروف'),'error'));
@@ -153,6 +160,7 @@
 
   async function render(){
     if(!db||!user)return;tell('');
+    await refreshUnreadCount();
     const panel=$('ecoPanel');if(!panel)return;
     if(tab==='market'){
       await Promise.all([loadProducts(),loadProjects()]);
@@ -306,7 +314,11 @@
     if(c.error)throw c.error;if(!c.data)return '<div class="eco-empty">المحادثة غير متاحة.</div>';
     const r=await db.from('ammar_messages').select('*').eq('conversation_id',id).order('created_at',{ascending:true}).limit(300);
     if(r.error)throw r.error;
-    await db.rpc('ammar_mark_conversation_read',{p_conversation_id:id});
+    const marked=await db.rpc('ammar_mark_conversation_read',{p_conversation_id:id});
+    if(marked.error)throw marked.error;
+    const read=await db.from('ammar_user_notifications').update({read_at:new Date().toISOString()}).eq('user_id',user.id).eq('conversation_id',id).is('read_at',null);
+    if(read.error)throw read.error;
+    await refreshUnreadCount();
     const bubbles=await Promise.all((r.data||[]).map(async m=>{
       let body=esc(m.body||'');
       if(m.file_path){
@@ -335,12 +347,31 @@
       </form></section>`;
     const req=await db.from('ammar_service_requests').select('*').eq('status','open').order('created_at',{ascending:false}).limit(100);
     if(req.error)throw req.error;
-    const cards=(req.data||[]).map(r=>`<article class="eco-card"><h3>${esc(r.title)}</h3><div class="eco-meta"><span class="eco-pill">${esc(r.service_type)}</span><span class="eco-pill">${esc(r.city||'الموقع غير محدد')}</span></div><p>${esc(r.description)}</p><p>الميزانية القصوى: ${r.budget_max==null?'غير محددة':money(r.budget_max,r.currency)}</p>${provider&&r.requester_id!==user.id?`<div class="eco-form"><div><label>عرضك المالي</label><input id="ecoSvcAmount-${esc(r.id)}" type="number" min="0" step="0.01"></div><div><label>مدة التنفيذ (يوم)</label><input id="ecoSvcDays-${esc(r.id)}" type="number" min="1"></div><div class="wide"><button class="btn primary" type="button" data-eco-service-offer="${esc(r.id)}">تقديم عرض</button></div></div>`:''}</article>`).join('');
+    const requestIds=(req.data||[]).map(x=>x.id);
+    let offerRows=[];
+    if(requestIds.length){
+      const offers=await db.from('ammar_service_offers').select('*,provider:ammar_service_providers(owner_id,business_name)').in('request_id',requestIds).order('created_at',{ascending:false});
+      if(offers.error)throw offers.error;offerRows=offers.data||[];
+    }
+    const offersMap=new Map();offerRows.forEach(o=>{if(!offersMap.has(o.request_id))offersMap.set(o.request_id,[]);offersMap.get(o.request_id).push(o);});
+    const cards=(req.data||[]).map(r=>{
+      const own=r.requester_id===user.id;
+      const offersHtml=(offersMap.get(r.id)||[]).map(o=>{
+        const sp=Array.isArray(o.provider)?o.provider[0]:o.provider;
+        const actions=(own&&o.status==='proposed'?'<button class="btn primary" type="button" data-eco-accept-service="'+esc(o.id)+'">قبول العرض</button>':'')
+          +(own?'<button class="btn light" type="button" data-eco-service-chat="'+esc(o.id)+'" data-other="'+esc(sp?.owner_id)+'">مراسلة مقدم الخدمة</button>':'<button class="btn light" type="button" data-eco-service-chat="'+esc(o.id)+'" data-other="'+esc(r.requester_id)+'">مراسلة صاحب الطلب</button>')
+          +(o.status==='accepted'?'<button class="btn light" type="button" data-eco-service-agreement="'+esc(o.id)+'">إنشاء اتفاق</button>':'');
+        return '<div class="eco-row"><div><strong>'+esc(sp?.business_name||'مقدم خدمة')+'</strong><div class="muted">'+money(o.amount,o.currency)+' · '+esc(o.duration_days==null?'المدة غير محددة':o.duration_days+' يوم')+' · '+esc(statusText[o.status]||o.status)+'</div></div><div class="eco-actions">'+actions+'</div></div>';
+      }).join('');
+      const offerForm=provider&&!own?'<div class="eco-form"><div><label>عرضك المالي</label><input id="ecoSvcAmount-'+esc(r.id)+'" type="number" min="0" step="0.01"></div><div><label>مدة التنفيذ (يوم)</label><input id="ecoSvcDays-'+esc(r.id)+'" type="number" min="1"></div><div class="wide"><button class="btn primary" type="button" data-eco-service-offer="'+esc(r.id)+'">تقديم عرض</button></div></div>':'';
+      return '<article class="eco-card"><h3>'+esc(r.title)+'</h3><div class="eco-meta"><span class="eco-pill">'+esc(r.service_type)+'</span><span class="eco-pill">'+esc(r.city||'الموقع غير محدد')+'</span></div><p>'+esc(r.description)+'</p><p>الميزانية القصوى: '+(r.budget_max==null?'غير محددة':money(r.budget_max,r.currency))+'</p>'+offerForm+'<div class="eco-subsection"><strong>العروض المقدمة</strong>'+(offersHtml||'<p class="muted">لا توجد عروض بعد.</p>')+'</div></article>';
+    }).join('');
     return `${profile}<section class="eco-card eco-subsection"><h3>نشر طلب خدمة أو مقاول</h3>
       <form id="ecoServiceRequestForm" class="eco-form">
         <div><label>نوع الخدمة *</label><select name="service_type"><option value="contractor">مقاولات</option><option value="renovation">ترميم</option><option value="maintenance">صيانة</option><option value="engineering">هندسة</option><option value="inspection">معاينة</option><option value="transport">نقل</option><option value="equipment_rental">تأجير معدات</option><option value="other">أخرى</option></select></div>
         <div><label>عنوان الطلب *</label><input name="title" required minlength="5" maxlength="180"></div>
         <div><label>الولاية</label><input name="governorate"></div><div><label>المدينة</label><input name="city"></div><div><label>المنطقة</label><input name="area"></div>
+        <div><label>ربط بمشروع (اختياري)</label><select name="project_id"><option value="">بدون ربط</option>${projects.map(p=>'<option value="'+esc(p.id)+'">'+esc(p.title)+'</option>').join('')}</select></div>
         <div><label>الميزانية القصوى</label><input name="budget_max" type="number" min="0" step="0.01"></div>
         <div class="wide"><label>التفاصيل المطلوبة *</label><textarea name="description" required minlength="10" maxlength="6000"></textarea></div>
         <div class="wide"><button class="btn primary" type="submit">نشر طلب الخدمة</button></div>
@@ -362,7 +393,12 @@
     if(!other||other===user.id)throw new Error('بيانات الطرف الآخر غير صالحة.');
     const r=await db.rpc('ammar_start_conversation',{p_other_user:other,p_context_type:context,p_context_id:String(contextId),p_subject:subject||null});
     if(r.error)throw r.error;
-    activeConversation=r.data;chooseTab('messages');switchRealtime(activeConversation);
+    activeConversation=r.data;await chooseTabAsync('messages');switchRealtime(activeConversation);
+  }
+
+  async function chooseTabAsync(next){
+    tab=next;document.querySelectorAll('[data-eco-tab]').forEach(b=>b.classList.toggle('active',b.dataset.ecoTab===next));
+    await render();
   }
 
   function switchRealtime(id){
@@ -375,7 +411,7 @@
 
   async function click(e){
     const t=e.target.closest('[data-eco-tab]');if(t){chooseTab(t.dataset.ecoTab);return;}
-    const b=e.target.closest('[data-eco-action],[data-eco-buy],[data-eco-contact],[data-eco-toggle-product],[data-eco-open-chat],[data-eco-accept-quote],[data-eco-submit-quote],[data-eco-advance],[data-eco-order-chat],[data-eco-create-agreement],[data-eco-service-offer],[data-eco-accept-agreement]');
+    const b=e.target.closest('[data-eco-action],[data-eco-buy],[data-eco-contact],[data-eco-toggle-product],[data-eco-open-chat],[data-eco-accept-quote],[data-eco-submit-quote],[data-eco-advance],[data-eco-order-chat],[data-eco-create-agreement],[data-eco-service-offer],[data-eco-accept-service],[data-eco-service-chat],[data-eco-service-agreement],[data-eco-accept-agreement]');
     if(!b)return;
     try{
       if(b.dataset.ecoAction==='refresh'){await render();tell('تم تحديث البيانات.','success');return;}
@@ -436,6 +472,24 @@
         const r=await db.from('ammar_service_offers').insert({request_id:id,provider_id:provider.id,created_by:user.id,amount,duration_days:days?Number(days):null,currency:'SDG'});
         if(r.error)throw r.error;await render();tell('تم تقديم عرض الخدمة.','success');return;
       }
+      if(b.dataset.ecoAcceptService){
+        const r=await db.rpc('ammar_accept_service_offer',{p_offer_id:b.dataset.ecoAcceptService});
+        if(r.error)throw r.error;await render();tell('تم قبول عرض مقدم الخدمة.','success');return;
+      }
+      if(b.dataset.ecoServiceChat){
+        await startConversation(b.dataset.other,'service_offer',b.dataset.ecoServiceChat,'محادثة عرض خدمة');return;
+      }
+      if(b.dataset.ecoServiceAgreement){
+        const id=b.dataset.ecoServiceAgreement;
+        const r=await db.from('ammar_service_offers').select('*,request:ammar_service_requests(*),provider:ammar_service_providers(owner_id,business_name)').eq('id',id).single();
+        if(r.error)throw r.error;
+        const req=Array.isArray(r.data.request)?r.data.request[0]:r.data.request;
+        const sp=Array.isArray(r.data.provider)?r.data.provider[0]:r.data.provider;
+        const title=window.prompt('عنوان الاتفاق:','اتفاق تنفيذ خدمات');if(!title)return;
+        const scope=window.prompt('نطاق العمل والتفاصيل:',req?.description||'الخدمات الموضحة في طلب الخدمة والعرض المقبول.');if(!scope)return;
+        const a=await db.from('ammar_agreements').insert({source_type:'service_offer',source_id:id,project_id:req?.project_id||null,client_id:req.requester_id,provider_id:sp.owner_id,title,scope,amount:r.data.amount,currency:r.data.currency,created_by:user.id});
+        if(a.error)throw a.error;chooseTab('agreements');tell('تم إنشاء الاتفاق وإرساله للطرف الآخر.','success');return;
+      }
       if(b.dataset.ecoAcceptAgreement){
         const r=await db.rpc('ammar_accept_agreement',{p_agreement_id:b.dataset.ecoAcceptAgreement});
         if(r.error)throw r.error;await render();tell('تم تسجيل موافقتك؛ يكتمل الاتفاق بعد موافقة الطرفين.','success');return;
@@ -473,7 +527,7 @@
         const r=provider?await db.from('ammar_service_providers').update(payload).eq('owner_id',user.id):await db.from('ammar_service_providers').insert({...payload,owner_id:user.id});
         if(r.error)throw r.error;await loadProfiles();await render();tell('تم حفظ ملف مقدم الخدمة.','success');
       }else if(form.id==='ecoServiceRequestForm'){
-        const r=await db.from('ammar_service_requests').insert({requester_id:user.id,service_type:d.service_type,title:d.title.trim(),description:d.description.trim(),governorate:d.governorate||null,city:d.city||null,area:d.area||null,budget_max:d.budget_max?Number(d.budget_max):null,currency:'SDG'});
+        const r=await db.from('ammar_service_requests').insert({requester_id:user.id,project_id:d.project_id||null,service_type:d.service_type,title:d.title.trim(),description:d.description.trim(),governorate:d.governorate||null,city:d.city||null,area:d.area||null,budget_max:d.budget_max?Number(d.budget_max):null,currency:'SDG'});
         if(r.error)throw r.error;await render();tell('تم نشر طلب الخدمة.','success');
       }else if(form.id==='ecoSendMessageForm'){
         if(!activeConversation)throw new Error('اختر محادثة أولاً.');
@@ -514,7 +568,7 @@
       if(p)p.innerHTML=`<div class="eco-empty">لم يتم تهيئة السوق بعد. طبّق ترحيل <strong>202611120006_ammar_marketplace_messaging.sql</strong> في Supabase ثم أعد تحميل التطبيق.<br><small>${esc(err.message||'')}</small></div>`;
     });
     if(refreshTimer)clearInterval(refreshTimer);
-    refreshTimer=setInterval(()=>{if(user&&tab==='messages'&&!document.hidden)render().catch(()=>{});},30000);
+    refreshTimer=setInterval(()=>{if(user&&!document.hidden){refreshUnreadCount();if(tab==='messages')render().catch(()=>{});}},30000);
   }
 
   function boot(){
