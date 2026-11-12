@@ -115,12 +115,12 @@ CREATE OR REPLACE FUNCTION public.ammar_touch_updated_at()
 RETURNS trigger
 LANGUAGE plpgsql
 SET search_path = public, pg_temp
-AS $
+AS $$
 BEGIN
   NEW.updated_at := now();
   RETURN NEW;
 END;
-$;
+$$;
 
 DROP TRIGGER IF EXISTS ammar_projects_touch_updated_at ON public.projects;
 CREATE TRIGGER ammar_projects_touch_updated_at
@@ -146,7 +146,7 @@ CREATE OR REPLACE FUNCTION public.ammar_set_project_completion_time()
 RETURNS trigger
 LANGUAGE plpgsql
 SET search_path = public, pg_temp
-AS $
+AS $$
 BEGIN
   IF NEW.status='completed' AND OLD.status IS DISTINCT FROM 'completed' AND NEW.completed_at IS NULL THEN
     NEW.completed_at := now();
@@ -155,14 +155,14 @@ BEGIN
   END IF;
   RETURN NEW;
 END;
-$;
+$$;
 
 DROP TRIGGER IF EXISTS ammar_projects_completion_time ON public.projects;
 CREATE TRIGGER ammar_projects_completion_time
 BEFORE UPDATE OF status ON public.projects
 FOR EACH ROW EXECUTE FUNCTION public.ammar_set_project_completion_time();
 
-DO $
+DO $$
 BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conrelid='public.projects'::regclass AND conname='projects_ammar_budget_nonnegative') THEN
     ALTER TABLE public.projects ADD CONSTRAINT projects_ammar_budget_nonnegative
@@ -172,7 +172,7 @@ BEGIN
     ALTER TABLE public.projects ADD CONSTRAINT projects_ammar_dates_check
       CHECK (start_date IS NULL OR target_end_date IS NULL OR target_end_date >= start_date) NOT VALID;
   END IF;
-END $;
+END $$;
 
 -- Resolve project membership in a SECURITY DEFINER function to avoid RLS recursion.
 CREATE OR REPLACE FUNCTION public.ammar_project_role(p_project_id text)
@@ -269,7 +269,6 @@ BEGIN
 
   IF NOT FOUND THEN RAISE EXCEPTION 'Invitation is invalid, expired, or already used'; END IF;
   IF v_inv.expires_at <= now() THEN
-    UPDATE public.project_invitations SET status='expired' WHERE id=v_inv.id;
     RAISE EXCEPTION 'Invitation has expired';
   END IF;
   IF v_email <> lower(v_inv.email) THEN
@@ -354,7 +353,7 @@ RETURNS boolean
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public, pg_temp
-AS $
+AS $$
 DECLARE v_project_id text;
         v_email text;
 BEGIN
@@ -379,7 +378,7 @@ BEGIN
 
   RETURN true;
 END;
-$;
+$$;
 
 GRANT EXECUTE ON FUNCTION public.ammar_revoke_project_invitation(text,uuid) TO authenticated;
 
