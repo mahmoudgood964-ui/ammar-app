@@ -370,14 +370,14 @@ CREATE OR REPLACE FUNCTION public.ammar_market_product_price_stamp()
 RETURNS trigger
 LANGUAGE plpgsql
 SET search_path = public, pg_temp
-AS $
+AS $$
 BEGIN
   IF NEW.price IS DISTINCT FROM OLD.price THEN
     NEW.price_updated_at := now();
   END IF;
   RETURN NEW;
 END;
-$;
+$$;
 
 DROP TRIGGER IF EXISTS ammar_market_product_price_stamp_trigger ON public.ammar_market_products;
 CREATE TRIGGER ammar_market_product_price_stamp_trigger
