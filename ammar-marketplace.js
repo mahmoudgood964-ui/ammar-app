@@ -197,6 +197,9 @@
       panel.innerHTML=await agreementsHtml();
     }else if(tab==='partners'){
       panel.innerHTML=partnerDirectoryHtml();
+    }else if(tab==='admin'){
+      if(!isAdmin)throw new Error('ليست لديك صلاحية إدارة عَمِّر');
+      panel.innerHTML=await adminDashboardHtml();
     }
   }
 
