@@ -174,6 +174,18 @@ BEGIN
 END
 $ammar_plus_test$;
 
+-- The account owner can remove its own block, after which messaging resumes.
+DELETE FROM public.ammar_user_blocks
+WHERE blocker_id=auth.uid()
+  AND blocked_id='22222222-2222-4222-8222-222222222222';
+INSERT INTO public.ammar_messages(conversation_id,sender_id,message_type,body)
+VALUES (
+  current_setting('ammar.test.conversation_id')::uuid,
+  auth.uid(),
+  'text',
+  'رسالة بعد إلغاء الحظر.'
+);
+
 RESET ROLE;
 
 SELECT 'AMMAR ADVANCED MESSAGING TESTS PASSED' AS result;
