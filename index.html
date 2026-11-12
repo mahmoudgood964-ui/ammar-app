@@ -210,7 +210,7 @@ async function loadProjectModules(){
  try{
   const pairs=await Promise.all(Object.entries(map).map(async([k,t])=>{
    if(k==='invitations'&&String(activeProject.client_id)!==String(currentUser.id))return[k,[]];
-   let q=client.from(t).select('*').eq('project_id',activeProject.id);
+   let q=client.from(t).select(k==='invitations'?'id,project_id,email,member_role,status,expires_at,created_at':'*').eq('project_id',activeProject.id);
    if(!['members','invitations'].includes(k))q=q.order('created_at',{ascending:false}).limit(100);
    const r=await q;if(r.error)throw r.error;return[k,r.data||[]];
   }));
