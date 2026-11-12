@@ -11,9 +11,9 @@ BEGIN
   SELECT schemaname,tablename,policyname,qual,with_check
   FROM pg_policies
   WHERE (
-    schemaname='public' AND tablename LIKE 'ammar\_%' ESCAPE '\'
-  ) OR (
-    schemaname='storage' AND tablename='objects' AND policyname LIKE 'ammar\_%' ESCAPE '\'
+    (schemaname='public' AND tablename LIKE 'ammar\_%' ESCAPE '\')
+    OR
+    (schemaname='storage' AND tablename='objects' AND policyname LIKE 'ammar\_%' ESCAPE '\')
   )
   AND (
     coalesce(qual,'') LIKE '%auth.uid()%'
