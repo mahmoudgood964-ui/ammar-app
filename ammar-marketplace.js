@@ -69,7 +69,7 @@
     const make=(small)=>{
       const b=document.createElement('button');b.type='button';b.className='nav-btn';b.dataset.ammarOpen='market';
       b.innerHTML='<span class="nav-icon">▦</span>'+(small?'السوق':'السوق والرسائل');
-      b.addEventListener('click',()=>open('market'));return b;
+      return b;
     };
     if(sidebar&&!sidebar.querySelector('[data-ammar-open]'))sidebar.insertBefore(make(false),sidebar.querySelector('.sidebar-bottom')||null);
     if(mobile&&!mobile.querySelector('[data-ammar-open]'))mobile.insertBefore(make(true),mobile.lastElementChild);
@@ -136,8 +136,14 @@
   }
 
   async function loadProjects(){
-    const r=await db.from('projects').select('id,title').eq('client_id',user.id).order('created_at',{ascending:false}).limit(100);
-    if(r.error)throw r.error;projects=r.data||[];
+    const own=await db.from('projects').select('id,title,created_at').eq('client_id',user.id).order('created_at',{ascending:false}).limit(100);
+    if(own.error)throw own.error;
+    const m=await db.from('project_members').select('project_id').eq('user_id',user.id);
+    if(m.error)throw m.error;
+    const ids=[...new Set((m.data||[]).map(x=>String(x.project_id)).filter(Boolean))];
+    let shared=[];
+    if(ids.length){const r=await db.from('projects').select('id,title,created_at').in('id',ids);if(r.error)throw r.error;shared=r.data||[];}
+    const seen=new Set();projects=[...(own.data||[]),...shared].filter(p=>{const k=String(p.id);if(seen.has(k))return false;seen.add(k);return true;});
   }
 
   function chooseTab(next){
@@ -374,12 +380,16 @@
       if(b.dataset.ecoBuy){
         const p=products.find(x=>x.id===b.dataset.ecoBuy),qty=Number($('ecoQty-'+b.dataset.ecoBuy)?.value||0);
         if(!p||qty<=0)throw new Error('حدد كمية صحيحة.');
-        const r=await db.rpc('ammar_create_market_request',{p_supplier_id:p.supplier_id,p_product_id:p.id,p_quantity:qty,p_project_id:null,p_buyer_note:null});
+        const projectId=$('ecoProjectSelect')?.value||null;
+        const r=await db.rpc('ammar_create_market_request',{p_supplier_id:p.supplier_id,p_product_id:p.id,p_quantity:qty,p_project_id:projectId,p_buyer_note:null});
         if(r.error)throw r.error;chooseTab('orders');tell('تم إنشاء طلب الشراء.','success');return;
       }
       if(b.dataset.ecoContact){
         const p=products.find(x=>x.id===b.dataset.ecoContact);
         await startConversation(b.dataset.owner,'market_product',b.dataset.ecoContact,'استفسار عن: '+(p?.title||'منتج'));return;
+      }
+      if(b.dataset.ecoOpenChat){
+        activeConversation=b.dataset.ecoOpenChat;await render();realtime(activeConversation);return;
       }
       if(b.dataset.ecoToggleProduct){
         const res=await db.from('ammar_market_products').update({is_active:b.dataset.active!=='true'}).eq('id',b.dataset.ecoToggleProduct);
