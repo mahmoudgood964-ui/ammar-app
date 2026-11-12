@@ -36,7 +36,7 @@ RETURNING id AS quote_id \gset
 
 RESET ROLE;
 SELECT set_config('ammar.test.request_id', :'request_id', false);
-DO $ BEGIN
+DO $$ BEGIN
   IF (SELECT status FROM public.ammar_market_requests WHERE id=current_setting('ammar.test.request_id')::uuid) <> 'quoted' THEN
     RAISE EXCEPTION 'Quote trigger did not set request status to quoted';
   END IF;
@@ -125,7 +125,7 @@ RESET ROLE;
 SET ROLE authenticated;
 SELECT set_config('request.jwt.claim.sub','33333333-3333-4333-8333-333333333333',false);
 SELECT set_config('ammar.test.conversation_id', :'conversation_id', false);
-DO $ BEGIN
+DO $$ BEGIN
   IF EXISTS (SELECT 1 FROM public.ammar_conversations WHERE id=current_setting('ammar.test.conversation_id')::uuid) THEN
     RAISE EXCEPTION 'RLS failure: outsider can read a private conversation';
   END IF;
@@ -138,7 +138,7 @@ RESET ROLE;
 
 -- Final assertions under database owner.
 SELECT set_config('ammar.test.request_id', :'request_id', false);
-DO $
+DO $$
 DECLARE v_expenses integer; v_commission numeric; v_notifications integer;
 BEGIN
   SELECT count(*) INTO v_expenses FROM public.project_expenses
