@@ -670,7 +670,7 @@ function init(){if(!window.supabase||typeof window.supabase.createClient!=='func
  }catch(err){message($('appMessage'),'تعذر تحديث الحالة: '+(err.message||'خطأ'),'error');}
  });
 
- document.querySelectorAll('[data-auth-panel]').forEach(b=>b.addEventListener('click',()=>{const name=b.dataset.authPanel;if(name==='reset'){$('resetRequestForm').hidden=false;$('newPasswordForm').hidden=true;$('resetEmail').value=$('loginEmail').value.trim();}authPanel(name);}));
+ document.querySelectorAll('[data-auth-panel]').forEach(b=>b.addEventListener('click',()=>{const name=b.dataset.authPanel;if(name==='reset'){$('resetRequestForm').hidden=false;$('newPasswordForm').hidden=true;$('resetEmail').value=$('loginEmail').value.trim();}authPanel(name);if(b.closest('#publicLanding'))$('authShell').querySelector('.auth-card').scrollIntoView({behavior:'smooth',block:'start'});}));
  $('appShell').addEventListener('click',clickApp);
  $('marketingLang').addEventListener('click',()=>setAppLanguage(appLanguage==='en'?'ar':'en'));
  setAppLanguage(appLanguage);
