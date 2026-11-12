@@ -118,11 +118,33 @@ function details(project){
  $('detailBackdrop').hidden=false;renderWorkspace();loadProjectModules();
 }
 function currentProjectRole(){
- if(!activeProject||!currentUser)return null;
+ if(!activeProject||!currentUser)return 'viewer';
  if(String(activeProject.client_id)===String(currentUser.id))return 'owner';
  const m=(moduleData.members||[]).find(x=>String(x.user_id)===String(currentUser.id));
- return m?m.member_role:'viewer';
+ const role=m?m.member_role:'viewer';
+ if(['admin','project_manager','owner'].includes(role))return 'manager';
+ if(['member','technician'].includes(role))return 'worker';
+ return role;
 }
+function canWriteModule(kind){
+ const role=currentProjectRole();
+ const rights={
+  tasks:['owner','manager','supervisor','engineer','worker'],
+  progress:['owner','manager','supervisor','engineer','worker'],
+  expenses:['owner','manager','accountant'],
+  quotes:['owner','manager','accountant'],
+  payments:['owner','manager','accountant'],
+  documents:['owner','manager','supervisor','engineer','accountant','worker'],
+  comments:['owner','manager','supervisor','engineer','accountant','worker']
+ };
+ return (rights[kind]||[]).includes(role);
+}
+function canDeleteModule(kind){
+ const role=currentProjectRole();
+ if(kind==='expenses'||kind==='quotes'||kind==='tasks'||kind==='documents'||kind==='payments')return ['owner','manager'].includes(role);
+ return false;
+}
+
 function logActivity(eventType,summary,entityType,entityId,metadata){
  if(!activeProject||!client)return Promise.resolve();
  return client.from('project_activity').insert({project_id:activeProject.id,actor_id:currentUser.id,event_type:eventType,summary,entity_type:entityType||null,entity_id:entityId==null?null:String(entityId),metadata:metadata||{}})
@@ -137,16 +159,22 @@ function renderWorkspace(){if(!activeProject)return;$('detailContent').innerHTML
 function moduleRows(items,kind){
  if(!items||!items.length)return '<div class="empty">لا توجد سجلات بعد.</div>';
  return items.map(x=>{
-  const del='<button class="btn quiet" type="button" data-delete-module="'+kind+'" data-id="'+esc(x.id)+'">حذف</button>';
-  const edit=['tasks','expenses','quotes'].includes(kind)?'<button class="btn light" type="button" data-edit-module="'+kind+'" data-id="'+esc(x.id)+'">تعديل</button>':'';
-
-  if(kind==='tasks')return '<article class="project-card"><h4>'+esc(x.title)+'</h4><p>'+esc(x.details||'')+'</p><div class="meta"><span class="pill">'+esc(({todo:'لم تبدأ',doing:'قيد التنفيذ',done:'مكتملة'})[x.status]||x.status)+'</span><span class="pill">'+esc(assigneeLabel(x.assigned_to))+'</span><span class="pill">'+esc(x.due_date||'بلا موعد')+'</span></div><label class="muted">تحديث الحالة </label><select data-task-status="'+esc(x.id)+'" class="search-input"><option value="todo" '+(x.status==='todo'?'selected':'')+'>لم تبدأ</option><option value="doing" '+(x.status==='doing'?'selected':'')+'>قيد التنفيذ</option><option value="done" '+(x.status==='done'?'selected':'')+'>مكتملة</option></select><div class="actions">'+edit+del+'</div></article>';
+  const del=canDeleteModule(kind)?'<button class="btn quiet" type="button" data-delete-module="'+kind+'" data-id="'+esc(x.id)+'">حذف</button>':'';
+  const edit=['tasks','expenses','quotes'].includes(kind)&&canWriteModule(kind)?'<button class="btn light" type="button" data-edit-module="'+kind+'" data-id="'+esc(x.id)+'">تعديل</button>':'';
+  if(kind==='tasks'){
+   const status=canWriteModule('tasks')?'<label class="muted">تحديث الحالة</label><select data-task-status="'+esc(x.id)+'" class="search-input"><option value="todo" '+(x.status==='todo'?'selected':'')+'>لم تبدأ</option><option value="doing" '+(x.status==='doing'?'selected':'')+'>قيد التنفيذ</option><option value="done" '+(x.status==='done'?'selected':'')+'>مكتملة</option></select>':'';
+   return '<article class="project-card"><h4>'+esc(x.title)+'</h4><p>'+esc(x.details||'')+'</p><div class="meta"><span class="pill">'+esc(({todo:'لم تبدأ',doing:'قيد التنفيذ',done:'مكتملة'})[x.status]||x.status)+'</span><span class="pill">'+esc(assigneeLabel(x.assigned_to))+'</span><span class="pill">'+esc(x.due_date||'بلا موعد')+'</span></div>'+status+'<div class="actions">'+edit+del+'</div></article>';
+  }
   if(kind==='expenses')return '<article class="project-card"><h4>'+esc(x.description)+'</h4><p><strong>'+esc(x.amount)+' '+esc(x.currency||'')+'</strong></p><p>'+esc(x.spent_on)+' · '+esc(x.notes||'')+'</p><div class="actions">'+edit+del+'</div></article>';
-  if(kind==='quotes')return '<article class="project-card"><h4>'+esc(x.title)+'</h4><p>'+esc(x.supplier_name)+' · '+esc(x.amount==null?'السعر غير محدد':x.amount+' '+(x.currency||''))+'</p><p>'+esc(x.details||'')+'</p><label class="muted">حالة العرض</label><select data-quote-status="'+esc(x.id)+'" class="search-input"><option value="pending" '+(x.status==='pending'?'selected':'')+'>قيد المراجعة</option><option value="accepted" '+(x.status==='accepted'?'selected':'')+'>مقبول</option><option value="rejected" '+(x.status==='rejected'?'selected':'')+'>مرفوض</option></select><div class="actions">'+edit+del+'</div></article>';
+  if(kind==='quotes'){
+   const status=canWriteModule('quotes')?'<label class="muted">حالة العرض</label><select data-quote-status="'+esc(x.id)+'" class="search-input"><option value="pending" '+(x.status==='pending'?'selected':'')+'>قيد المراجعة</option><option value="accepted" '+(x.status==='accepted'?'selected':'')+'>مقبول</option><option value="rejected" '+(x.status==='rejected'?'selected':'')+'>مرفوض</option></select>':'<span class="pill">'+esc(({pending:'قيد المراجعة',accepted:'مقبول',rejected:'مرفوض'})[x.status]||x.status)+'</span>';
+   return '<article class="project-card"><h4>'+esc(x.title)+'</h4><p>'+esc(x.supplier_name)+' · '+esc(x.amount==null?'السعر غير محدد':x.amount+' '+(x.currency||''))+'</p><p>'+esc(x.details||'')+'</p>'+status+'<div class="actions">'+edit+del+'</div></article>';
+  }
   if(kind==='updates')return '<article class="project-card"><h4>'+esc(x.progress)+'% إنجاز</h4><p>'+esc(x.note||'لا توجد ملاحظات')+'</p><p class="muted">'+esc(dateText(x.created_at))+'</p></article>';
   return '<article class="project-card"><h4>'+esc(x.title)+'</h4><p>'+esc(x.notes||'')+'</p><p class="muted">'+esc(x.mime_type||'ملف')+' · '+esc(x.file_size||'')+' بايت</p><div class="actions"><button class="btn light" type="button" data-download-doc="'+esc(x.id)+'">فتح / تنزيل</button>'+del+'</div></article>';
  }).join('');
 }
+
 function taskAssigneeOptions(){
  const people=[{id:activeProject.client_id,label:'مالك المشروع'}].concat((moduleData.members||[]).map(m=>({id:m.user_id,label:m.member_email||('عضو '+String(m.user_id).slice(0,8))})));
  const unique=new Map();people.forEach(p=>{if(p.id)unique.set(String(p.id),p.label);});
