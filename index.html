@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#123f35">
-<meta name="description" content="عَمِّر — منصة تشغيل مشاريع الترميم والصيانة، من التخطيط والعروض إلى التنفيذ والاستلام."><meta name="application-name" content="AMMIR"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="AMMIR"><link rel="manifest" href="/manifest.webmanifest"><link rel="icon" type="image/svg+xml" href="/icon.svg">
+<meta name="description" content="عَمِّر | AMMIR — منصة تشغيل المشاريع والمشتريات، من إدارة المشروع وطلبات الشراء إلى عروض الموردين ومتابعة التنفيذ والاستلام."><meta name="application-name" content="AMMIR"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="AMMIR"><link rel="manifest" href="/manifest.webmanifest"><link rel="icon" type="image/svg+xml" href="/icon.svg">
 <title>عَمِّر | AMMIR</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
@@ -35,6 +35,25 @@
 .landing-feature strong{display:block;color:var(--gd);margin-bottom:5px}
 .landing-feature p{font-size:12px;color:var(--muted);margin:0;line-height:1.7}
 .landing-lang{border:1px solid #cbd8d0;background:#fff;color:var(--gd);border-radius:9px;padding:8px 12px;font-weight:700}
+
+.landing-deck{margin-top:25px;max-width:920px}
+.landing-section-heading{margin:0 0 12px}
+.landing-kicker{display:block;color:var(--g);font-size:11px;font-weight:800;letter-spacing:.04em}
+.landing-section-heading h3{margin:5px 0 0;color:var(--gd);font-size:19px;line-height:1.45}
+.landing-roles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.landing-role{background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px;min-height:125px}
+.landing-role>span{display:inline-grid;place-items:center;background:var(--gs);color:var(--gd);border-radius:8px;width:28px;height:25px;font-size:10px;font-weight:800;margin-bottom:7px}
+.landing-role strong{display:block;color:var(--gd);font-size:14px}
+.landing-role p{font-size:12px;color:var(--muted);margin:5px 0 0;line-height:1.7}
+.landing-steps{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}
+.landing-step{background:#ffffffc9;border:1px solid var(--line);border-radius:12px;padding:12px 10px;min-width:0}
+.landing-step span{display:block;color:var(--g);font-size:10px;font-weight:800;margin-bottom:6px}
+.landing-step strong{display:block;color:var(--gd);font-size:14px}
+.landing-step p{font-size:11px;color:var(--muted);line-height:1.55;margin:4px 0 0}
+.landing-trust{margin-top:20px;background:var(--gd);color:#fff;border-radius:16px;padding:18px 20px;max-width:920px}
+.landing-trust strong{font-size:16px}
+.landing-trust p{margin:6px 0 0;color:#e0eee7;font-size:12px;line-height:1.9}
+
 .auth-shell{grid-template-columns:minmax(0,1fr) minmax(320px,430px);gap:36px;align-content:center;justify-items:center}
 .auth-shell .auth-card{width:100%}
 .module-list{display:grid;gap:10px}
@@ -45,8 +64,8 @@
 .module-record .record-actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px}
 .module-record select,.module-record input{border:1px solid var(--line);border-radius:8px;padding:8px;background:#fff;color:var(--ink);max-width:100%}
 .module-empty{border:1px dashed #cbd8d0;border-radius:12px;text-align:center;padding:22px;color:var(--muted);font-size:13px}
-@media(max-width:900px){.auth-shell{grid-template-columns:1fr;gap:8px}.public-landing{padding:4px 8px 14px}.public-landing h2{font-size:32px}.landing-grid{grid-template-columns:1fr}.landing-feature{min-height:0}}
-@media(max-width:680px){.public-landing h2{font-size:28px}.public-landing .lead{font-size:14px}.landing-actions .btn{width:100%}.auth-card{max-width:430px}}
+@media(max-width:900px){.auth-shell{grid-template-columns:1fr;gap:8px}.public-landing{padding:4px 8px 14px}.public-landing h2{font-size:32px}.landing-grid{grid-template-columns:1fr}.landing-roles{grid-template-columns:1fr}.landing-steps{grid-template-columns:repeat(2,minmax(0,1fr))}.landing-feature{min-height:0}}
+@media(max-width:680px){.public-landing h2{font-size:28px}.public-landing .lead{font-size:14px}.landing-actions .btn{width:100%}.landing-steps{grid-template-columns:repeat(3,minmax(0,1fr))}.auth-card{max-width:430px}}
 html[lang="en"] body{direction:ltr}
 html[lang="en"] .layout{direction:ltr}
 html[lang="en"] .nav-btn{text-align:left}
@@ -64,20 +83,53 @@ html[lang="en"] .top-user{direction:ltr}
 <body>
 <div id="authShell" class="auth-shell">
 <section class="public-landing" id="publicLanding" aria-labelledby="landingTitle">
- <span class="eyebrow" data-ar="منصة تشغيل مشاريع الترميم والصيانة" data-en="Renovation & property maintenance operations">منصة تشغيل مشاريع الترميم والصيانة</span>
- <h2 id="landingTitle" data-ar="من أول طلب ترميم… إلى التسليم النهائي." data-en="From the first repair request to final handover.">من أول طلب ترميم… إلى التسليم النهائي.</h2>
- <p class="lead" data-ar="عَمِّر يجمع إدارة المشروع، فريق العمل، عروض المقاولين، المصروفات، تقارير الموقع، متابعة العيوب، والموافقات في مساحة عمل واحدة واضحة." data-en="AMMIR brings project management, teams, contractor quotations, costs, site reports, issue tracking and approvals into one clear workspace.">عَمِّر يجمع إدارة المشروع، فريق العمل، عروض المقاولين، المصروفات، تقارير الموقع، متابعة العيوب، والموافقات في مساحة عمل واحدة واضحة.</p>
- <p class="landing-proof" data-ar="مصمم لأصحاب العقارات وشركات إدارة المشاريع والمقاولين وفرق التنفيذ." data-en="Built for property owners, project management firms, contractors and field teams.">مصمم لأصحاب العقارات وشركات إدارة المشاريع والمقاولين وفرق التنفيذ.</p>
- <div class="landing-actions"><button class="btn primary" type="button" data-auth-panel="signup" data-ar="ابدأ مساحة عملك" data-en="Create your workspace">ابدأ مساحة عملك</button><button class="btn light" type="button" data-auth-panel="login" data-ar="تسجيل الدخول" data-en="Sign in">تسجيل الدخول</button><button id="marketingLang" class="landing-lang" type="button" aria-label="Switch language">EN</button></div>
+ <span class="eyebrow" data-ar="منصة تشغيل المشاريع والمشتريات" data-en="Project operations & procurement network">منصة تشغيل المشاريع والمشتريات</span>
+ <h2 id="landingTitle" data-ar="كل تفاصيل المشروع… من أول مواصفة إلى آخر استلام." data-en="Every project detail — from the first specification to final handover.">كل تفاصيل المشروع… من أول مواصفة إلى آخر استلام.</h2>
+ <p class="lead" data-ar="عَمِّر يجمع إدارة المشاريع، الموردين، المقاولين، طلبات الشراء، عروض الأسعار، فرق التنفيذ، تقارير الموقع والاتفاقات في مساحة عمل واحدة مترابطة." data-en="AMMIR connects project management, suppliers, contractors, purchase requests, quotations, field teams, site reports and agreements in one coordinated workspace.">عَمِّر يجمع إدارة المشاريع، الموردين، المقاولين، طلبات الشراء، عروض الأسعار، فرق التنفيذ، تقارير الموقع والاتفاقات في مساحة عمل واحدة مترابطة.</p>
+ <p class="landing-proof" data-ar="لأصحاب العقارات والمشروعات، شركات إدارة المشاريع، المقاولين، موردي مواد البناء وفرق الموقع." data-en="For property owners, project firms, contractors, building-material suppliers and field teams.">لأصحاب العقارات والمشروعات، شركات إدارة المشاريع، المقاولين، موردي مواد البناء وفرق الموقع.</p>
+ <div class="landing-actions"><button class="btn primary" type="button" data-auth-panel="signup" data-ar="أنشئ مساحة عملك" data-en="Create your workspace">أنشئ مساحة عملك</button><button class="btn light" type="button" data-auth-panel="login" data-ar="تسجيل الدخول" data-en="Sign in">تسجيل الدخول</button><button id="marketingLang" class="landing-lang" type="button" aria-label="Switch language">EN</button></div>
+
  <div class="landing-grid">
-  <article class="landing-feature"><strong data-ar="إدارة المشروع" data-en="Project control">إدارة المشروع</strong><p data-ar="المهام، الميزانية، الفريق، العروض، الدفعات وسجل القرارات." data-en="Tasks, budgets, teams, quotations, payments and a decision trail.">المهام، الميزانية، الفريق، العروض، الدفعات وسجل القرارات.</p></article>
-  <article class="landing-feature"><strong data-ar="متابعة الموقع" data-en="Field visibility">متابعة الموقع</strong><p data-ar="تقارير يومية، تقدم التنفيذ، العيوب والملاحظات الميدانية." data-en="Daily reports, execution progress, defects and field notes.">تقارير يومية، تقدم التنفيذ، العيوب والملاحظات الميدانية.</p></article>
-  <article class="landing-feature"><strong data-ar="حوكمة وتسليم" data-en="Governance & handover">حوكمة وتسليم</strong><p data-ar="طلبات تغيير قابلة للاعتماد وقائمة تحقق قبل استلام العقار." data-en="Approval-based change requests and a property handover checklist.">طلبات تغيير قابلة للاعتماد وقائمة تحقق قبل استلام العقار.</p></article>
+  <article class="landing-feature"><strong data-ar="شغّل المشروع" data-en="Run the project">شغّل المشروع</strong><p data-ar="المهام، الفريق، الميزانية، القرارات، التقارير ومتابعة التنفيذ." data-en="Tasks, teams, budgets, decisions, reports and execution tracking.">المهام، الفريق، الميزانية، القرارات، التقارير ومتابعة التنفيذ.</p></article>
+  <article class="landing-feature"><strong data-ar="نظّم المشتريات" data-en="Coordinate procurement">نظّم المشتريات</strong><p data-ar="منتجات الموردين، طلبات الشراء، عروض الأسعار والاتفاقات." data-en="Supplier products, purchase requests, quotations and agreements.">منتجات الموردين، طلبات الشراء، عروض الأسعار والاتفاقات.</p></article>
+  <article class="landing-feature"><strong data-ar="تابع الموقع" data-en="See field progress">تابع الموقع</strong><p data-ar="تقارير ميدانية، صور، عيوب، ملاحظات وقائمة استلام." data-en="Field reports, photos, defects, notes and handover checks.">تقارير ميدانية، صور، عيوب، ملاحظات وقائمة استلام.</p></article>
+ </div>
+
+ <section class="landing-deck" aria-labelledby="landingRolesTitle">
+  <div class="landing-section-heading">
+   <span class="landing-kicker" data-ar="منظومة واحدة لأطراف متعددة" data-en="One network for every stakeholder">منظومة واحدة لأطراف متعددة</span>
+   <h3 id="landingRolesTitle" data-ar="كل طرف يعرف دوره، وما عليه، وما ينتظره." data-en="Every stakeholder knows their role, responsibilities and next step.">كل طرف يعرف دوره، وما عليه، وما ينتظره.</h3>
+  </div>
+  <div class="landing-roles">
+   <article class="landing-role"><span>01</span><strong data-ar="مالك المشروع" data-en="Project owner">مالك المشروع</strong><p data-ar="أنشئ مشروعك، راقب التكلفة، اطلب العروض، واعتمد القرارات والاستلام." data-en="Create your project, monitor costs, request offers and approve decisions and handover.">أنشئ مشروعك، راقب التكلفة، اطلب العروض، واعتمد القرارات والاستلام.</p></article>
+   <article class="landing-role"><span>02</span><strong data-ar="المقاول ومقدم الخدمة" data-en="Contractor & service provider">المقاول ومقدم الخدمة</strong><p data-ar="اعرض خدماتك، استقبل الطلبات، قدّم عرضك، ووثّق نطاق العمل والاتفاق." data-en="Present your services, receive requests, submit offers and document scope and agreements.">اعرض خدماتك، استقبل الطلبات، قدّم عرضك، ووثّق نطاق العمل والاتفاق.</p></article>
+   <article class="landing-role"><span>03</span><strong data-ar="مورد مواد البناء" data-en="Building-material supplier">مورد مواد البناء</strong><p data-ar="أنشئ كتالوجك، حدّث الأسعار والتوفر، واستقبل طلبات الشراء." data-en="Create your catalogue, update prices and availability, and receive purchase requests.">أنشئ كتالوجك، حدّث الأسعار والتوفر، واستقبل طلبات الشراء.</p></article>
+   <article class="landing-role"><span>04</span><strong data-ar="مدير المشروع وفريق الموقع" data-en="Project manager & field team">مدير المشروع وفريق الموقع</strong><p data-ar="وزّع المهام، أرسل التقارير، عالج الملاحظات، وتابع التقدم." data-en="Assign tasks, submit reports, resolve issues and track progress.">وزّع المهام، أرسل التقارير، عالج الملاحظات، وتابع التقدم.</p></article>
+  </div>
+ </section>
+
+ <section class="landing-deck" aria-labelledby="landingFlowTitle">
+  <div class="landing-section-heading">
+   <span class="landing-kicker" data-ar="سير عمل مترابط" data-en="A connected workflow">سير عمل مترابط</span>
+   <h3 id="landingFlowTitle" data-ar="من الطلب إلى التنفيذ والتسليم" data-en="From request to execution and handover">من الطلب إلى التنفيذ والتسليم</h3>
+  </div>
+  <div class="landing-steps">
+   <div class="landing-step"><span>01</span><strong data-ar="حدّد" data-en="Define">حدّد</strong><p data-ar="المشروع والاحتياج" data-en="The project and need">المشروع والاحتياج</p></div>
+   <div class="landing-step"><span>02</span><strong data-ar="اطلب" data-en="Request">اطلب</strong><p data-ar="الخدمة أو مواد البناء" data-en="Service or materials">الخدمة أو مواد البناء</p></div>
+   <div class="landing-step"><span>03</span><strong data-ar="قارن" data-en="Compare">قارن</strong><p data-ar="العروض والشروط" data-en="Offers and terms">العروض والشروط</p></div>
+   <div class="landing-step"><span>04</span><strong data-ar="نفّذ" data-en="Execute">نفّذ</strong><p data-ar="تابع الفريق والتوريد" data-en="Track teams and supply">تابع الفريق والتوريد</p></div>
+   <div class="landing-step"><span>05</span><strong data-ar="استلم" data-en="Handover">استلم</strong><p data-ar="وثّق النتيجة والتكلفة" data-en="Record outcome and cost">وثّق النتيجة والتكلفة</p></div>
+  </div>
+ </section>
+
+ <div class="landing-trust">
+  <strong data-ar="الوضوح قبل الوعود" data-en="Clarity before promises">الوضوح قبل الوعود</strong>
+  <p data-ar="عَمِّر ينظم الطلبات والعروض والقرارات وسجل المشروع. بيانات الموردين والأسعار والتوفر تأتي من أصحابها، ولا تُعرض الجهة كشريك معتمد أو موثّق قبل استكمال التحقق." data-en="AMMIR organizes requests, offers, decisions and project records. Supplier details, prices and availability come from their owners; no business is labelled verified before its checks are completed.">عَمِّر ينظم الطلبات والعروض والقرارات وسجل المشروع. بيانات الموردين والأسعار والتوفر تأتي من أصحابها، ولا تُعرض الجهة كشريك معتمد أو موثّق قبل استكمال التحقق.</p>
  </div>
 </section>
 <main class="auth-card">
- <div class="brand"><div class="brand-mark">ع</div><div><h1>عَمِّر | AMMIR</h1><small>إدارة مشاريع ترميم وصيانة العقارات</small></div></div>
- <p class="auth-intro">مكان واحد لتنظيم مشاريع العقارات ومتابعة تفاصيلها.</p>
+ <div class="brand"><div class="brand-mark">ع</div><div><h1>عَمِّر | AMMIR</h1><small>تشغيل المشاريع والمشتريات والتوريد</small></div></div>
+ <p class="auth-intro">مساحة واحدة تربط المشروع والمشتريات والتنفيذ.</p>
  <section id="loginPanel"><h2 class="panel-title">تسجيل الدخول</h2>
   <form id="loginForm"><div class="field"><label for="loginEmail">البريد الإلكتروني</label><input id="loginEmail" type="email" autocomplete="email" required placeholder="name@example.com"></div><div class="field"><label for="loginPassword">كلمة المرور</label><input id="loginPassword" type="password" autocomplete="current-password" required placeholder="كلمة المرور"></div><button id="loginButton" class="btn primary block" type="submit">دخول إلى عَمِّر</button></form>
   <button class="text-link" type="button" data-auth-panel="reset">نسيت كلمة المرور؟</button><button class="text-link" type="button" data-auth-panel="signup">إنشاء حساب جديد</button>
@@ -88,7 +140,7 @@ html[lang="en"] .top-user{direction:ltr}
 </main></div>
 
 <div id="appShell" hidden>
-<header class="topbar"><div class="brand"><div class="brand-mark">ع</div><div><h1>عَمِّر | AMMIR</h1><small>إدارة مشاريع ترميم وصيانة العقارات</small></div></div><div class="top-user"><button class="btn light" id="installButton" type="button" data-action="install" hidden>تثبيت التطبيق</button><button class="btn light" type="button" id="appLangToggle" data-action="language">English</button><button class="btn light notification-toggle" type="button" data-action="notifications">الإشعارات <span id="notificationCount" class="notification-badge" hidden>0</span></button><span class="email-label" id="headerEmail"></span><span class="avatar" id="userAvatar">ع</span></div></header>
+<header class="topbar"><div class="brand"><div class="brand-mark">ع</div><div><h1>عَمِّر | AMMIR</h1><small>تشغيل المشاريع والمشتريات والتوريد</small></div></div><div class="top-user"><button class="btn light" id="installButton" type="button" data-action="install" hidden>تثبيت التطبيق</button><button class="btn light" type="button" id="appLangToggle" data-action="language">English</button><button class="btn light notification-toggle" type="button" data-action="notifications">الإشعارات <span id="notificationCount" class="notification-badge" hidden>0</span></button><span class="email-label" id="headerEmail"></span><span class="avatar" id="userAvatar">ع</span></div></header>
 <div class="layout">
 <aside class="sidebar"><div class="side-label">مساحة العمل</div><button class="nav-btn active" type="button" data-view="dashboard"><span class="nav-icon">⌂</span>الرئيسية</button><button class="nav-btn" type="button" data-view="projects"><span class="nav-icon">▤</span>مشاريعي</button><button class="nav-btn" type="button" data-view="form"><span class="nav-icon">＋</span>إنشاء مشروع</button><div class="sidebar-bottom"><div class="side-label">الحساب</div><button class="nav-btn" type="button" data-action="logout"><span class="nav-icon">↪</span>تسجيل الخروج</button></div></aside>
 <main class="content"><div id="appMessage" class="message" role="status" aria-live="polite"></div>

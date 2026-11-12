@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - feature/ammar-market-messaging
+      - launch/ammir-trust-hardening
   pull_request:
     branches:
       - main
@@ -53,6 +54,30 @@ jobs:
         env:
           PGPASSWORD: postgres
         run: psql -h 127.0.0.1 -U postgres -d ammar_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261112142000_optimize_ammir_rls_policies.sql
+      - name: Apply AMMIR trust and admin access hardening
+        env:
+          PGPASSWORD: postgres
+        run: psql -h 127.0.0.1 -U postgres -d ammar_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261112200000_ammir_trust_and_admin_access.sql
+      - name: Apply AMMIR provider verification audit migration
+        env:
+          PGPASSWORD: postgres
+        run: psql -h 127.0.0.1 -U postgres -d ammar_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261112203000_ammir_provider_verification_audit.sql
+      - name: Enforce verified-provider transaction gates
+        env:
+          PGPASSWORD: postgres
+        run: psql -h 127.0.0.1 -U postgres -d ammar_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261112210000_ammir_verified_provider_transaction_gate.sql
+      - name: Disable unapproved commission defaults
+        env:
+          PGPASSWORD: postgres
+        run: psql -h 127.0.0.1 -U postgres -d ammar_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261112204500_disable_unapproved_commission_defaults.sql
+      - name: Verify AMMIR commission defaults
+        env:
+          PGPASSWORD: postgres
+        run: psql -h 127.0.0.1 -U postgres -d ammar_test -v ON_ERROR_STOP=1 -f tests/ammar-commission-defaults.sql
+      - name: Run AMMIR trust and admin permission tests
+        env:
+          PGPASSWORD: postgres
+        run: psql -h 127.0.0.1 -U postgres -d ammar_test -v ON_ERROR_STOP=1 -f tests/ammar-trust-admin.sql
       - name: Run marketplace integration tests
         env:
           PGPASSWORD: postgres

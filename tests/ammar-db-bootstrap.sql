@@ -8,6 +8,22 @@ CREATE TABLE auth.users (id uuid PRIMARY KEY,email text UNIQUE);
 CREATE OR REPLACE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql STABLE AS $$
  SELECT nullif(current_setting('request.jwt.claim.sub',true),'')::uuid
 $$;
+CREATE TABLE public.profiles (
+ id uuid PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+ role text NOT NULL DEFAULT 'client'
+);
+CREATE OR REPLACE FUNCTION public.is_admin()
+RETURNS boolean
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+ SELECT EXISTS (
+   SELECT 1 FROM public.profiles
+   WHERE id = (SELECT auth.uid()) AND role = 'admin'
+ )
+$$;
 CREATE TABLE public.projects (
  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
  client_id uuid NOT NULL REFERENCES auth.users(id),
@@ -67,6 +83,8 @@ DO $$ BEGIN
 END $$;
 GRANT USAGE ON SCHEMA public,auth,storage TO authenticated,anon;
 GRANT SELECT,INSERT,UPDATE,DELETE ON ALL TABLES IN SCHEMA public TO authenticated;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT,INSERT,UPDATE,DELETE ON TABLES TO authenticated;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT USAGE,SELECT ON SEQUENCES TO authenticated;
 GRANT SELECT,INSERT,UPDATE,DELETE ON storage.objects TO authenticated;
 ALTER TABLE storage.objects ENABLE ROW LEVEL SECURITY;
 GRANT SELECT ON storage.buckets TO authenticated,anon;
