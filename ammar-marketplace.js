@@ -453,7 +453,7 @@
         <button type="button" data-eco-reply="${esc(m.id)}">رد</button>
         ${pinControl}
         ${m.sender_id!==user.id?`<button type="button" data-eco-report="${esc(m.id)}">إبلاغ</button>`:''}
-        <button type="button" data-eco-forward="${esc(m.id)}">إعادة توجيه</button>
+        ${m.message_type==='text'&&m.body?`<button type="button" data-eco-forward="${esc(m.id)}">إعادة توجيه</button>`:''}
         ${c.data.context_type==='project'?`<button type="button" data-eco-to-task="${esc(m.id)}">تحويل لمهمة</button><button type="button" data-eco-to-change="${esc(m.id)}">طلب تغيير</button>`:''}
       </div>`;
       return `<div class="eco-bubble ${m.sender_id===user.id?'mine':''}" data-eco-message="${esc(m.id)}">
@@ -594,6 +594,17 @@ async function servicesHtml(){
     messageChannel=db.channel('ammar-chat-'+id)
       .on('postgres_changes',{event:'INSERT',schema:'public',table:'ammar_messages',filter:'conversation_id=eq.'+id},()=>{
         if(tab==='messages'&&activeConversation===id)render().catch(e=>tell(e.message,'error'));
+        refreshUnreadCount();
+      })
+      .on('postgres_changes',{event:'INSERT',schema:'public',table:'ammar_user_notifications',filter:'user_id=eq.'+user.id},payload=>{
+        refreshUnreadCount();
+        if(payload.new?.conversation_id===id&&tab==='messages'&&activeConversation===id)
+          render().catch(e=>tell(e.message,'error'));
+      })
+      .on('postgres_changes',{event:'UPDATE',schema:'public',table:'ammar_message_receipts'},async payload=>{
+        if(tab!=='messages'||activeConversation!==id)return;
+        const msg=await db.from('ammar_messages').select('conversation_id').eq('id',payload.new?.message_id).maybeSingle();
+        if(!msg.error&&msg.data?.conversation_id===id)render().catch(e=>tell(e.message,'error'));
       }).subscribe();
   }
 
