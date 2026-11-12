@@ -418,6 +418,17 @@ BEGIN
 END;
 $$;
 
+-- Extend the original insert policy to admit the new message types while
+-- preserving sender identity, conversation membership and private file paths.
+DROP POLICY IF EXISTS ammar_messages_insert ON public.ammar_messages;
+CREATE POLICY ammar_messages_insert ON public.ammar_messages
+FOR INSERT TO authenticated WITH CHECK (
+  sender_id=auth.uid()
+  AND message_type IN ('text','image','file','video','location','system')
+  AND public.ammar_is_conversation_member(conversation_id)
+  AND (file_path IS NULL OR file_path LIKE conversation_id::text || '/' || auth.uid()::text || '/%')
+);
+
 ALTER TABLE public.ammar_message_receipts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.ammar_conversation_preferences ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.ammar_user_blocks ENABLE ROW LEVEL SECURITY;
