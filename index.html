@@ -220,9 +220,9 @@ function renderCommentsPanel(){
  return '<section class="panel"><div class="panel-head"><h3>تعليقات الفريق</h3><span class="muted">'+a.length+' تعليق</span></div>'+(canWriteModule('comments')?'<form id="projectCommentForm"><div class="field"><textarea name="message" maxlength="4000" required placeholder="اكتب ملاحظة أو قراراً أو سؤالاً للفريق..."></textarea></div><button class="btn primary" type="submit">إضافة التعليق</button></form>':'<div class="notice">صلاحية مشاهدة فقط: لا يمكنك إضافة تعليق.</div>')+'<div class="workspace-section">'+(a.length?a.map(x=>'<div class="timeline-item"><strong>'+esc(x.message)+'</strong><small>'+esc(x.author_id)+' · '+esc(dateText(x.created_at))+'</small></div>').join(''):'<div class="empty">لا توجد تعليقات بعد.</div>')+'</div></section>';
 }
 function renderFinancePanel(){
- const exp=moduleData.expenses||[],pay=moduleData.payments||[],budget=Number(activeProject.budget_amount||0),cur=activeProject.budget_currency||'';
- const by={};exp.forEach(x=>{const c=x.currency||'غير محددة';by[c]=(by[c]||0)+Number(x.amount||0);});
- const paid={};pay.filter(x=>x.status==='paid').forEach(x=>{const c=x.currency||'غير محددة';paid[c]=(paid[c]||0)+Number(x.amount||0);});
+ const exp=moduleData.expenses||[],pay=moduleData.payments||[],budget=Number(activeProject.budget_amount||0),cur=String(activeProject.budget_currency||'').trim().toUpperCase();
+ const by={};exp.forEach(x=>{const c=String(x.currency||'غير محددة').trim().toUpperCase();by[c]=(by[c]||0)+Number(x.amount||0);});
+ const paid={};pay.filter(x=>x.status==='paid').forEach(x=>{const c=String(x.currency||'غير محددة').trim().toUpperCase();paid[c]=(paid[c]||0)+Number(x.amount||0);});
  const spent=cur?(by[cur]||0):null;
  const metrics='<div class="finance-grid"><div class="finance-metric"><span class="muted">الميزانية</span><strong>'+esc(activeProject.budget_amount!=null?budget.toLocaleString('en-US')+' '+cur:'غير محددة')+'</strong></div><div class="finance-metric"><span class="muted">المصروفات بنفس العملة</span><strong>'+esc(spent===null?'حدد عملة الميزانية':spent.toLocaleString('en-US')+' '+cur)+'</strong></div><div class="finance-metric"><span class="muted">المتبقي</span><strong>'+esc(spent===null||activeProject.budget_amount==null?'غير محسوب':(budget-spent).toLocaleString('en-US')+' '+cur)+'</strong></div></div>';
  const byRows=Object.entries(by).map(([c,v])=>'<div class="member-row"><span>مصروفات '+esc(c)+'</span><strong>'+esc(v.toLocaleString('en-US'))+'</strong></div>').join('');
