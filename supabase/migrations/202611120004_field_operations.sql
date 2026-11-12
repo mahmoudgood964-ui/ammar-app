@@ -85,6 +85,29 @@ ALTER TABLE public.project_quotes
   ADD COLUMN IF NOT EXISTS inclusions text,
   ADD COLUMN IF NOT EXISTS exclusions text;
 
+-- Protect future quotation records while retaining any historical values.
+DO $
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid='public.project_quotes'::regclass
+      AND conname='project_quotes_duration_days_ammar_check'
+  ) THEN
+    ALTER TABLE public.project_quotes
+      ADD CONSTRAINT project_quotes_duration_days_ammar_check
+      CHECK (duration_days IS NULL OR duration_days BETWEEN 1 AND 3650) NOT VALID;
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid='public.project_quotes'::regclass
+      AND conname='project_quotes_warranty_months_ammar_check'
+  ) THEN
+    ALTER TABLE public.project_quotes
+      ADD CONSTRAINT project_quotes_warranty_months_ammar_check
+      CHECK (warranty_months IS NULL OR warranty_months BETWEEN 0 AND 600) NOT VALID;
+  END IF;
+END $;
+
 CREATE INDEX IF NOT EXISTS project_site_reports_project_date_idx
   ON public.project_site_reports(project_id, report_date DESC, created_at DESC);
 CREATE INDEX IF NOT EXISTS project_issues_project_status_idx
@@ -112,9 +135,11 @@ FOR INSERT TO authenticated WITH CHECK (
 );
 CREATE POLICY project_site_reports_author_update ON public.project_site_reports
 FOR UPDATE TO authenticated USING (
-  created_by = auth.uid() OR public.ammar_project_role(project_id::text) IN ('owner','manager')
+  public.ammar_project_role(project_id::text) IN ('owner','manager','supervisor','engineer','worker')
+  AND (created_by = auth.uid() OR public.ammar_project_role(project_id::text) IN ('owner','manager'))
 ) WITH CHECK (
-  created_by = auth.uid() OR public.ammar_project_role(project_id::text) IN ('owner','manager')
+  public.ammar_project_role(project_id::text) IN ('owner','manager','supervisor','engineer','worker')
+  AND (created_by = auth.uid() OR public.ammar_project_role(project_id::text) IN ('owner','manager'))
 );
 CREATE POLICY project_site_reports_manager_delete ON public.project_site_reports
 FOR DELETE TO authenticated USING (public.ammar_project_role(project_id::text) IN ('owner','manager'));
