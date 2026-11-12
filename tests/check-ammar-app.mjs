@@ -8,6 +8,8 @@ const serviceWorker = fs.readFileSync('sw.js', 'utf8');
 const migration = fs.readFileSync('supabase/migrations/202611120006_ammar_marketplace_messaging.sql', 'utf8');
 const messagingPlus = fs.readFileSync('supabase/migrations/202611120007_ammar_messaging_plus.sql', 'utf8');
 const messagingTests = fs.readFileSync('tests/ammar-messaging-plus.sql', 'utf8');
+const competitiveAudit = fs.readFileSync('docs/AMMAR_COMPETITIVE_POSITIONING_AND_NAME_REVIEW.md', 'utf8');
+const releaseAudit = fs.readFileSync('docs/AMMAR_MESSAGING_AND_RELEASE_GAP_AUDIT.md', 'utf8');
 const tests = fs.readFileSync('tests/ammar-marketplace-integration.sql', 'utf8');
 
 const inlineScripts = [...html.matchAll(/<script\b(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/gi)];
@@ -63,11 +65,15 @@ for (const rpc of ['ammar_mark_conversation_delivered','ammar_mark_conversation_
 }
 assert.ok(messagingPlus.includes("'video','location'"), 'Video and location messages are missing');
 assert.ok(messagingTests.includes('AMMAR ADVANCED MESSAGING TESTS PASSED'), 'Advanced messaging integration tests are missing');
+assert.ok(messagingTests.includes('بعد إلغاء الحظر'), 'Unblock/resume messaging test is missing');
+assert.ok(competitiveAudit.includes('عمار لمواد البناء'), 'Direct same-name building-materials competitor not documented');
+assert.ok(competitiveAudit.includes('BOQ'), 'Defensible project procurement differentiation is not documented');
+assert.ok(releaseAudit.includes('synthetic PostgreSQL'), 'Release audit must distinguish synthetic CI from production readiness');
 
 for (const feature of [
   'data-eco-buy','data-eco-contact','data-eco-submit-quote','data-eco-accept-quote',
   'data-eco-service-offer','data-eco-accept-service','data-eco-service-chat',
-  'data-eco-complete-service','data-eco-submit-review','ammar_user_notifications','ammar-chat-files','ammar-market-files'
+  'data-eco-complete-service','data-eco-submit-review','data-eco-unblock','data-eco-to-task','data-eco-to-change','contextCard','ammar_user_notifications','ammar-chat-files','ammar-market-files'
 ]) assert.ok(moduleSource.includes(feature), 'Missing UI feature ' + feature);
 
 console.log('AMMAR static application and migration checks passed.');
