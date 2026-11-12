@@ -151,7 +151,7 @@ DO $$ BEGIN
   IF EXISTS (SELECT 1 FROM storage.objects WHERE bucket_id='ammar-chat-files' AND name=current_setting('ammar.test.file_path')) THEN
     RAISE EXCEPTION 'RLS failure: outsider can read a private attachment';
   END IF;
-END $;
+END $$;
 
 RESET ROLE;
 
