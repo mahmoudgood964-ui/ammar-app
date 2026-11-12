@@ -199,7 +199,7 @@ function moduleForm(kind){
 function renderTeamPanel(){
  const owner=String(activeProject.client_id)===String(currentUser.id),members=moduleData.members||[],invites=moduleData.invitations||[];
  let s='<section class="panel"><div class="panel-head"><h3>فريق المشروع</h3><span class="muted">'+(members.length+1)+' عضو</span></div><div class="member-row"><div class="member-meta"><strong>مالك المشروع</strong><small>'+esc(String(activeProject.client_id)===String(currentUser.id)?currentUser.email:activeProject.client_id)+'</small></div><span class="status-pill">المالك</span></div>';
- s+=members.map(m=>'<div class="member-row"><div class="member-meta"><strong>'+esc(m.user_id)+'</strong><small>انضم: '+esc(dateText(m.created_at))+'</small></div><div class="actions"><select class="team-role" data-member-role="'+esc(m.user_id)+'" '+(!owner?'disabled':'')+'>'+Object.entries(memberRoleLabels).map(([k,v])=>'<option value="'+k+'" '+((({admin:'manager',project_manager:'manager',owner:'manager',member:'worker',technician:'worker'})[m.member_role]||m.member_role)===k?'selected':'')+'>'+v+'</option>').join('')+'</select>'+(owner?'<button class="btn quiet" type="button" data-remove-member="'+esc(m.user_id)+'">إزالة</button>':'')+'</div></div>').join('');
+ s+=members.map(m=>'<div class="member-row"><div class="member-meta"><strong>'+esc(m.member_email||m.user_id)+'</strong><small>انضم: '+esc(dateText(m.created_at))+'</small></div><div class="actions"><select class="team-role" data-member-role="'+esc(m.user_id)+'" '+(!owner?'disabled':'')+'>'+Object.entries(memberRoleLabels).map(([k,v])=>'<option value="'+k+'" '+((({admin:'manager',project_manager:'manager',owner:'manager',member:'worker',technician:'worker'})[m.member_role]||m.member_role)===k?'selected':'')+'>'+v+'</option>').join('')+'</select>'+(owner?'<button class="btn quiet" type="button" data-remove-member="'+esc(m.user_id)+'">إزالة</button>':'')+'</div></div>').join('');
  if(!members.length)s+='<div class="empty">لم تتم إضافة أعضاء بعد. ادعُ أول عضو للبدء بالعمل الجماعي.</div>';
  s+='</section>';
  if(owner){
@@ -300,7 +300,7 @@ function exportProjectReport(){
  (moduleData.comments||[]).forEach(x=>rows.push(['COMMENTS',x.author_id,x.message,x.created_at]));
  rows.push([],['ACTIVITY','Actor','Event','Summary','Created']);
  (moduleData.activity||[]).forEach(x=>rows.push(['ACTIVITY',x.actor_id,x.event_type,x.summary,x.created_at]));
- const csv='\\uFEFF'+rows.map(r=>r.map(csvCell).join(',')).join('\\r\\n');
+ const csv='\uFEFF'+rows.map(r=>r.map(csvCell).join(',')).join('\r\n');
  const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});
  const url=URL.createObjectURL(blob),a=document.createElement('a');
  const safe=(activeProject.title||'project').replace(/[^a-z0-9_-]+/gi,'_').slice(0,60)||'project';
