@@ -554,7 +554,7 @@ RETURNS uuid
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path=public,pg_temp
-AS $
+AS $ammar_start_conversation$
 DECLARE
   v_user uuid := auth.uid();
   v_conversation uuid;
@@ -684,7 +684,7 @@ BEGIN
   END IF;
   RETURN v_conversation;
 END;
-$;
+$ammar_start_conversation$;
 
 -- Enable realtime for delivery receipts and presence where the publication is available.
 DO $ammar_realtime_plus$
