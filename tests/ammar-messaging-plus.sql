@@ -40,9 +40,6 @@ BEGIN
 END
 $ammar_plus_test$;
 
--- Re-fetch the generated id into a session setting for the assertion above.
-SELECT set_config('ammar.test.receipt_message_id', :'receipt_message_id', false);
-
 -- Presence privacy: hidden last-seen must not be returned to a conversation peer.
 SET ROLE authenticated;
 SELECT set_config('request.jwt.claim.sub','11111111-1111-4111-8111-111111111111',false);
@@ -176,5 +173,4 @@ $ammar_plus_test$;
 
 RESET ROLE;
 
-SELECT set_config('ammar.test.source_message_id', :'source_message_id', false);
 SELECT 'AMMAR ADVANCED MESSAGING TESTS PASSED' AS result;
