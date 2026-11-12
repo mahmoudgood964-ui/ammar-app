@@ -461,6 +461,10 @@ FOR DELETE TO authenticated USING (
 GRANT SELECT, INSERT ON public.project_activity, public.project_comments TO authenticated;
 GRANT DELETE ON public.project_comments TO authenticated;
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.project_payments TO authenticated;
-GRANT SELECT, UPDATE ON public.project_notifications TO authenticated;
-GRANT SELECT ON public.project_invitations, public.project_members TO authenticated;
+REVOKE ALL ON public.project_notifications FROM authenticated;
+GRANT SELECT ON public.project_notifications TO authenticated;
+GRANT UPDATE (read_at) ON public.project_notifications TO authenticated;
+REVOKE ALL ON public.project_invitations FROM authenticated;
+GRANT SELECT (id, project_id, email, member_role, status, expires_at, created_at) ON public.project_invitations TO authenticated;
+GRANT SELECT ON public.project_members TO authenticated;
 GRANT SELECT ON public.project_activity, public.project_comments, public.project_payments, public.project_notifications TO authenticated;
