@@ -116,7 +116,7 @@ const SUPABASE_URL='https://uutwijowzewmvvrzsaww.supabase.co';
 const SUPABASE_KEY='sb_publishable_o-zC0NdMggZbPPY2l1REhA_w8Sbvjw_';
 const APP_URL='https://ammar-app.vercel.app/';
 const $=id=>document.getElementById(id);
-let client=null,currentUser=null,projectsCache=[],editingProjectId=null,recoveryMode=false,lastViewedProjectId=null,activeProject=null,moduleTab='tasks',pendingInviteToken=new URLSearchParams(location.search).get('invite')||localStorage.getItem('ammar_pending_invite')||null,inviteAccepting=false,notificationTimer=null,lastInviteUrl='',moduleData={tasks:[],expenses:[],quotes:[],updates:[],documents:[],payments:[],activity:[],comments:[],members:[],invitations:[]},moduleLoadWarnings=[];
+let client=null,currentUser=null,projectsCache=[],editingProjectId=null,recoveryMode=false,lastViewedProjectId=null,activeProject=null,moduleTab='tasks',pendingInviteToken=new URLSearchParams(location.search).get('invite')||localStorage.getItem('ammar_pending_invite')||null,inviteAccepting=false,notificationTimer=null,lastInviteUrl='',moduleData={tasks:[],expenses:[],quotes:[],updates:[],documents:[],payments:[],activity:[],comments:[],members:[],invitations:[],siteReports:[],issues:[],changeOrders:[],handover:[]},moduleLoadWarnings=[];
 if(pendingInviteToken)localStorage.setItem('ammar_pending_invite',pendingInviteToken);
 const projectStatusLabels={planning:'قيد التخطيط',approved:'معتمد',in_progress:'قيد التنفيذ',on_hold:'متوقف مؤقتاً',completed:'مكتمل',cancelled:'ملغي'};
 const memberRoleLabels={manager:'مدير مشروع',supervisor:'مشرف',engineer:'مهندس',accountant:'محاسب',worker:'منفذ',viewer:'مشاهدة فقط'};
@@ -148,7 +148,7 @@ function goForm(project){
 function dateText(value){if(!value)return'غير متاح';const d=new Date(value);if(Number.isNaN(d.getTime()))return'غير متاح';try{return new Intl.DateTimeFormat('ar',{year:'numeric',month:'short',day:'numeric'}).format(d);}catch(e){return d.toLocaleDateString();}}
 function row(label,value){return'<div class="detail-row"><div class="detail-label">'+esc(label)+'</div><div class="detail-value">'+esc(value||'غير محدد')+'</div></div>';}
 function details(project){
- if(!project)return;if(!activeProject||String(activeProject.id)!==String(project.id)){lastInviteUrl='';moduleLoadWarnings=[];moduleData={tasks:[],expenses:[],quotes:[],updates:[],documents:[],payments:[],activity:[],comments:[],members:[],invitations:[]};}activeProject=project;lastViewedProjectId=String(project.id);moduleTab='tasks';
+ if(!project)return;if(!activeProject||String(activeProject.id)!==String(project.id)){lastInviteUrl='';moduleLoadWarnings=[];moduleData={tasks:[],expenses:[],quotes:[],updates:[],documents:[],payments:[],activity:[],comments:[],members:[],invitations:[],siteReports:[],issues:[],changeOrders:[],handover:[]};}activeProject=project;lastViewedProjectId=String(project.id);moduleTab='tasks';
  $('detailTitle').textContent=project.title||'تفاصيل المشروع';
  $('detailEdit').hidden=String(project.client_id)!==String(currentUser.id);
  $('detailBackdrop').hidden=false;renderWorkspace();loadProjectModules();
@@ -187,7 +187,7 @@ function logActivity(eventType,summary,entityType,entityId,metadata){
  .then(r=>{if(r.error)console.warn('AMMAR activity log:',r.error.message);});
 }
 function workspaceTabs(){
- const tabs=[['tasks','المهام'],['progress','التقدم'],['quotes','العروض'],['expenses','المصروفات'],['finance','المالية'],['documents','الملفات'],['team','الفريق'],['comments','التعليقات'],['activity','سجل النشاط'],['overview','الملخص']];
+ const tabs=[['tasks','المهام'],['progress','التقدم'],['quotes','العروض'],['expenses','المصروفات'],['finance','المالية'],['documents','الملفات'],['team','الفريق'],['siteReports','تقارير الموقع'],['issues','العيوب والملاحظات'],['changeOrders','طلبات التغيير'],['handover','الاستلام'],['comments','التعليقات'],['activity','سجل النشاط'],['overview','الملخص']];
  return '<div class="actions" style="margin:14px 0;gap:6px">'+tabs.map(([k,v])=>'<button class="btn '+(moduleTab===k?'primary':'quiet')+'" type="button" data-module-tab="'+k+'">'+v+'</button>').join('')+'<button class="btn light" type="button" data-export-project>تصدير التقرير</button></div><div id="modulePanel"></div>';
 }
 function renderWorkspace(){
@@ -278,7 +278,7 @@ function renderModulePanel(){
  if(k==='team'){box.innerHTML=renderTeamPanel();return;}
  if(k==='activity'){box.innerHTML=renderActivityPanel();return;}
  if(k==='comments'){box.innerHTML=renderCommentsPanel();return;}
- if(k==='finance'){box.innerHTML=renderFinancePanel();return;}
+ if(k==='finance'){box.innerHTML=renderFinancePanel();return;}if(k==='siteReports'){box.innerHTML=renderSiteReportsPanel();return;}if(k==='issues'){box.innerHTML=renderIssuesPanel();return;}if(k==='changeOrders'){box.innerHTML=renderChangeOrdersPanel();return;}if(k==='handover'){box.innerHTML=renderHandoverPanel();return;}
  if(k==='overview'){
   const done=moduleData.tasks.filter(x=>x.status==='done').length,last=moduleData.updates[0];
   box.innerHTML='<div class="panel">'+row('حالة المشروع',projectStatusLabels[activeProject.status]||'قيد التخطيط')+row('البداية',activeProject.start_date)+row('التسليم المستهدف',activeProject.target_end_date)+row('الميزانية الرقمية',activeProject.budget_amount==null?'غير محددة':activeProject.budget_amount+' '+(activeProject.budget_currency||''))+row('الموقع',activeProject.property_location)+row('نوع العقار',activeProject.property_type)+row('إجمالي المهام',moduleData.tasks.length)+row('المهام المكتملة',done)+row('إنجاز المهام',moduleData.tasks.length?Math.round(done/moduleData.tasks.length*100)+'%':'لا توجد مهام')+row('إجمالي المصروفات المسجلة',moduleData.expenses.reduce((s,x)=>s+Number(x.amount||0),0))+row('آخر نسبة إنجاز',last?last.progress+'%':'لم تسجل بعد')+row('أعضاء الفريق',moduleData.members.length+1)+'</div>';return;
@@ -289,7 +289,7 @@ function renderModulePanel(){
 
 async function loadProjectModules(){
  if(!activeProject||!client)return;
- const map={tasks:'project_tasks',expenses:'project_expenses',quotes:'project_quotes',updates:'project_updates',documents:'project_documents',payments:'project_payments',activity:'project_activity',comments:'project_comments',members:'project_members',invitations:'project_invitations'};
+ const map={tasks:'project_tasks',expenses:'project_expenses',quotes:'project_quotes',updates:'project_updates',documents:'project_documents',payments:'project_payments',activity:'project_activity',comments:'project_comments',members:'project_members',invitations:'project_invitations',siteReports:'project_site_reports',issues:'project_issues',changeOrders:'project_change_orders',handover:'project_handover_items'};
  const failures=[];
  const pairs=await Promise.all(Object.entries(map).map(async([k,t])=>{
   if(k==='invitations'&&String(activeProject.client_id)!==String(currentUser.id))return[k,[]];
