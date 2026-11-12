@@ -168,7 +168,19 @@ function init(){if(!window.supabase||typeof window.supabase.createClient!=='func
  $('detailEdit').addEventListener('click',()=>{const p=projectsCache.find(x=>String(x.id)===String(lastViewedProjectId));$('detailBackdrop').hidden=true;if(p)goForm(p);});
  $('detailContent').addEventListener('click',e=>{handleModuleClick(e).catch(err=>message($('appMessage'),'تعذر تنفيذ العملية: '+(err.message||'خطأ غير معروف'),'error'));});
  $('detailContent').addEventListener('submit',e=>{const form=e.target.closest('[data-module-form]');if(!form)return;e.preventDefault();const submit=form.querySelector('button[type="submit"]');busy(submit,true,'جارٍ الحفظ...');submitModule(form).then(()=>{message($('appMessage'),'تم حفظ البيانات بنجاح.','success');}).catch(err=>{message($('appMessage'),'تعذر حفظ البيانات: '+(err.message||'خطأ غير معروف'),'error');}).finally(()=>busy(submit,false));});
- $('detailContent').addEventListener('change',async e=>{const sel=e.target.closest('[data-task-status]');if(!sel)return;try{const r=await client.from('project_tasks').update({status:sel.value,updated_at:new Date().toISOString()}).eq('id',sel.dataset.taskStatus);if(r.error)throw r.error;await loadProjectModules();}catch(err){message($('appMessage'),'تعذر تحديث حالة المهمة: '+(err.message||'خطأ'),'error');}});
+ $('detailContent').addEventListener('change',async e=>{
+ const task=e.target.closest('[data-task-status]');
+ const quote=e.target.closest('[data-quote-status]');
+ if(!task&&!quote)return;
+ try{
+  const r=task
+   ?await client.from('project_tasks').update({status:task.value,updated_at:new Date().toISOString()}).eq('id',task.dataset.taskStatus).eq('project_id',activeProject.id)
+   :await client.from('project_quotes').update({status:quote.value}).eq('id',quote.dataset.quoteStatus).eq('project_id',activeProject.id);
+  if(r.error)throw r.error;
+  await loadProjectModules();
+  message($('appMessage'),task?'تم تحديث حالة المهمة.':'تم تحديث حالة عرض السعر.','success');
+ }catch(err){message($('appMessage'),'تعذر تحديث الحالة: '+(err.message||'خطأ'),'error');}
+});
  document.querySelectorAll('[data-auth-panel]').forEach(b=>b.addEventListener('click',()=>{const name=b.dataset.authPanel;if(name==='reset'){$('resetRequestForm').hidden=false;$('newPasswordForm').hidden=true;$('resetEmail').value=$('loginEmail').value.trim();}authPanel(name);}));
  $('appShell').addEventListener('click',clickApp);
  const hp=new URLSearchParams(location.hash.replace(/^#/,'')).get('type'),qp=new URLSearchParams(location.search).get('type');const hashError=new URLSearchParams(location.hash.replace(/^#/,'')).get('error_description')||new URLSearchParams(location.search).get('error_description');
