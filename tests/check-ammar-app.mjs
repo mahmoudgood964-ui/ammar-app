@@ -6,6 +6,8 @@ const html = fs.readFileSync('index.html', 'utf8');
 const moduleSource = fs.readFileSync('ammar-marketplace.js', 'utf8');
 const serviceWorker = fs.readFileSync('sw.js', 'utf8');
 const migration = fs.readFileSync('supabase/migrations/202611120006_ammar_marketplace_messaging.sql', 'utf8');
+const messagingPlus = fs.readFileSync('supabase/migrations/202611120007_ammar_messaging_plus.sql', 'utf8');
+const messagingTests = fs.readFileSync('tests/ammar-messaging-plus.sql', 'utf8');
 const tests = fs.readFileSync('tests/ammar-marketplace-integration.sql', 'utf8');
 
 const inlineScripts = [...html.matchAll(/<script\b(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/gi)];
@@ -53,6 +55,14 @@ assert.ok(!/^DO \$(?: BEGIN|$)/m.test(tests), 'Found malformed dollar delimiter 
 assert.ok(tests.includes('ammar_accept_agreement'), 'Dual-party agreement tests are missing');
 assert.ok(tests.includes('ammar_advance_market_request'), 'Purchase lifecycle tests are missing');
 assert.ok(tests.includes('RLS failure'), 'Private conversation isolation test is missing');
+for (const feature of ['ammar_message_receipts','ammar_user_blocks','ammar_message_reports','ammar_pinned_messages','ammar_conversation_preferences','ammar_user_presence']) {
+  assert.ok(messagingPlus.includes('CREATE TABLE IF NOT EXISTS public.' + feature), 'Missing advanced messaging table ' + feature);
+}
+for (const rpc of ['ammar_mark_conversation_delivered','ammar_mark_conversation_read','ammar_set_presence','ammar_get_conversation_presence','ammar_forward_message','ammar_message_to_project_task','ammar_message_to_change_order']) {
+  assert.ok(messagingPlus.includes('FUNCTION public.' + rpc), 'Missing advanced messaging RPC ' + rpc);
+}
+assert.ok(messagingPlus.includes("'video','location'"), 'Video and location messages are missing');
+assert.ok(messagingTests.includes('AMMAR ADVANCED MESSAGING TESTS PASSED'), 'Advanced messaging integration tests are missing');
 
 for (const feature of [
   'data-eco-buy','data-eco-contact','data-eco-submit-quote','data-eco-accept-quote',
