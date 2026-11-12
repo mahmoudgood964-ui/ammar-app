@@ -99,13 +99,14 @@
           <button class="eco-tab" type="button" data-eco-tab="supplier">حساب المورد</button>
           <button class="eco-tab" type="button" data-eco-tab="services">المقاولون والخدمات</button>
           <button class="eco-tab" type="button" data-eco-tab="agreements">الاتفاقات</button>
+          <button class="eco-tab" type="button" data-eco-tab="partners">دليل الجهات</button>
         </div>
         <div id="ecoNotice" class="message" role="status" aria-live="polite"></div>
         <div id="ecoPanel"><div class="eco-empty">جارٍ تحميل سوق عَمِّر...</div></div>
       </div>`;
     document.querySelector('#appShell .content').appendChild(view);
     view.addEventListener('click',click);view.addEventListener('submit',submit);
-    view.addEventListener('input',e=>{if(e.target.id==='ecoChatSearch')filterChatList();if(e.target.id==='ecoMessageSearch')filterMessageBubbles();});
+    view.addEventListener('input',e=>{if(e.target.id==='ecoChatSearch')filterChatList();if(e.target.id==='ecoMessageSearch')filterMessageBubbles();if(e.target.id==='ecoPartnerSearch'||e.target.id==='ecoPartnerType')filterPartnerDirectory();});
     view.addEventListener('change',e=>{if(e.target.id==='ecoChatFilter')filterChatList();});
     mounted=true;
   }
@@ -187,7 +188,38 @@
       await loadProfiles();panel.innerHTML=await servicesHtml();
     }else if(tab==='agreements'){
       panel.innerHTML=await agreementsHtml();
+    }else if(tab==='partners'){
+      panel.innerHTML=partnerDirectoryHtml();
     }
+  }
+
+  const partnerLeads=[
+    {name:'ATC Group',type:'commercial',scope:'مقاولات وأعمال مدنية وبنية تحتية وتوريد ولوجستيات وطاقة وري',site:'https://atc.sd/',contact:'info@atc.sd',label:'الموقع الرسمي والبريد المنشور'},
+    {name:'CTI United Co. Ltd.',type:'commercial',scope:'مبانٍ مسبقة الصنع، مواد مدنية وتشطيبات، حلول طاقة وتوريد',site:'https://ctiunited.com/',contact:'info@ctiunited.com',label:'الموقع الرسمي والبريد المنشور'},
+    {name:'Haramain Development',type:'commercial',scope:'مواد بناء وأدوات صحية وأنظمة مياه وسباكة',site:'https://www.haramaindevelopment.com/',contact:'+249 183 581 096',label:'الموقع الرسمي؛ الهاتف يحتاج تأكيداً قبل الاعتماد'},
+    {name:'KAYAN Consultancy',type:'commercial',scope:'استشارات وتصميم معماري وإنشائي وكهربائي ودراسات جدوى',site:'https://kayan.sd/',contact:'info@kayan.sd',label:'الموقع الرسمي والبريد المنشور'},
+    {name:'Haboba’s House',type:'support',scope:'مبادرات إصلاح المنازل والمدارس والأعمال المتضررة؛ مسار دعم مجتمعي لا مورد تجاري',site:'https://habobashouse.com/',contact:'habobashouse@hotmail.com',label:'الموقع الرسمي والبريد المنشور'},
+    {name:'UN-Habitat Sudan',type:'support',scope:'الإسكان والمستوطنات والتأهيل الحضري وتقنيات البناء منخفضة التكلفة',site:'https://unhabitat.org/sudan-housing-and-slum-upgrading',contact:'صفحة البرنامج',label:'صفحة البرنامج الرسمية؛ تحقق من البرامج النشطة وشروط الأهلية'},
+    {name:'UNOPS Sudan',type:'support',scope:'بنية تحتية ومياه ومشتريات وإدارة مشاريع؛ فرص مؤسسية وليست خدمة أفراد مباشرة',site:'https://www.unops.org/sudan',contact:'صفحة البلد',label:'صفحة البلد الرسمية'}
+  ];
+
+  function partnerDirectoryHtml(){
+    return `<div class="eco-note"><strong>تنبيه مهم:</strong> هذا دليل استكشافي لجهات محتملة فقط. لا تمثل هذه الجهات شركاء معتمدين أو مزودين متعاقدين مع عَمِّر، ولم تُنشأ لها حسابات داخل التطبيق. لا تعرض علامة «موثّق» ولا تنشر أسعاراً أو مخزوناً نيابة عنها قبل موافقتها والتحقق من مستنداتها ومراجعها.</div>
+      <div class="eco-form" style="margin-bottom:15px"><div><label for="ecoPartnerSearch">ابحث عن جهة أو خدمة</label><input id="ecoPartnerSearch" placeholder="اسم الجهة، مقاولات، استشارات، دعم..." autocomplete="off"></div><div><label for="ecoPartnerType">نوع الجهة</label><select id="ecoPartnerType"><option value="all">كل الجهات</option><option value="commercial">شركات ومقدمو خدمات</option><option value="support">جهات دعم وإعمار</option></select></div></div>
+      <div id="ecoPartnerGrid" class="eco-grid">${partnerCards(partnerLeads)}</div>
+      <div class="eco-note">خطوة الاعتماد قبل إدراج أي جهة كشريك: موافقة مكتوبة، إثبات الكيان والتسجيل والتراخيص المناسبة، التحقق من الشخص المفوض، مراجعة أعمال سابقة ومراجع مستقلة، ثم تحديد نطاق الخدمة والمناطق وشروط التعامل.</div>`;
+  }
+
+  function partnerCards(rows){
+    if(!rows.length)return '<div class="eco-empty">لا توجد نتائج مطابقة. جرّب عبارة بحث أخرى.</div>';
+    return rows.map(p=>`<article class="eco-card"><h3>${esc(p.name)}</h3><div class="eco-meta"><span class="eco-pill">${p.type==='support'?'جهة دعم/إعمار':'شركة أو مقدم خدمة'}</span><span class="eco-pill">جهة محتملة — غير معتمدة</span></div><p>${esc(p.scope)}</p><p class="muted">قناة التواصل: ${esc(p.contact)}</p><p class="hint">${esc(p.label)}</p><div class="eco-actions"><a class="btn light" href="${esc(p.site)}" target="_blank" rel="noopener noreferrer">الموقع الرسمي</a>${p.contact.includes('@')?`<a class="btn quiet" href="mailto:${esc(p.contact)}">مراسلة بالبريد</a>`:''}</div></article>`).join('');
+  }
+
+  function filterPartnerDirectory(){
+    const grid=$('ecoPartnerGrid');if(!grid)return;
+    const q=($('ecoPartnerSearch')?.value||'').trim().toLowerCase(),type=$('ecoPartnerType')?.value||'all';
+    const rows=partnerLeads.filter(p=>(type==='all'||p.type===type)&&[p.name,p.scope,p.contact].join(' ').toLowerCase().includes(q));
+    grid.innerHTML=partnerCards(rows);
   }
 
   function marketHtml(){
