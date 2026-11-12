@@ -12,7 +12,7 @@ The deployed product is a real working application shell with project management
 
 The most important issue found during this review was that suppliers and service providers could set their own `is_verified` and `verified_at` fields under the existing owner RLS policy. This review created a separate hardening branch, added database triggers, added admin-only moderation controls, added an audited verification workflow, and applied the SQL changes to the isolated staging project
 
-Those changes are **not yet in production**. They must pass the new CI integration tests and code review before deployment
+Those changes are **not yet in production**. The new branch also adds a server-side transaction gate so an unverified or suspended supplier/provider cannot receive a new purchase request/offer or have a quote/offer accepted. This must pass the regression suite and code review before production deployment
 
 ## Verified production evidence
 
@@ -58,6 +58,12 @@ A database trigger now:
 ### 2. Admin-only moderation access
 The branch adds administrator-only read/update policies for supplier/provider review, message reports, disputes, transaction events and the commission ledger. The new report-review RPC returns only the message linked to a report, not every message in every conversation
 
+A third migration also:
+- Requires verified and active suppliers before purchase requests can be created
+- Requires verified and active providers before formal service offers can be submitted
+- Rechecks provider/supplier status again when buyers accept quotes or offers
+- Keeps unverified catalog listings visible with a clear warning, but removes formal purchase/offer actions until verification
+
 ### 3. Audited verification decisions
 A new append-only table records:
 - Entity type and entity ID
@@ -77,6 +83,9 @@ The two hardening migrations have been applied to isolated staging:
 - `ammir_provider_verification_audit`
 
 Read-only verification found two trust triggers, eleven admin policies from the first migration, and the report review RPC. The second migration adds the provider verification audit table and guarded review routine
+- `ammir_verified_provider_transaction_gate` — applies verified-provider checks to purchase, quote acceptance, service offers and service-offer acceptance
+
+The placeholder 5% commission defaults have been deactivated in both production and staging. Read-only verification on production confirms 0 active rules out of 5; this prevents the unapproved default from being recorded for new completed transactions
 
 **Do not deploy to production until the new workflow succeeds and the SQL tests are reviewed**
 
