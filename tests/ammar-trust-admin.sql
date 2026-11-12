@@ -119,7 +119,7 @@ INSERT INTO public.ammar_messages(
 ) VALUES (
   'bbbbbbbb-1000-4000-8000-000000000002',
   'bbbbbbbb-1000-4000-8000-000000000001',
-  'aaaaaaaa-1000-4000-8000-000000000003',
+  auth.uid(),
   'text','AMMIR trust moderation test message'
 );
 
