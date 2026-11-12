@@ -294,7 +294,16 @@
     return `<div class="eco-grid">${rows.map(r=>{
       const buyer=r.buyer_id===user.id,sp=sm.get(r.supplier_id);
       const items=(im.get(r.id)||[]).map(x=>`<p>${esc(x.product_title)} — ${esc(x.quantity)} ${esc(x.unit)}</p>`).join('');
-      const quotes=(qm.get(r.id)||[]).map(q=>`<div class="eco-row"><div><strong>${money(q.total_amount,q.currency)}</strong><div class="muted">${esc(q.delivery_days==null?'المدة غير محددة':q.delivery_days+' يوم')} · ${esc(statusText[q.status]||q.status)}</div></div>${buyer&&q.status==='proposed'?`<button class="btn primary" type="button" data-eco-accept-quote="${esc(q.id)}">قبول العرض</button>`:''}</div>`).join('');
+      const quotes=(qm.get(r.id)||[]).map(q=>`
+        <div class="eco-row">
+          <div><strong>${money(q.total_amount,q.currency)}</strong>
+            <div class="muted">${esc(q.delivery_days==null?'المدة غير محددة':q.delivery_days+' يوم')} · ${esc(statusText[q.status]||q.status)}</div>
+          </div>
+          <div class="eco-actions">
+            ${buyer&&q.status==='proposed'? `<button class="btn primary" type="button" data-eco-accept-quote="${esc(q.id)}">قبول العرض</button>`:''}
+            <button class="btn light" type="button" data-eco-quote-chat="${esc(q.id)}" data-other="${esc(buyer?sp?.owner_id:r.buyer_id)}">مراسلة حول العرض</button>
+          </div>
+        </div>`).join('');
       let acts='';
       if(!buyer&&r.status==='submitted')acts+=`<div class="eco-form"><div><label>قيمة العرض</label><input id="ecoQuoteAmount-${esc(r.id)}" type="number" min="0" step="0.01"></div><div><label>مدة التوريد بالأيام</label><input id="ecoQuoteDays-${esc(r.id)}" type="number" min="0" step="1"></div><div class="wide"><label>ملاحظات</label><input id="ecoQuoteNote-${esc(r.id)}"></div><div class="wide"><button class="btn primary" type="button" data-eco-submit-quote="${esc(r.id)}">إرسال عرض السعر</button></div></div>`;
       if(!buyer&&r.status==='accepted')acts+='<button class="btn primary" type="button" data-eco-advance="'+esc(r.id)+'" data-next="fulfilling">بدء التوريد</button>';
@@ -463,6 +472,12 @@
     }else if(c.data.context_type==='market_request'){
       const q=await db.from('ammar_market_requests').select('status,agreed_total,currency,delivery_city,supplier:ammar_market_suppliers(business_name)').eq('id',c.data.context_id).maybeSingle();
       if(!q.error&&q.data){const s=Array.isArray(q.data.supplier)?q.data.supplier[0]:q.data.supplier;const items=await db.from('ammar_market_request_items').select('product_title,quantity,unit').eq('request_id',c.data.context_id);const itemText=!items.error?(items.data||[]).map(x=>esc(x.product_title)+' — '+esc(x.quantity)+' '+esc(x.unit)).join('، '):'';contextCard=`<div class="eco-note"><strong>طلب الشراء المرتبط</strong><p>${itemText||'تفاصيل الطلب'} · ${esc(statusText[q.data.status]||q.data.status)}</p><small>${esc(s?.business_name||'المورد')} · ${esc(q.data.delivery_city||'')} · ${q.data.agreed_total==null?'لم يعتمد السعر':money(q.data.agreed_total,q.data.currency)}</small></div>`;}
+    }else if(c.data.context_type==='market_quote'){
+      const q=await db.from('ammar_market_quotes').select('total_amount,currency,delivery_days,valid_until,notes,status,supplier:ammar_market_suppliers(business_name),request:ammar_market_requests(id,delivery_city)').eq('id',c.data.context_id).maybeSingle();
+      if(!q.error&&q.data){const sp=Array.isArray(q.data.supplier)?q.data.supplier[0]:q.data.supplier,request=Array.isArray(q.data.request)?q.data.request[0]:q.data.request;contextCard=`<div class="eco-note"><strong>عرض السعر المرتبط</strong><p>${money(q.data.total_amount,q.data.currency)} · ${esc(q.data.delivery_days??'—')} يوم توريد · ${esc(statusText[q.data.status]||q.data.status)}</p><small>${esc(sp?.business_name||'المورد')} · ${esc(request?.delivery_city||'')} · صالح حتى ${esc(q.data.valid_until||'غير محدد')} · ${esc(q.data.notes||'')}</small></div>`;}
+    }else if(c.data.context_type==='agreement'){
+      const q=await db.from('ammar_agreements').select('title,scope,amount,currency,status,source_type').eq('id',c.data.context_id).maybeSingle();
+      if(!q.error&&q.data)contextCard=`<div class="eco-note"><strong>الاتفاق المرتبط</strong><p>${esc(q.data.title)} · ${money(q.data.amount,q.data.currency)} · ${esc(statusText[q.data.status]||q.data.status)}</p><small>${esc(q.data.scope)}</small></div>`;
     }else if(c.data.context_type==='service_offer'){
       const q=await db.from('ammar_service_offers').select('amount,currency,status,duration_days,request:ammar_service_requests(title,service_type,city),provider:ammar_service_providers(business_name)').eq('id',c.data.context_id).maybeSingle();
       if(!q.error&&q.data){const req=Array.isArray(q.data.request)?q.data.request[0]:q.data.request,sp=Array.isArray(q.data.provider)?q.data.provider[0]:q.data.provider;contextCard=`<div class="eco-note"><strong>عرض الخدمة المرتبط</strong><p>${esc(req?.title||'طلب خدمة')} · ${money(q.data.amount,q.data.currency)} · ${esc(q.data.duration_days??'—')} يوم</p><small>${esc(sp?.business_name||'مقدم الخدمة')} · ${esc(req?.city||'')} · ${esc(statusText[q.data.status]||q.data.status)}</small></div>`;}
@@ -546,7 +561,17 @@ async function servicesHtml(){
       db.from('ammar_commission_ledger').select('gross_amount,currency,commission_amount,status,recorded_at').eq('payer_id',user.id).order('recorded_at',{ascending:false}).limit(30)
     ]);
     if(a.error)throw a.error;if(l.error)throw l.error;
-    const agreements=(a.data||[]).map(x=>`<article class="eco-card"><h3>${esc(x.title)}</h3><div class="eco-meta"><span class="eco-pill">${esc(statusText[x.status]||x.status)}</span><span class="eco-pill">${x.client_id===user.id?'أنت العميل':'أنت مقدم الخدمة'}</span></div><p>${esc(x.scope)}</p><p>القيمة: ${money(x.amount,x.currency)}</p><p class="muted">تاريخ الإنشاء: ${esc(new Date(x.created_at).toLocaleDateString('ar'))}</p>${x.status!=='accepted'&&!['cancelled','rejected'].includes(x.status)?`<button class="btn primary" type="button" data-eco-accept-agreement="${esc(x.id)}">اعتماد الاتفاق</button>`:''}</article>`).join('');
+    const agreements=(a.data||[]).map(x=>`
+      <article class="eco-card">
+        <h3>${esc(x.title)}</h3>
+        <div class="eco-meta"><span class="eco-pill">${esc(statusText[x.status]||x.status)}</span><span class="eco-pill">${x.client_id===user.id?'أنت العميل':'أنت مقدم الخدمة'}</span></div>
+        <p>${esc(x.scope)}</p><p>القيمة: ${money(x.amount,x.currency)}</p>
+        <p class="muted">تاريخ الإنشاء: ${esc(new Date(x.created_at).toLocaleDateString('ar'))}</p>
+        <div class="eco-actions">
+          ${x.status!=='accepted'&&!['cancelled','rejected'].includes(x.status)?`<button class="btn primary" type="button" data-eco-accept-agreement="${esc(x.id)}">اعتماد الاتفاق</button>`:''}
+          <button class="btn light" type="button" data-eco-agreement-chat="${esc(x.id)}" data-other="${esc(x.client_id===user.id?x.provider_id:x.client_id)}">مراسلة حول الاتفاق</button>
+        </div>
+      </article>`).join('');
     const ledger=(l.data||[]).map(x=>`<div class="eco-row"><div>${money(x.gross_amount,x.currency)} · عمولة ${money(x.commission_amount,x.currency)}</div><span class="eco-pill">${esc(x.status)}</span></div>`).join('');
     return `<section class="eco-card eco-subsection"><h3>الاتفاقات</h3><div class="eco-grid">${agreements||'<div class="eco-empty">لا توجد اتفاقات موثقة.</div>'}</div></section><section class="eco-card"><h3>سجل العمولات المستحقة</h3>${ledger||'<p class="muted">لا توجد عمولات مسجلة لهذا الحساب.</p>'}</section><div class="eco-note">العمولات هنا سجلات محاسبية فقط؛ لا ينفذ عَمِّر تحصيلاً أو حيازة أموال أو تحويلات بنكية.</div>`;
   }
@@ -574,9 +599,11 @@ async function servicesHtml(){
 
   async function click(e){
     const t=e.target.closest('[data-eco-tab]');if(t){chooseTab(t.dataset.ecoTab);return;}
-    const b=e.target.closest('[data-eco-action],[data-eco-buy],[data-eco-contact],[data-eco-toggle-product],[data-eco-open-chat],[data-eco-accept-quote],[data-eco-submit-quote],[data-eco-advance],[data-eco-order-chat],[data-eco-create-agreement],[data-eco-service-offer],[data-eco-accept-service],[data-eco-service-chat],[data-eco-service-agreement],[data-eco-complete-service],[data-eco-accept-agreement],[data-eco-submit-review],[data-eco-reply],[data-eco-clear-reply],[data-eco-pin],[data-eco-unpin],[data-eco-report],[data-eco-forward],[data-eco-archive],[data-eco-block],[data-eco-presence-toggle],[data-eco-location],[data-eco-to-task],[data-eco-to-change],[data-eco-unblock]');
+    const b=e.target.closest('[data-eco-action],[data-eco-buy],[data-eco-contact],[data-eco-toggle-product],[data-eco-open-chat],[data-eco-accept-quote],[data-eco-submit-quote],[data-eco-advance],[data-eco-order-chat],[data-eco-create-agreement],[data-eco-service-offer],[data-eco-accept-service],[data-eco-service-chat],[data-eco-service-agreement],[data-eco-complete-service],[data-eco-accept-agreement],[data-eco-submit-review],[data-eco-quote-chat],[data-eco-agreement-chat],[data-eco-reply],[data-eco-clear-reply],[data-eco-pin],[data-eco-unpin],[data-eco-report],[data-eco-forward],[data-eco-archive],[data-eco-block],[data-eco-presence-toggle],[data-eco-location],[data-eco-to-task],[data-eco-to-change],[data-eco-unblock]');
     if(!b)return;
     try{
+      if(b.dataset.ecoQuoteChat){await startConversation(b.dataset.other,'market_quote',b.dataset.ecoQuoteChat,'مراسلة حول عرض السعر');return;}
+      if(b.dataset.ecoAgreementChat){await startConversation(b.dataset.other,'agreement',b.dataset.ecoAgreementChat,'مراسلة حول الاتفاق');return;}
       if(b.dataset.ecoReply){replyToMessageId=b.dataset.ecoReply;await render();return;}
       if(b.hasAttribute('data-eco-clear-reply')){replyToMessageId=null;await render();return;}
       if(b.dataset.ecoPin){
