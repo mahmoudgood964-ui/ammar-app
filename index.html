@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#123f35">
-<meta name="description" content="عَمِّر — منصة لإدارة مشاريع ترميم وصيانة العقارات.">
+<meta name="description" content="عَمِّر — منصة تشغيل مشاريع الترميم والصيانة، من التخطيط والعروض إلى التنفيذ والاستلام."><meta name="application-name" content="AMMAR"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="AMMAR"><link rel="manifest" href="/manifest.webmanifest"><link rel="icon" type="image/svg+xml" href="/icon.svg">
 <title>عَمِّر | AMMAR</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
@@ -23,10 +23,46 @@
 @media(max-width:900px){.layout{grid-template-columns:190px minmax(0,1fr);padding:16px;gap:16px}.project-grid{grid-template-columns:1fr}}
 @media(max-width:680px){.topbar{height:62px;padding:0 16px}.top-user .email-label{display:none}.layout{display:block;padding:13px 13px 86px}.sidebar{display:none}.heading{align-items:center}.heading h2{font-size:21px}.heading .btn{font-size:12px;padding:10px}.stats{gap:8px}.stat{padding:13px 11px}.stat-value{font-size:23px}.panel{padding:14px}.toolbar{width:100%}.search-input{max-width:none}.form-card{padding:16px}.form-grid{display:block}.mobile-nav{display:flex;position:fixed;bottom:0;right:0;left:0;z-index:10;background:#fff;border-top:1px solid var(--line);padding:7px 8px calc(7px + env(safe-area-inset-bottom));justify-content:space-around}.mobile-nav .nav-btn{width:auto;min-width:70px;display:flex;flex-direction:column;gap:2px;padding:6px 8px;font-size:10px;text-align:center;margin:0}.mobile-nav .nav-icon{font-size:17px}.auth-card{padding:23px}}
 .workspace-section{margin-top:14px}.notification-badge{display:inline-grid;place-items:center;min-width:20px;height:20px;padding:0 5px;border-radius:20px;background:#b42318;color:#fff;font-size:11px}.notification-item,.timeline-item{padding:12px 0;border-bottom:1px solid var(--line)}.notification-item:last-child,.timeline-item:last-child{border:0}.timeline-item strong{display:block}.timeline-item small{color:var(--muted)}.member-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 0;border-bottom:1px solid var(--line);flex-wrap:wrap}.member-meta{min-width:0}.member-meta strong{display:block;overflow-wrap:anywhere}.member-meta small{color:var(--muted)}.inline-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.inline-form .full{grid-column:1/-1}.inline-form input,.inline-form select{width:100%;border:1px solid #d9e2dc;border-radius:9px;padding:10px;background:#fff;color:var(--ink)}.finance-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.finance-metric{background:#f5f8f6;border-radius:12px;padding:13px}.finance-metric strong{display:block;font-size:20px;color:var(--gd);overflow-wrap:anywhere}.team-role{max-width:160px;padding:8px;border:1px solid var(--line);border-radius:8px}@media(max-width:680px){.inline-form{display:block}.finance-grid{grid-template-columns:1fr}.notification-toggle{font-size:11px;padding:8px}.topbar{gap:8px}.top-user{gap:6px}}
+
+.public-landing{width:min(100%,1050px);color:var(--ink);padding:8px 18px 24px}
+.public-landing .eyebrow{display:inline-flex;background:#dcebe4;color:#174c3e;border:1px solid #c7ded3;border-radius:30px;padding:6px 12px;font-size:12px;font-weight:700}
+.public-landing h2{font-size:clamp(30px,4.4vw,48px);line-height:1.2;color:var(--gd);margin:18px 0 14px;max-width:760px}
+.public-landing .lead{font-size:17px;color:#4e6057;max-width:760px;line-height:1.9;margin:0 0 22px}
+.landing-actions{display:flex;gap:10px;flex-wrap:wrap;margin:20px 0 28px}
+.landing-proof{font-size:12px;color:var(--muted);margin:0 0 18px}
+.landing-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;max-width:880px}
+.landing-feature{background:#ffffffc9;border:1px solid var(--line);border-radius:15px;padding:15px;min-height:118px}
+.landing-feature strong{display:block;color:var(--gd);margin-bottom:5px}
+.landing-feature p{font-size:12px;color:var(--muted);margin:0;line-height:1.7}
+.landing-lang{border:1px solid #cbd8d0;background:#fff;color:var(--gd);border-radius:9px;padding:8px 12px;font-weight:700}
+.auth-shell{grid-template-columns:minmax(0,1fr) minmax(320px,430px);gap:36px;align-content:center;justify-items:center}
+.auth-shell .auth-card{width:100%}
+.module-list{display:grid;gap:10px}
+.module-record{border:1px solid var(--line);border-radius:12px;padding:13px;background:#fff;min-width:0}
+.module-record h4{margin:0 0 6px;color:var(--gd);font-size:15px}
+.module-record p{margin:5px 0;font-size:13px;color:#54625b;white-space:pre-wrap;overflow-wrap:anywhere}
+.module-record .record-meta{display:flex;flex-wrap:wrap;gap:7px;margin-top:9px}
+.module-record .record-actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px}
+.module-record select,.module-record input{border:1px solid var(--line);border-radius:8px;padding:8px;background:#fff;color:var(--ink);max-width:100%}
+.module-empty{border:1px dashed #cbd8d0;border-radius:12px;text-align:center;padding:22px;color:var(--muted);font-size:13px}
+@media(max-width:900px){.auth-shell{grid-template-columns:1fr;gap:8px}.public-landing{padding:4px 8px 14px}.public-landing h2{font-size:32px}.landing-grid{grid-template-columns:1fr}.landing-feature{min-height:0}}
+@media(max-width:680px){.public-landing h2{font-size:28px}.public-landing .lead{font-size:14px}.landing-actions .btn{width:100%}.auth-card{max-width:430px}}
 </style>
 </head>
 <body>
 <div id="authShell" class="auth-shell">
+<section class="public-landing" id="publicLanding" aria-labelledby="landingTitle">
+ <span class="eyebrow" data-ar="منصة تشغيل مشاريع الترميم والصيانة" data-en="Renovation & property maintenance operations">منصة تشغيل مشاريع الترميم والصيانة</span>
+ <h2 id="landingTitle" data-ar="من أول طلب ترميم… إلى التسليم النهائي." data-en="From the first repair request to final handover.">من أول طلب ترميم… إلى التسليم النهائي.</h2>
+ <p class="lead" data-ar="عَمِّر يجمع إدارة المشروع، فريق العمل، عروض المقاولين، المصروفات، تقارير الموقع، متابعة العيوب، والموافقات في مساحة عمل واحدة واضحة." data-en="AMMAR brings project management, teams, contractor quotations, costs, site reports, issue tracking and approvals into one clear workspace.">عَمِّر يجمع إدارة المشروع، فريق العمل، عروض المقاولين، المصروفات، تقارير الموقع، متابعة العيوب، والموافقات في مساحة عمل واحدة واضحة.</p>
+ <p class="landing-proof" data-ar="مصمم لأصحاب العقارات وشركات إدارة المشاريع والمقاولين وفرق التنفيذ." data-en="Built for property owners, project management firms, contractors and field teams.">مصمم لأصحاب العقارات وشركات إدارة المشاريع والمقاولين وفرق التنفيذ.</p>
+ <div class="landing-actions"><button class="btn primary" type="button" data-auth-panel="signup" data-ar="ابدأ مساحة عملك" data-en="Create your workspace">ابدأ مساحة عملك</button><button class="btn light" type="button" data-auth-panel="login" data-ar="تسجيل الدخول" data-en="Sign in">تسجيل الدخول</button><button id="marketingLang" class="landing-lang" type="button" aria-label="Switch language">EN</button></div>
+ <div class="landing-grid">
+  <article class="landing-feature"><strong data-ar="إدارة المشروع" data-en="Project control">إدارة المشروع</strong><p data-ar="المهام، الميزانية، الفريق، العروض، الدفعات وسجل القرارات." data-en="Tasks, budgets, teams, quotations, payments and a decision trail.">المهام، الميزانية، الفريق، العروض، الدفعات وسجل القرارات.</p></article>
+  <article class="landing-feature"><strong data-ar="متابعة الموقع" data-en="Field visibility">متابعة الموقع</strong><p data-ar="تقارير يومية، تقدم التنفيذ، العيوب والملاحظات الميدانية." data-en="Daily reports, execution progress, defects and field notes.">تقارير يومية، تقدم التنفيذ، العيوب والملاحظات الميدانية.</p></article>
+  <article class="landing-feature"><strong data-ar="حوكمة وتسليم" data-en="Governance & handover">حوكمة وتسليم</strong><p data-ar="طلبات تغيير قابلة للاعتماد وقائمة تحقق قبل استلام العقار." data-en="Approval-based change requests and a property handover checklist.">طلبات تغيير قابلة للاعتماد وقائمة تحقق قبل استلام العقار.</p></article>
+ </div>
+</section>
 <main class="auth-card">
  <div class="brand"><div class="brand-mark">ع</div><div><h1>عَمِّر | AMMAR</h1><small>إدارة مشاريع ترميم وصيانة العقارات</small></div></div>
  <p class="auth-intro">مكان واحد لتنظيم مشاريع العقارات ومتابعة تفاصيلها.</p>
@@ -40,7 +76,7 @@
 </main></div>
 
 <div id="appShell" hidden>
-<header class="topbar"><div class="brand"><div class="brand-mark">ع</div><div><h1>عَمِّر | AMMAR</h1><small>إدارة مشاريع ترميم وصيانة العقارات</small></div></div><div class="top-user"><button class="btn light notification-toggle" type="button" data-action="notifications">الإشعارات <span id="notificationCount" class="notification-badge" hidden>0</span></button><span class="email-label" id="headerEmail"></span><span class="avatar" id="userAvatar">ع</span></div></header>
+<header class="topbar"><div class="brand"><div class="brand-mark">ع</div><div><h1>عَمِّر | AMMAR</h1><small>إدارة مشاريع ترميم وصيانة العقارات</small></div></div><div class="top-user"><button class="btn light" id="installButton" type="button" data-action="install" hidden>تثبيت التطبيق</button><button class="btn light notification-toggle" type="button" data-action="notifications">الإشعارات <span id="notificationCount" class="notification-badge" hidden>0</span></button><span class="email-label" id="headerEmail"></span><span class="avatar" id="userAvatar">ع</span></div></header>
 <div class="layout">
 <aside class="sidebar"><div class="side-label">مساحة العمل</div><button class="nav-btn active" type="button" data-view="dashboard"><span class="nav-icon">⌂</span>الرئيسية</button><button class="nav-btn" type="button" data-view="projects"><span class="nav-icon">▤</span>مشاريعي</button><button class="nav-btn" type="button" data-view="form"><span class="nav-icon">＋</span>إنشاء مشروع</button><div class="sidebar-bottom"><div class="side-label">الحساب</div><button class="nav-btn" type="button" data-action="logout"><span class="nav-icon">↪</span>تسجيل الخروج</button></div></aside>
 <main class="content"><div id="appMessage" class="message" role="status" aria-live="polite"></div>
