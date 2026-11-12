@@ -3,581 +3,117 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#123f35">
+<meta name="description" content="عَمِّر — منصة لإدارة مشاريع ترميم وصيانة العقارات.">
 <title>عَمِّر | AMMAR</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
 <style>
-*{box-sizing:border-box}
-body{font-family:Arial,sans-serif;background:#f3f5f7;margin:0;padding:20px;color:#222}
-main{max-width:480px;margin:30px auto;background:#fff;padding:24px;border-radius:14px;box-shadow:0 4px 18px #0000000c}
-h1{text-align:center;color:#176b57}
-h3{margin-top:25px}
-p{text-align:center;color:#666}
-input,textarea,button{width:100%;padding:13px;margin:9px 0;border:1px solid #ddd;border-radius:8px;font-size:16px}
-textarea{min-height:90px;resize:vertical}
-button{background:#176b57;color:#fff;border:0;font-weight:bold;cursor:pointer}
-button:disabled{opacity:.6;cursor:wait}
-#app,#reset{display:none}
-#message{text-align:center;margin-top:15px;line-height:1.7;overflow-wrap:anywhere}
-.link{display:block;text-align:center;color:#176b57;margin:14px;cursor:pointer;text-decoration:underline}
-.secondary{background:#777}
+:root{--g:#176b57;--gd:#123f35;--gs:#e9f3ef;--ink:#17231f;--muted:#6b7772;--line:#e4eae6;--bg:#f4f7f5;--red:#b42318;--shadow:0 12px 35px rgba(19,53,42,.07);--r:16px}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:Arial,"Noto Sans Arabic",sans-serif;line-height:1.55}button,input,textarea{font:inherit}button{cursor:pointer}[hidden]{display:none!important}
+.auth-shell{min-height:100vh;display:grid;place-items:center;padding:22px;background:radial-gradient(circle at top right,#e3f0e9 0,transparent 38%),var(--bg)}
+.auth-card{width:min(100%,430px);background:#fff;border:1px solid var(--line);border-radius:22px;padding:30px;box-shadow:var(--shadow)}
+.brand{display:flex;align-items:center;gap:12px;justify-content:center;margin-bottom:8px}.brand-mark{width:46px;height:46px;border-radius:14px;background:var(--gd);color:#fff;display:grid;place-items:center;font-size:23px;font-weight:800}.brand h1{font-size:25px;line-height:1;margin:0;color:var(--gd)}.brand small{display:block;color:var(--muted);font-size:12px;margin-top:5px}.auth-intro{text-align:center;color:var(--muted);font-size:14px;margin:18px 0 24px}.panel-title{font-size:19px;margin:0 0 16px}
+.field{margin:0 0 15px}.field label{display:block;font-size:13px;font-weight:700;margin-bottom:7px;color:#34433c}.field input,.field textarea,.search-input{width:100%;border:1px solid #d9e2dc;background:#fff;border-radius:10px;padding:12px 13px;outline:none;color:var(--ink);transition:border .15s,box-shadow .15s}.field input:focus,.field textarea:focus,.search-input:focus{border-color:var(--g);box-shadow:0 0 0 3px rgba(23,107,87,.11)}.field textarea{min-height:105px;resize:vertical}.hint{font-size:12px;color:var(--muted);margin-top:5px}
+.btn{border:0;border-radius:10px;padding:12px 16px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;gap:8px;transition:transform .15s,opacity .15s}.btn:active{transform:translateY(1px)}.btn:disabled{opacity:.55;cursor:wait}.primary{background:var(--g);color:#fff}.primary:hover{background:#105b48}.light{background:var(--gs);color:var(--gd)}.quiet{background:#f0f3f1;color:#34433c}.block{width:100%}.text-link{display:block;background:none;border:0;padding:8px;margin:8px auto 0;color:var(--g);text-decoration:underline;font-size:13px}
+.message{border-radius:10px;padding:10px 12px;font-size:13px;margin-top:14px;overflow-wrap:anywhere}.message:empty{display:none}.info{background:#edf4f1;color:#245746}.error{background:#fff0ef;color:#982b24}.success{background:#eaf6ee;color:#23633d}
+.topbar{height:72px;background:#fff;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;padding:0 28px;position:sticky;top:0;z-index:5}.topbar .brand{justify-content:flex-start;margin:0}.topbar .brand-mark{width:39px;height:39px;border-radius:12px;font-size:20px}.topbar .brand h1{font-size:20px}.top-user{display:flex;align-items:center;gap:12px;color:var(--muted);font-size:13px}.avatar{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;background:var(--gs);color:var(--gd);font-weight:800}
+.layout{max-width:1440px;margin:0 auto;display:grid;grid-template-columns:235px minmax(0,1fr);gap:24px;padding:24px}.sidebar{background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:18px;height:calc(100vh - 120px);min-height:430px;position:sticky;top:96px;display:flex;flex-direction:column}.side-label{font-size:11px;color:#89948e;font-weight:700;margin:8px 10px 12px}.nav-btn{border:0;background:transparent;color:#52615a;text-align:right;width:100%;padding:12px;border-radius:10px;margin:3px 0;font-weight:700;display:flex;align-items:center;gap:11px}.nav-btn:hover,.nav-btn.active{background:var(--gs);color:var(--gd)}.nav-icon{width:22px;text-align:center;font-size:17px}.sidebar-bottom{margin-top:auto;border-top:1px solid var(--line);padding-top:15px}.content{min-width:0}.view{display:none}.view.active{display:block}
+.heading{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin:4px 0 22px}.heading h2{margin:0;font-size:25px;color:var(--gd)}.heading p{margin:5px 0 0;color:var(--muted);font-size:13px}.stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:15px;margin-bottom:22px}.stat,.panel,.form-card{background:#fff;border:1px solid var(--line);border-radius:var(--r);box-shadow:0 4px 18px rgba(20,50,38,.025)}.stat{padding:18px}.stat-label{font-size:12px;color:var(--muted)}.stat-value{font-size:28px;font-weight:800;color:var(--gd);margin-top:7px;direction:ltr;text-align:right}.panel{padding:20px;margin-bottom:18px}.panel-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}.panel-head h3{margin:0;font-size:17px}.muted{color:var(--muted);font-size:13px}.toolbar{display:flex;align-items:center;gap:10px;width:min(100%,540px)}.search-input{max-width:420px}.project-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.project-card{border:1px solid var(--line);border-radius:13px;padding:16px;background:#fff;min-width:0}.project-card h4{font-size:16px;margin:0 0 8px;color:var(--gd);overflow-wrap:anywhere}.project-card p{font-size:13px;color:var(--muted);margin:6px 0;overflow-wrap:anywhere}.meta{display:flex;flex-wrap:wrap;gap:8px;margin:11px 0}.pill{display:inline-flex;align-items:center;background:#f0f4f1;color:#52615a;border-radius:30px;padding:4px 9px;font-size:11px}.actions{display:flex;gap:8px;margin-top:13px;flex-wrap:wrap}.actions .btn{font-size:12px;padding:8px 11px}.empty{border:1px dashed #cbd8d0;border-radius:13px;padding:28px;text-align:center;color:var(--muted);grid-column:1/-1}.form-card{padding:22px;max-width:820px}.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:0 16px}.full{grid-column:1/-1}.form-actions{display:flex;gap:10px;align-items:center;margin-top:8px}.notice{background:#f5f8f6;border-right:3px solid var(--g);padding:12px 14px;border-radius:8px;color:#58665f;font-size:12px;margin:16px 0}.footnote{font-size:11px;color:#8a9690;margin-top:20px;text-align:center}
+.modal-backdrop{position:fixed;inset:0;background:rgba(10,26,19,.48);z-index:20;display:grid;place-items:center;padding:18px}.modal{background:#fff;border-radius:18px;width:min(100%,600px);max-height:85vh;overflow:auto;padding:22px;box-shadow:0 25px 80px #0003}.modal-head{display:flex;justify-content:space-between;align-items:center;gap:12px}.modal-head h3{margin:0;color:var(--gd)}.modal-close{border:0;background:#f0f3f1;border-radius:50%;width:34px;height:34px;font-size:18px}.detail-row{padding:12px 0;border-bottom:1px solid var(--line)}.detail-row:last-child{border:0}.detail-label{font-size:11px;color:var(--muted);margin-bottom:3px}.detail-value{white-space:pre-wrap;overflow-wrap:anywhere}.mobile-nav{display:none}
+@media(max-width:900px){.layout{grid-template-columns:190px minmax(0,1fr);padding:16px;gap:16px}.project-grid{grid-template-columns:1fr}}
+@media(max-width:680px){.topbar{height:62px;padding:0 16px}.top-user .email-label{display:none}.layout{display:block;padding:13px 13px 86px}.sidebar{display:none}.heading{align-items:center}.heading h2{font-size:21px}.heading .btn{font-size:12px;padding:10px}.stats{gap:8px}.stat{padding:13px 11px}.stat-value{font-size:23px}.panel{padding:14px}.toolbar{width:100%}.search-input{max-width:none}.form-card{padding:16px}.form-grid{display:block}.mobile-nav{display:flex;position:fixed;bottom:0;right:0;left:0;z-index:10;background:#fff;border-top:1px solid var(--line);padding:7px 8px calc(7px + env(safe-area-inset-bottom));justify-content:space-around}.mobile-nav .nav-btn{width:auto;min-width:70px;display:flex;flex-direction:column;gap:2px;padding:6px 8px;font-size:10px;text-align:center;margin:0}.mobile-nav .nav-icon{font-size:17px}.auth-card{padding:23px}}
 </style>
 </head>
-
 <body>
-<main>
+<div id="authShell" class="auth-shell">
+<main class="auth-card">
+ <div class="brand"><div class="brand-mark">ع</div><div><h1>عَمِّر | AMMAR</h1><small>إدارة مشاريع ترميم وصيانة العقارات</small></div></div>
+ <p class="auth-intro">مكان واحد لتنظيم مشاريع العقارات ومتابعة تفاصيلها.</p>
+ <section id="loginPanel"><h2 class="panel-title">تسجيل الدخول</h2>
+  <form id="loginForm"><div class="field"><label for="loginEmail">البريد الإلكتروني</label><input id="loginEmail" type="email" autocomplete="email" required placeholder="name@example.com"></div><div class="field"><label for="loginPassword">كلمة المرور</label><input id="loginPassword" type="password" autocomplete="current-password" required placeholder="كلمة المرور"></div><button id="loginButton" class="btn primary block" type="submit">دخول إلى عَمِّر</button></form>
+  <button class="text-link" type="button" data-auth-panel="reset">نسيت كلمة المرور؟</button><button class="text-link" type="button" data-auth-panel="signup">إنشاء حساب جديد</button>
+ </section>
+ <section id="signupPanel" hidden><h2 class="panel-title">إنشاء حساب جديد</h2><form id="signupForm"><div class="field"><label for="signupEmail">البريد الإلكتروني</label><input id="signupEmail" type="email" autocomplete="email" required placeholder="name@example.com"></div><div class="field"><label for="signupPassword">كلمة المرور</label><input id="signupPassword" type="password" autocomplete="new-password" minlength="8" required placeholder="8 أحرف على الأقل"></div><div class="field"><label for="signupConfirm">تأكيد كلمة المرور</label><input id="signupConfirm" type="password" autocomplete="new-password" minlength="8" required placeholder="أعد كتابة كلمة المرور"></div><button id="signupButton" class="btn primary block" type="submit">إنشاء الحساب</button></form><button class="text-link" type="button" data-auth-panel="login">العودة إلى تسجيل الدخول</button></section>
+ <section id="resetPanel" hidden><h2 class="panel-title">استعادة كلمة المرور</h2><form id="resetRequestForm"><div class="field"><label for="resetEmail">البريد الإلكتروني</label><input id="resetEmail" type="email" autocomplete="email" required placeholder="name@example.com"></div><button id="resetRequestButton" class="btn primary block" type="submit">إرسال رابط الاستعادة</button></form><form id="newPasswordForm" hidden><div class="field"><label for="newPassword">كلمة المرور الجديدة</label><input id="newPassword" type="password" autocomplete="new-password" minlength="8" required></div><div class="field"><label for="newPasswordConfirm">تأكيد كلمة المرور</label><input id="newPasswordConfirm" type="password" autocomplete="new-password" minlength="8" required></div><button id="savePasswordButton" class="btn primary block" type="submit">حفظ كلمة المرور</button></form><button class="text-link" type="button" data-auth-panel="login">العودة إلى تسجيل الدخول</button></section>
+ <div id="authMessage" class="message" role="status" aria-live="polite"></div><div class="footnote">عَمِّر — تنظيم أفضل لكل مشروع.</div>
+</main></div>
 
-<h1>عَمِّر | AMMAR</h1>
-<p>إدارة مشاريع ترميم وصيانة العقارات</p>
-
-<section id="login">
-<h3>تسجيل الدخول</h3>
-
-<input id="email" type="email"
-placeholder="البريد الإلكتروني" autocomplete="email">
-
-<input id="password" type="password"
-placeholder="كلمة المرور" autocomplete="current-password">
-
-<button id="loginButton" type="button" onclick="login()">دخول</button>
-
-<span class="link" onclick="forgotPassword()">نسيت كلمة المرور؟</span>
-<span class="link" onclick="showSignup()">إنشاء حساب جديد</span>
+<div id="appShell" hidden>
+<header class="topbar"><div class="brand"><div class="brand-mark">ع</div><div><h1>عَمِّر | AMMAR</h1><small>إدارة مشاريع ترميم وصيانة العقارات</small></div></div><div class="top-user"><span class="email-label" id="headerEmail"></span><span class="avatar" id="userAvatar">ع</span></div></header>
+<div class="layout">
+<aside class="sidebar"><div class="side-label">مساحة العمل</div><button class="nav-btn active" type="button" data-view="dashboard"><span class="nav-icon">⌂</span>الرئيسية</button><button class="nav-btn" type="button" data-view="projects"><span class="nav-icon">▤</span>مشاريعي</button><button class="nav-btn" type="button" data-view="form"><span class="nav-icon">＋</span>إنشاء مشروع</button><div class="sidebar-bottom"><div class="side-label">الحساب</div><button class="nav-btn" type="button" data-action="logout"><span class="nav-icon">↪</span>تسجيل الخروج</button></div></aside>
+<main class="content"><div id="appMessage" class="message" role="status" aria-live="polite"></div>
+<section id="dashboardView" class="view active"><div class="heading"><div><h2>الرئيسية</h2><p>نظرة عامة على مشاريعك العقارية.</p></div><button class="btn primary" type="button" data-view="form">＋ مشروع جديد</button></div>
+ <div class="stats"><article class="stat"><div class="stat-label">إجمالي المشاريع</div><div class="stat-value" id="statProjects">—</div></article><article class="stat"><div class="stat-label">آخر مشروع أُضيف</div><div class="stat-value" id="statLatest" style="font-size:17px;direction:rtl">—</div></article><article class="stat"><div class="stat-label">حالة الاتصال</div><div class="stat-value" id="statConnection" style="font-size:17px;direction:rtl">متصل</div></article></div>
+ <section class="panel"><div class="panel-head"><h3>أحدث المشاريع</h3><button class="btn light" type="button" data-view="projects">عرض الكل</button></div><div id="recentProjects" class="project-grid"><div class="empty">جارٍ تحميل المشاريع...</div></div></section>
+ <div class="notice">بيانات المشاريع خاصة بحسابك وفق صلاحيات قاعدة البيانات. لا تشارك كلمة المرور، وسجّل الخروج عند استخدام جهاز مشترك.</div>
 </section>
-
-<section id="signup" style="display:none">
-<h3>إنشاء حساب جديد</h3>
-<input id="signupEmail" type="email" placeholder="البريد الإلكتروني" autocomplete="email">
-<input id="signupPassword" type="password" placeholder="كلمة المرور (8 أحرف على الأقل)" autocomplete="new-password">
-<input id="signupConfirm" type="password" placeholder="تأكيد كلمة المرور" autocomplete="new-password">
-<button id="signupButton" type="button" onclick="signup()">إنشاء الحساب</button>
-<span class="link" onclick="showLogin()">العودة إلى تسجيل الدخول</span>
+<section id="projectsView" class="view"><div class="heading"><div><h2>مشاريعي</h2><p>استعرض المشاريع وابحث فيها وعدّل بياناتها.</p></div><button class="btn primary" type="button" data-view="form">＋ مشروع جديد</button></div>
+ <section class="panel"><div class="panel-head"><h3>قائمة المشاريع</h3><button class="btn quiet" type="button" data-action="refresh">تحديث ↻</button></div><div class="toolbar"><input id="projectSearch" class="search-input" type="search" placeholder="ابحث بالعنوان أو الموقع أو الوصف..." aria-label="ابحث في المشاريع"></div><p id="projectCount" class="muted"></p><div id="allProjects" class="project-grid"><div class="empty">جارٍ تحميل المشاريع...</div></div></section>
 </section>
-
-<section id="reset">
-<h3>تعيين كلمة مرور جديدة</h3>
-<p>أدخل كلمة المرور الجديدة مرتين.</p>
-
-<input id="newPassword" type="password"
-placeholder="كلمة المرور الجديدة" autocomplete="new-password">
-
-<input id="confirmPassword" type="password"
-placeholder="تأكيد كلمة المرور" autocomplete="new-password">
-
-<button id="updateButton" type="button" onclick="updatePassword()">
-حفظ كلمة المرور
-</button>
+<section id="formView" class="view"><div class="heading"><div><h2 id="formHeading">إنشاء مشروع جديد</h2><p>أدخل المعلومات الأساسية للعقار والمشروع.</p></div></div>
+ <section class="form-card"><form id="projectForm"><div class="form-grid">
+  <div class="field full"><label for="projectTitle">عنوان المشروع <span style="color:#b42318">*</span></label><input id="projectTitle" name="title" maxlength="160" required placeholder="مثال: ترميم منزل سكني"></div>
+  <div class="field full"><label for="projectDescription">وصف المشروع</label><textarea id="projectDescription" name="description" maxlength="5000" placeholder="اكتب وصفاً واضحاً للأعمال المطلوبة وحالة العقار..."></textarea></div>
+  <div class="field"><label for="projectLocation">موقع العقار</label><input id="projectLocation" name="location" maxlength="240" placeholder="المدينة / الحي / العنوان"></div>
+  <div class="field"><label for="projectType">نوع العقار</label><input id="projectType" name="type" maxlength="120" placeholder="سكني، تجاري، إداري..."></div>
+  <div class="field full"><label for="projectBudget">الميزانية التقديرية</label><input id="projectBudget" name="budget" maxlength="120" placeholder="مثال: 250,000 جنيه سوداني"><div class="hint">اكتب المبلغ والعملة كما يناسبك؛ لا نفرض قيمة أو عملة افتراضية.</div></div>
+ </div><div class="form-actions"><button id="saveProjectButton" class="btn primary" type="submit">حفظ المشروع</button><button id="cancelProjectButton" class="btn quiet" type="button">إلغاء</button></div></form><div id="formMessage" class="message" role="status" aria-live="polite"></div></section>
+ <div class="notice">يمكنك تعديل المعلومات الأساسية لاحقاً. لا توجد خاصية حذف نهائي حالياً حتى لا تفقد بيانات المشاريع بالخطأ.</div>
 </section>
+</main></div>
+<nav class="mobile-nav" aria-label="التنقل الرئيسي"><button class="nav-btn active" type="button" data-view="dashboard"><span class="nav-icon">⌂</span>الرئيسية</button><button class="nav-btn" type="button" data-view="projects"><span class="nav-icon">▤</span>مشاريعي</button><button class="nav-btn" type="button" data-view="form"><span class="nav-icon">＋</span>مشروع جديد</button><button class="nav-btn" type="button" data-action="logout"><span class="nav-icon">↪</span>خروج</button></nav>
+</div>
 
-<section id="app">
-<h3>إنشاء مشروع جديد</h3>
-
-<input id="title" placeholder="عنوان المشروع *">
-
-<textarea id="description" placeholder="وصف المشروع"></textarea>
-
-<input id="location" placeholder="موقع العقار">
-
-<input id="type" placeholder="نوع العقار">
-
-<input id="budget" placeholder="الميزانية">
-
-<button type="button" onclick="createProject()">
-إنشاء المشروع
-</button>
-
-<h3 style="margin-top:28px">مشاريعي</h3>
-<div id="projects-list" aria-live="polite">جارٍ تحميل المشاريع...</div>
-
-<button type="button" class="secondary" onclick="logout()">
-تسجيل الخروج
-</button>
-</section>
-
-<div id="message" role="status" aria-live="polite"></div>
-
-</main>
+<div id="detailBackdrop" class="modal-backdrop" hidden><section class="modal" role="dialog" aria-modal="true" aria-labelledby="detailTitle"><div class="modal-head"><h3 id="detailTitle">تفاصيل المشروع</h3><button id="closeDetail" class="modal-close" type="button" aria-label="إغلاق">×</button></div><div id="detailContent"></div><div class="form-actions"><button id="detailEdit" class="btn primary" type="button">تعديل المشروع</button><button id="detailCloseButton" class="btn quiet" type="button">إغلاق</button></div></section></div>
 
 <script>
-const SUPABASE_URL =
-'https://uutwijowzewmvvrzsaww.supabase.co';
+(function(){
+'use strict';
+const SUPABASE_URL='https://uutwijowzewmvvrzsaww.supabase.co';
+const SUPABASE_KEY='sb_publishable_o-zC0NdMggZbPPY2l1REhA_w8Sbvjw_';
+const APP_URL='https://ammar-app.vercel.app/';
+const $=id=>document.getElementById(id);
+let client=null,currentUser=null,projectsCache=[],editingProjectId=null,recoveryMode=false,lastViewedProjectId=null;
 
-const SUPABASE_KEY =
-'sb_publishable_o-zC0NdMggZbPPY2l1REhA_w8Sbvjw_';
-
-const APP_URL =
-'https://ammar-app.vercel.app/';
-
-const msg = document.getElementById('message');
-
-let recoveryMode = false;
-
-function showMessage(text){
-  msg.textContent = text;
+function message(el,text,type){el.textContent=text||'';el.className='message'+(text?' '+(type||'info'):'');}
+function busy(button,on,label){if(!button)return;if(on){button.dataset.old=button.textContent;button.disabled=true;button.textContent=label||'جارٍ التنفيذ...';}else{button.disabled=false;if(button.dataset.old)button.textContent=button.dataset.old;delete button.dataset.old;}}
+function esc(value){return String(value==null?'':value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function authPanel(name){['login','signup','reset'].forEach(p=>$(p+'Panel').hidden=p!==name);message($('authMessage'),'');}
+function showAuth(text,type){currentUser=null;$('appShell').hidden=true;$('authShell').hidden=false;authPanel('login');if(text)message($('authMessage'),text,type||'info');}
+function showRecovery(){recoveryMode=true;authPanel('reset');$('resetRequestForm').hidden=true;$('newPasswordForm').hidden=false;message($('authMessage'),'أدخل كلمة المرور الجديدة.','info');}
+function activeView(name){['dashboard','projects','form'].forEach(v=>$(v+'View').classList.toggle('active',v===name));document.querySelectorAll('[data-view]').forEach(b=>b.classList.toggle('active',b.dataset.view===name));if(name==='projects')renderProjects();if(name==='dashboard')renderDashboard();}
+function showApp(user){if(recoveryMode)return;currentUser=user||currentUser;if(!currentUser)return;$('authShell').hidden=true;$('appShell').hidden=false;$('headerEmail').textContent=currentUser.email||'';$('userAvatar').textContent=(currentUser.email||'ع').trim().charAt(0).toUpperCase();activeView('dashboard');loadProjects();}
+function goForm(project){editingProjectId=project?String(project.id):null;$('projectForm').reset();$('formHeading').textContent=project?'تعديل بيانات المشروع':'إنشاء مشروع جديد';$('saveProjectButton').textContent=project?'حفظ التعديلات':'حفظ المشروع';if(project){$('projectTitle').value=project.title||'';$('projectDescription').value=project.description||'';$('projectLocation').value=project.property_location||'';$('projectType').value=project.property_type||'';$('projectBudget').value=project.budget==null?'':String(project.budget);}message($('formMessage'),'');activeView('form');$('projectTitle').focus();}
+function dateText(value){if(!value)return'غير متاح';const d=new Date(value);if(Number.isNaN(d.getTime()))return'غير متاح';try{return new Intl.DateTimeFormat('ar',{year:'numeric',month:'short',day:'numeric'}).format(d);}catch(e){return d.toLocaleDateString();}}
+function row(label,value){return'<div class="detail-row"><div class="detail-label">'+esc(label)+'</div><div class="detail-value">'+esc(value||'غير محدد')+'</div></div>';}
+function details(project){if(!project)return;lastViewedProjectId=String(project.id);$('detailTitle').textContent=project.title||'تفاصيل المشروع';$('detailContent').innerHTML=row('الوصف',project.description)+row('موقع العقار',project.property_location)+row('نوع العقار',project.property_type)+row('الميزانية التقديرية',project.budget==null?'':String(project.budget))+row('رقم المشروع',project.id)+row('تاريخ الإنشاء',dateText(project.created_at));$('detailBackdrop').hidden=false;}
+function card(p){const id=esc(p.id);return'<article class="project-card"><h4>'+esc(p.title||'مشروع بدون عنوان')+'</h4><p>'+esc(p.description||'لا يوجد وصف مضاف.')+'</p><div class="meta"><span class="pill">'+esc(p.property_location||'الموقع غير محدد')+'</span><span class="pill">'+esc(p.property_type||'نوع العقار غير محدد')+'</span></div><p><strong>الميزانية:</strong> '+esc(p.budget==null||p.budget===''?'غير محددة':String(p.budget))+'</p><p><strong>أُنشئ:</strong> '+esc(dateText(p.created_at))+'</p><div class="actions"><button class="btn light" type="button" data-action="details" data-id="'+id+'">التفاصيل</button><button class="btn quiet" type="button" data-action="edit" data-id="'+id+'">تعديل</button></div></article>';}
+function sorted(){return projectsCache.slice().sort((a,b)=>(new Date(b.created_at||0).getTime()||0)-(new Date(a.created_at||0).getTime()||0));}
+function renderDashboard(){const s=sorted();$('statProjects').textContent=String(s.length);$('statLatest').textContent=s.length?(s[0].title||'مشروع بدون عنوان'):'لا يوجد';$('recentProjects').innerHTML=s.length?s.slice(0,4).map(card).join(''):'<div class="empty"><strong>لا توجد مشاريع حتى الآن</strong><p>ابدأ بإضافة أول مشروع لترميم أو صيانة عقار.</p><button class="btn primary" type="button" data-view="form">إنشاء أول مشروع</button></div>';}
+function renderProjects(){const q=($('projectSearch').value||'').trim().toLowerCase();const found=sorted().filter(p=>[p.title,p.description,p.property_location,p.property_type,p.budget].join(' ').toLowerCase().includes(q));$('projectCount').textContent='عرض '+found.length+' من '+projectsCache.length+' مشروع';$('allProjects').innerHTML=found.length?found.map(card).join(''):(projectsCache.length?'<div class="empty">لا توجد نتائج مطابقة لبحثك.</div>':'<div class="empty"><strong>قائمة المشاريع فارغة</strong><p>أنشئ مشروعك الأول وستظهر بياناته هنا.</p><button class="btn primary" type="button" data-view="form">＋ إنشاء مشروع</button></div>');}
+async function loadProjects(){if(!client||!currentUser)return;$('statConnection').textContent='جارٍ التحميل';$('recentProjects').innerHTML='<div class="empty">جارٍ تحميل المشاريع...</div>';$('allProjects').innerHTML='<div class="empty">جارٍ تحميل المشاريع...</div>';try{const r=await client.from('projects').select('*').eq('client_id',currentUser.id);if(r.error)throw r.error;projectsCache=Array.isArray(r.data)?r.data:[];$('statConnection').textContent='متصل';message($('appMessage'),'');renderDashboard();renderProjects();}catch(e){$('statConnection').textContent='تعذر الاتصال';const m='تعذر تحميل المشاريع. '+(e.message||'تحقق من الاتصال والصلاحيات.');$('recentProjects').innerHTML='<div class="empty">'+esc(m)+'<br><button class="btn light" type="button" data-action="refresh">إعادة المحاولة</button></div>';$('allProjects').innerHTML='<div class="empty">'+esc(m)+'<br><button class="btn light" type="button" data-action="refresh">إعادة المحاولة</button></div>';message($('appMessage'),'لم نتمكن من جلب المشاريع. لن نعرض بيانات تجريبية بدلاً من بياناتك.','error');}}
+async function login(e){e.preventDefault();const b=$('loginButton'),email=$('loginEmail').value.trim(),password=$('loginPassword').value;if(!email||!password){message($('authMessage'),'أدخل البريد الإلكتروني وكلمة المرور.','error');return;}busy(b,true,'جارٍ تسجيل الدخول...');message($('authMessage'),'يتم التحقق من بيانات الحساب...');try{const r=await client.auth.signInWithPassword({email,password});if(r.error)throw r.error;recoveryMode=false;showApp(r.data.user);message($('authMessage'),'');}catch(err){message($('authMessage'),'تعذر تسجيل الدخول: '+(err.message||'حدث خطأ غير متوقع.'),'error');}finally{busy(b,false);}}
+async function signup(e){e.preventDefault();const b=$('signupButton'),email=$('signupEmail').value.trim(),password=$('signupPassword').value,confirm=$('signupConfirm').value;if(password.length<8){message($('authMessage'),'كلمة المرور يجب أن تتكون من 8 أحرف على الأقل.','error');return;}if(password!==confirm){message($('authMessage'),'كلمتا المرور غير متطابقتين.','error');return;}busy(b,true,'جارٍ إنشاء الحساب...');message($('authMessage'),'يتم إنشاء الحساب...');try{const r=await client.auth.signUp({email,password,options:{emailRedirectTo:APP_URL}});if(r.error)throw r.error;if(r.data&&r.data.session){showApp(r.data.user);message($('authMessage'),'');}else{$('loginEmail').value=email;authPanel('login');message($('authMessage'),'تم إنشاء طلب الحساب. أكّد بريدك من الرسالة التي تصلك، ثم سجّل الدخول. افحص الرسائل غير المرغوب فيها إذا لم تجدها.','success');}}catch(err){message($('authMessage'),'تعذر إنشاء الحساب: '+(err.message||'حدث خطأ غير متوقع.'),'error');}finally{busy(b,false);}}
+async function resetRequest(e){e.preventDefault();const b=$('resetRequestButton'),email=$('resetEmail').value.trim();if(!email){message($('authMessage'),'أدخل بريدك الإلكتروني.','error');return;}busy(b,true,'جارٍ الإرسال...');try{const r=await client.auth.resetPasswordForEmail(email,{redirectTo:APP_URL});if(r.error)throw r.error;message($('authMessage'),'إذا كان البريد مرتبطاً بحساب، فستصلك رسالة لاستعادة كلمة المرور. افحص الوارد والرسائل غير المرغوب فيها.','success');}catch(err){message($('authMessage'),'تعذر طلب الاستعادة: '+(err.message||'حدث خطأ غير متوقع.'),'error');}finally{busy(b,false);}}
+async function saveNewPassword(e){e.preventDefault();const b=$('savePasswordButton'),password=$('newPassword').value,confirm=$('newPasswordConfirm').value;if(password.length<8){message($('authMessage'),'كلمة المرور يجب أن تتكون من 8 أحرف على الأقل.','error');return;}if(password!==confirm){message($('authMessage'),'كلمتا المرور غير متطابقتين.','error');return;}busy(b,true,'جارٍ حفظ كلمة المرور...');try{const s=await client.auth.getSession();if(s.error||!s.data.session)throw new Error('رابط الاستعادة غير صالح أو انتهت صلاحيته. اطلب رابطاً جديداً.');const r=await client.auth.updateUser({password});if(r.error)throw r.error;await client.auth.signOut();recoveryMode=false;$('newPasswordForm').reset();$('resetRequestForm').hidden=false;$('newPasswordForm').hidden=true;showAuth('تم تغيير كلمة المرور. سجّل الدخول باستخدام الكلمة الجديدة.','success');}catch(err){message($('authMessage'),'تعذر تغيير كلمة المرور: '+(err.message||'حدث خطأ غير متوقع.'),'error');}finally{busy(b,false);}}
+async function saveProject(e){e.preventDefault();if(!currentUser){showAuth('انتهت الجلسة. سجّل الدخول من جديد.','error');return;}const b=$('saveProjectButton'),title=$('projectTitle').value.trim();if(!title){message($('formMessage'),'عنوان المشروع مطلوب.','error');$('projectTitle').focus();return;}const data={title,description:$('projectDescription').value.trim()||null,property_location:$('projectLocation').value.trim()||null,property_type:$('projectType').value.trim()||null,budget:$('projectBudget').value.trim()||null};busy(b,true,editingProjectId?'جارٍ حفظ التعديلات...':'جارٍ إنشاء المشروع...');message($('formMessage'),'يتم حفظ البيانات في قاعدة البيانات...');try{let r;if(editingProjectId){r=await client.from('projects').update(data).eq('id',editingProjectId).eq('client_id',currentUser.id).select('id');if(r.error)throw r.error;if(!r.data||!r.data.length)throw new Error('لم يتم تعديل أي سجل. قد لا تسمح صلاحيات قاعدة البيانات بالتعديل أو أن المشروع غير تابع لحسابك.');}else{r=await client.from('projects').insert(Object.assign({},data,{client_id:currentUser.id}));if(r.error)throw r.error;}editingProjectId=null;$('projectForm').reset();message($('formMessage'),'تم حفظ المشروع بنجاح. جارٍ تحديث القائمة...','success');await loadProjects();activeView('projects');message($('appMessage'),'تم حفظ المشروع وتحديث القائمة.','success');}catch(err){message($('formMessage'),'تعذر حفظ المشروع: '+(err.message||'حدث خطأ غير متوقع.'),'error');}finally{busy(b,false);}}
+async function logout(){try{const r=await client.auth.signOut();if(r.error)throw r.error;recoveryMode=false;showAuth('تم تسجيل الخروج بأمان.','success');}catch(e){message($('appMessage'),'تعذر تسجيل الخروج: '+(e.message||'حدث خطأ غير متوقع.'),'error');}}
+function clickApp(e){const vb=e.target.closest('[data-view]');if(vb){if(vb.dataset.view==='form')goForm(null);else activeView(vb.dataset.view);return;}const ab=e.target.closest('[data-action]');if(!ab)return;const action=ab.dataset.action;if(action==='logout'){logout();return;}if(action==='refresh'){loadProjects();return;}const p=projectsCache.find(x=>String(x.id)===String(ab.dataset.id));if(action==='details')details(p);if(action==='edit'&&p)goForm(p);}
+function init(){if(!window.supabase||typeof window.supabase.createClient!=='function'){message($('authMessage'),'تعذر تحميل مكتبة الاتصال. تحقق من الإنترنت ثم أعد تحميل الصفحة.','error');return;}try{client=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY,{auth:{autoRefreshToken:true,persistSession:true,detectSessionInUrl:true}});}catch(e){message($('authMessage'),'تعذر تهيئة الاتصال: '+e.message,'error');return;}
+ client.auth.onAuthStateChange((event,session)=>{if(event==='PASSWORD_RECOVERY')showRecovery();else if(event==='SIGNED_OUT'){recoveryMode=false;showAuth('تم تسجيل الخروج.');}else if(event==='SIGNED_IN'&&session&&!recoveryMode)showApp(session.user);});
+ $('loginForm').addEventListener('submit',login);$('signupForm').addEventListener('submit',signup);$('resetRequestForm').addEventListener('submit',resetRequest);$('newPasswordForm').addEventListener('submit',saveNewPassword);$('projectForm').addEventListener('submit',saveProject);$('projectSearch').addEventListener('input',renderProjects);
+ $('cancelProjectButton').addEventListener('click',()=>{editingProjectId=null;$('projectForm').reset();activeView('projects');});
+ $('closeDetail').addEventListener('click',()=>$('detailBackdrop').hidden=true);$('detailCloseButton').addEventListener('click',()=>$('detailBackdrop').hidden=true);$('detailBackdrop').addEventListener('click',e=>{if(e.target===$('detailBackdrop'))$('detailBackdrop').hidden=true;});
+ $('detailEdit').addEventListener('click',()=>{const p=projectsCache.find(x=>String(x.id)===String(lastViewedProjectId));$('detailBackdrop').hidden=true;if(p)goForm(p);});
+ document.querySelectorAll('[data-auth-panel]').forEach(b=>b.addEventListener('click',()=>{const name=b.dataset.authPanel;if(name==='reset'){$('resetRequestForm').hidden=false;$('newPasswordForm').hidden=true;$('resetEmail').value=$('loginEmail').value.trim();}authPanel(name);}));
+ $('appShell').addEventListener('click',clickApp);
+ const hp=new URLSearchParams(location.hash.replace(/^#/,'')).get('type'),qp=new URLSearchParams(location.search).get('type');const hashError=new URLSearchParams(location.hash.replace(/^#/,'')).get('error_description')||new URLSearchParams(location.search).get('error_description');
+ if(hp==='recovery'||qp==='recovery'){recoveryMode=true;authPanel('reset');$('resetRequestForm').hidden=true;$('newPasswordForm').hidden=false;message($('authMessage'),'جارٍ التحقق من رابط الاستعادة...');}
+ client.auth.getSession().then(r=>{if(r.error){showAuth('تعذر التحقق من الجلسة: '+r.error.message,'error');return;}if(recoveryMode){if(r.data.session)showRecovery();else message($('authMessage'),'رابط الاستعادة غير صالح أو منتهي. اطلب رابطاً جديداً.','error');}else if(r.data.session)showApp(r.data.session.user);else if(hashError)showAuth('تعذر إكمال رابط البريد: '+hashError,'error');else showAuth();}).catch(e=>showAuth('حدث خطأ أثناء فتح التطبيق: '+e.message,'error'));
 }
-
-function showOnly(sectionId){
-  ['login','signup','reset','app'].forEach(id=>{
-    document.getElementById(id).style.display =
-      id === sectionId ? 'block' : 'none';
-  });
-}
-
-function showLogin(message){
-  recoveryMode = false;
-  showOnly('login');
-  document.getElementById('password').value = '';
-  if(message) showMessage(message);
-}
-
-function showApp(){
-  if(recoveryMode) return;
-  showOnly('app');
-  showMessage('تم تسجيل الدخول بنجاح');
-  loadProjects();
-}
-
-function showReset(){
-  recoveryMode = true;
-  showOnly('reset');
-  showMessage('أدخل كلمة المرور الجديدة');
-}
-
-if(!window.supabase || !window.supabase.createClient){
-
-  showMessage('تعذر تحميل النظام. تحقق من اتصال الإنترنت.');
-
-}else{
-
-  const client = window.supabase.createClient(
-    SUPABASE_URL,
-    SUPABASE_KEY
-  );
-
-  client.auth.onAuthStateChange((event,session)=>{
-
-    if(event === 'PASSWORD_RECOVERY'){
-      showReset();
-
-    }else if(event === 'SIGNED_OUT'){
-      recoveryMode = false;
-      showLogin('تم تسجيل الخروج.');
-
-    }else if(event === 'SIGNED_IN' && session && !recoveryMode){
-      showApp();
-    }
-
-  });
-
-  async function initialize(){
-
-    try{
-
-      const hash = new URLSearchParams(
-        window.location.hash.replace(/^#/,'')
-      );
-
-      const query = new URLSearchParams(
-        window.location.search
-      );
-
-      const errorText =
-        hash.get('error_description') ||
-        query.get('error_description') ||
-        hash.get('error') ||
-        query.get('error');
-
-      if(errorText){
-        showLogin('تعذر إكمال رابط الاستعادة: '+errorText);
-        return;
-      }
-
-      if(
-        hash.get('type') === 'recovery' ||
-        query.get('type') === 'recovery'
-      ){
-        recoveryMode = true;
-        showOnly('reset');
-        showMessage('جارٍ التحقق من رابط الاستعادة...');
-      }
-
-      const {data,error} = await client.auth.getSession();
-
-      if(error){
-        showLogin('تعذر التحقق من الجلسة: '+error.message);
-        return;
-      }
-
-      if(recoveryMode){
-
-        showOnly('reset');
-
-        if(data.session){
-          showMessage('أدخل كلمة المرور الجديدة.');
-        }else{
-          showMessage(
-            'رابط الاستعادة غير صالح أو منتهي. اطلب رسالة جديدة من الموقع المنشور.'
-          );
-        }
-
-      }else if(data.session){
-
-        showApp();
-
-      }else{
-
-        showLogin();
-
-      }
-
-    }catch(error){
-
-      showLogin('حدث خطأ أثناء فتح التطبيق: '+error.message);
-
-    }
-  }
-
-  function showSignup(){
-    recoveryMode = false;
-    showOnly('signup');
-    showMessage('أدخل بريدك الإلكتروني وأنشئ كلمة مرور آمنة.');
-  }
-
-  async function signup(){
-    const email = document.getElementById('signupEmail').value.trim();
-    const password = document.getElementById('signupPassword').value;
-    const confirmation = document.getElementById('signupConfirm').value;
-    const button = document.getElementById('signupButton');
-
-    if(!email || !password){ showMessage('أدخل البريد الإلكتروني وكلمة المرور.'); return; }
-    if(password.length < 8){ showMessage('كلمة المرور يجب أن تكون 8 أحرف على الأقل.'); return; }
-    if(password !== confirmation){ showMessage('كلمتا المرور غير متطابقتين.'); return; }
-
-    button.disabled = true;
-    showMessage('جارٍ إنشاء الحساب...');
-    try{
-      const {data,error} = await client.auth.signUp({
-        email,
-        password,
-        options:{ emailRedirectTo: APP_URL }
-      });
-      if(error){ showMessage('تعذر إنشاء الحساب: '+error.message); return; }
-      if(data.session){
-        recoveryMode = false;
-        showApp();
-      }else{
-        showLogin('تم إنشاء طلب الحساب. أرسلنا رابط تأكيد إلى بريدك الإلكتروني؛ أكّد البريد ثم سجّل الدخول.');
-      }
-    }catch(error){
-      showMessage('حدث خطأ أثناء إنشاء الحساب: '+error.message);
-    }finally{
-      button.disabled = false;
-    }
-  }
-
-  async function login(){
-
-    const email =
-      document.getElementById('email').value.trim();
-
-    const password =
-      document.getElementById('password').value;
-
-    const button =
-      document.getElementById('loginButton');
-
-    if(!email || !password){
-      showMessage('أدخل البريد الإلكتروني وكلمة المرور.');
-      return;
-    }
-
-    button.disabled = true;
-    showMessage('جارٍ تسجيل الدخول...');
-
-    try{
-
-      const {error} = await client.auth.signInWithPassword({
-        email,
-        password
-      });
-
-      if(error){
-        showMessage('تعذر تسجيل الدخول: '+error.message);
-        return;
-      }
-
-      recoveryMode = false;
-      showApp();
-
-    }catch(error){
-
-      showMessage('حدث خطأ أثناء تسجيل الدخول: '+error.message);
-
-    }finally{
-
-      button.disabled = false;
-
-    }
-  }
-
-  async function forgotPassword(){
-
-    const email =
-      document.getElementById('email').value.trim();
-
-    if(!email){
-      showMessage('أدخل بريدك الإلكتروني أولاً.');
-      return;
-    }
-
-    showMessage('جارٍ إرسال رابط الاستعادة...');
-
-    try{
-
-      const {error} = await client.auth.resetPasswordForEmail(
-        email,
-        {
-          redirectTo: APP_URL
-        }
-      );
-
-      if(error){
-        showMessage('تعذر إرسال الرابط: '+error.message);
-        return;
-      }
-
-      showMessage(
-        'إذا كان البريد مرتبطاً بحساب، فسيصلك رابط الاستعادة. افحص الوارد والرسائل غير المرغوب فيها.'
-      );
-
-    }catch(error){
-
-      showMessage('حدث خطأ أثناء إرسال الرابط: '+error.message);
-
-    }
-  }
-
-  async function updatePassword(){
-
-    const password =
-      document.getElementById('newPassword').value;
-
-    const confirmation =
-      document.getElementById('confirmPassword').value;
-
-    const button =
-      document.getElementById('updateButton');
-
-    if(password.length < 6){
-      showMessage('كلمة المرور يجب أن تكون 6 أحرف على الأقل.');
-      return;
-    }
-
-    if(password !== confirmation){
-      showMessage('كلمتا المرور غير متطابقتين.');
-      return;
-    }
-
-    button.disabled = true;
-    showMessage('جارٍ تحديث كلمة المرور...');
-
-    try{
-
-      const {data:sessionData,error:sessionError} =
-        await client.auth.getSession();
-
-      if(sessionError || !sessionData.session){
-        showMessage(
-          'رابط الاستعادة منتهي أو غير صالح. اطلب رابطاً جديداً.'
-        );
-        return;
-      }
-
-      const {error} = await client.auth.updateUser({
-        password:password
-      });
-
-      if(error){
-        showMessage('تعذر تغيير كلمة المرور: '+error.message);
-        return;
-      }
-
-      await client.auth.signOut();
-
-      recoveryMode = false;
-
-      showLogin(
-        'تم تغيير كلمة المرور بنجاح. سجل الدخول بكلمة المرور الجديدة.'
-      );
-
-      document.getElementById('newPassword').value = '';
-      document.getElementById('confirmPassword').value = '';
-
-    }catch(error){
-
-      showMessage('حدث خطأ أثناء تغيير كلمة المرور: '+error.message);
-
-    }finally{
-
-      button.disabled = false;
-
-    }
-  }
-
-  function escapeHtml(value){
-    return String(value ?? '').replace(/[&<>"']/g, character => ({
-      '&':'&amp;',
-      '<':'&lt;',
-      '>':'&gt;',
-      '"':'&quot;',
-      "'":'&#39;'
-    })[character]);
-  }
-
-  async function loadProjects(){
-    const list = document.getElementById('projects-list');
-    if(!list) return;
-    list.textContent = 'جارٍ تحميل المشاريع...';
-
-    try{
-      const {data:userData,error:userError} = await client.auth.getUser();
-      if(userError || !userData.user){
-        list.textContent = 'يرجى تسجيل الدخول لعرض المشاريع.';
-        return;
-      }
-
-      const {data,error} = await client
-        .from('projects')
-        .select('*')
-        .eq('client_id', userData.user.id);
-
-      if(error){
-        list.textContent = 'تعذر تحميل المشاريع: ' + error.message;
-        return;
-      }
-
-      if(!data || data.length === 0){
-        list.textContent = 'لا توجد مشاريع بعد. أنشئ أول مشروع من النموذج أعلاه.';
-        return;
-      }
-
-      list.innerHTML = data.map(project => `
-        <article style="border:1px solid #ddd;border-radius:10px;padding:14px;margin:10px 0">
-          <h4 style="margin:0 0 10px">${escapeHtml(project.title || 'مشروع بدون عنوان')}</h4>
-          <p><strong>الوصف:</strong> ${escapeHtml(project.description || 'غير محدد')}</p>
-          <p><strong>الموقع:</strong> ${escapeHtml(project.property_location || 'غير محدد')}</p>
-          <p><strong>نوع العقار:</strong> ${escapeHtml(project.property_type || 'غير محدد')}</p>
-          <p><strong>الميزانية:</strong> ${escapeHtml(project.budget || 'غير محددة')}</p>
-          <p><strong>رقم المشروع:</strong> ${escapeHtml(project.id || '—')}</p>
-        </article>
-      `).join('');
-
-    }catch(error){
-      list.textContent = 'حدث خطأ أثناء تحميل المشاريع: ' + error.message;
-    }
-  }
-
-  async function createProject(){
-
-    const title =
-      document.getElementById('title').value.trim();
-
-    if(!title){
-      showMessage('اكتب عنوان المشروع أولاً.');
-      return;
-    }
-
-    showMessage('جارٍ التحقق من الحساب...');
-
-    try{
-
-      const {data:userData,error:userError} =
-        await client.auth.getUser();
-
-      if(userError || !userData.user){
-        showLogin('انتهت الجلسة. سجل الدخول مرة أخرى.');
-        return;
-      }
-
-      const project = {
-
-        title:title,
-
-        client_id:userData.user.id,
-
-        description:
-          document.getElementById('description').value.trim() || null,
-
-        property_location:
-          document.getElementById('location').value.trim() || null,
-
-        property_type:
-          document.getElementById('type').value.trim() || null,
-
-        budget:
-          document.getElementById('budget').value.trim() || null
-
-      };
-
-      showMessage('جارٍ حفظ المشروع...');
-
-      const {error} = await client
-        .from('projects')
-        .insert(project);
-
-      if(error){
-        showMessage('فشل حفظ المشروع: '+error.message);
-        return;
-      }
-
-      await loadProjects();
-      showMessage('تم إنشاء المشروع بنجاح. ستجد المشروع الآن ضمن قائمة مشاريعي أسفل النموذج.');
-
-      document.querySelectorAll(
-        '#app input, #app textarea'
-      ).forEach(element=>{
-        element.value = '';
-      });
-
-    }catch(error){
-
-      showMessage('حدث خطأ أثناء إنشاء المشروع: '+error.message);
-
-    }
-  }
-
-  async function logout(){
-
-    try{
-
-      const {error} = await client.auth.signOut();
-
-      if(error){
-        showMessage('تعذر تسجيل الخروج: '+error.message);
-        return;
-      }
-
-      showLogin('تم تسجيل الخروج.');
-
-    }catch(error){
-
-      showMessage('حدث خطأ أثناء تسجيل الخروج: '+error.message);
-
-    }
-  }
-
-  window.showSignup = showSignup;
-  window.signup = signup;
-  window.login = login;
-  window.forgotPassword = forgotPassword;
-  window.updatePassword = updatePassword;
-  window.createProject = createProject;
-  window.logout = logout;
-
-  initialize();
-
-}
+init();
+})();
 </script>
-
 </body>
 </html>
