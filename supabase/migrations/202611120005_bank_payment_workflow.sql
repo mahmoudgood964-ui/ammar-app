@@ -147,7 +147,7 @@ BEGIN
   END IF;
 
   v_role := public.ammar_project_role(p_project_id);
-  IF v_role NOT IN ('owner','manager','accountant') THEN
+  IF v_role IS NULL OR v_role NOT IN ('owner','manager','accountant') THEN
     RAISE EXCEPTION 'Not allowed to create payment milestones';
   END IF;
 
