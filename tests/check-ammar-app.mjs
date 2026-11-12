@@ -33,7 +33,8 @@ for (const name of tables) {
 }
 for (const rpc of [
   'ammar_create_market_request','ammar_accept_market_quote','ammar_advance_market_request',
-  'ammar_start_conversation','ammar_accept_service_offer','ammar_accept_agreement'
+  'ammar_start_conversation','ammar_accept_service_offer','ammar_accept_agreement',
+  'ammar_complete_service_request'
 ]) assert.ok(migration.includes('FUNCTION public.' + rpc), 'Missing RPC ' + rpc);
 
 assert.ok(migration.includes('ammar-chat-files'), 'Private chat file bucket is missing');
@@ -56,7 +57,7 @@ assert.ok(tests.includes('RLS failure'), 'Private conversation isolation test is
 for (const feature of [
   'data-eco-buy','data-eco-contact','data-eco-submit-quote','data-eco-accept-quote',
   'data-eco-service-offer','data-eco-accept-service','data-eco-service-chat',
-  'data-eco-submit-review','ammar_user_notifications','ammar-chat-files','ammar-market-files'
+  'data-eco-complete-service','data-eco-submit-review','ammar_user_notifications','ammar-chat-files','ammar-market-files'
 ]) assert.ok(moduleSource.includes(feature), 'Missing UI feature ' + feature);
 
 console.log('AMMAR static application and migration checks passed.');
