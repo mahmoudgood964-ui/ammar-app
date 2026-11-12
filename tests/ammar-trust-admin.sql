@@ -81,6 +81,21 @@ BEGIN
 END
 $test$;
 
+-- A normal account must not call the administrator verification RPC
+DO $test$
+BEGIN
+  BEGIN
+    PERFORM public.ammar_admin_review_provider(
+      'supplier', current_setting('ammir.test.supplier_id')::uuid,
+      'approved', 'This ordinary account must not be allowed to verify'
+    );
+    RAISE EXCEPTION 'Non-admin was able to approve a supplier';
+  EXCEPTION
+    WHEN insufficient_privilege THEN NULL;
+  END;
+END
+$test$;
+
 -- A report contains the only message context exposed to an administrator
 RESET ROLE;
 INSERT INTO public.ammar_conversations(
@@ -144,13 +159,16 @@ SET status='investigating',
     reviewed_by='aaaaaaaa-1000-4000-8000-000000000002'
 WHERE id=current_setting('ammir.test.report_id')::uuid;
 
-UPDATE public.ammar_market_suppliers
-SET is_verified=true, verified_at=now()
-WHERE id=:'supplier_id';
-
-UPDATE public.ammar_service_providers
-SET is_verified=true, verified_at=now()
-WHERE id=:'provider_id';
+SELECT public.ammar_admin_review_provider(
+  'supplier', current_setting('ammir.test.supplier_id')::uuid,
+  'approved', 'Verified company registration and authorized contact',
+  'test-only evidence reference'
+);
+SELECT public.ammar_admin_review_provider(
+  'service_provider', current_setting('ammir.test.provider_id')::uuid,
+  'approved', 'Verified contractor registration and portfolio references',
+  'test-only evidence reference'
+);
 
 DO $test$
 BEGIN
@@ -172,6 +190,10 @@ BEGIN
       AND reviewed_by='aaaaaaaa-1000-4000-8000-000000000002'
   ) THEN
     RAISE EXCEPTION 'Administrator could not update a message report';
+  END IF;
+  IF (SELECT count(*) FROM public.ammar_provider_verification_events
+      WHERE actor_id='aaaaaaaa-1000-4000-8000-000000000002') <> 2 THEN
+    RAISE EXCEPTION 'Verification decision audit events were not recorded';
   END IF;
 END
 $test$;
