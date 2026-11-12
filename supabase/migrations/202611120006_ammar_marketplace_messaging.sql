@@ -881,7 +881,7 @@ RETURNS text
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public, pg_temp
-AS $
+AS $ammar_service_complete$
 DECLARE
   r public.ammar_service_requests%ROWTYPE;
   o public.ammar_service_offers%ROWTYPE;
@@ -964,7 +964,7 @@ BEGIN
 
   RETURN 'closed';
 END;
-$;
+$ammar_service_complete$;
 
 CREATE OR REPLACE FUNCTION public.ammar_validate_agreement()
 RETURNS trigger
