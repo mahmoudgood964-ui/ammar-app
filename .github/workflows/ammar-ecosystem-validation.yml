@@ -37,13 +37,21 @@ jobs:
         env:
           PGPASSWORD: postgres
         run: psql -h 127.0.0.1 -U postgres -d ammar_test -v ON_ERROR_STOP=1 -f tests/ammar-db-bootstrap.sql
-      - name: Apply ecosystem migration
+      - name: Apply marketplace and messaging foundation
         env:
           PGPASSWORD: postgres
         run: psql -h 127.0.0.1 -U postgres -d ammar_test -v ON_ERROR_STOP=1 -f supabase/migrations/202611120006_ammar_marketplace_messaging.sql
-      - name: Run marketplace and messaging integration tests
+      - name: Apply advanced messaging migration
+        env:
+          PGPASSWORD: postgres
+        run: psql -h 127.0.0.1 -U postgres -d ammar_test -v ON_ERROR_STOP=1 -f supabase/migrations/202611120007_ammar_messaging_plus.sql
+      - name: Run marketplace integration tests
         env:
           PGPASSWORD: postgres
         run: psql -h 127.0.0.1 -U postgres -d ammar_test -v ON_ERROR_STOP=1 -f tests/ammar-marketplace-integration.sql
+      - name: Run advanced messaging integration tests
+        env:
+          PGPASSWORD: postgres
+        run: psql -h 127.0.0.1 -U postgres -d ammar_test -v ON_ERROR_STOP=1 -f tests/ammar-messaging-plus.sql
       - name: Validate browser code and migration wiring
         run: node tests/check-ammar-app.mjs
