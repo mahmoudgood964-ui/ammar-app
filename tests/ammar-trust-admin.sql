@@ -111,6 +111,9 @@ INSERT INTO public.ammar_conversation_participants(
 ('bbbbbbbb-1000-4000-8000-000000000001','aaaaaaaa-1000-4000-8000-000000000001','participant'),
 ('bbbbbbbb-1000-4000-8000-000000000001','aaaaaaaa-1000-4000-8000-000000000003','participant');
 
+-- Message sender must match the authenticated session
+SET ROLE authenticated;
+SELECT set_config('request.jwt.claim.sub','aaaaaaaa-1000-4000-8000-000000000003',false);
 INSERT INTO public.ammar_messages(
   id,conversation_id,sender_id,message_type,body
 ) VALUES (
@@ -120,6 +123,7 @@ INSERT INTO public.ammar_messages(
   'text','AMMIR trust moderation test message'
 );
 
+RESET ROLE;
 SET ROLE authenticated;
 SELECT set_config('request.jwt.claim.sub','aaaaaaaa-1000-4000-8000-000000000001',false);
 INSERT INTO public.ammar_message_reports(
