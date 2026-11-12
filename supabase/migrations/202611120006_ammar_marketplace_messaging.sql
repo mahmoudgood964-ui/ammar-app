@@ -604,7 +604,7 @@ RETURNS uuid
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public, pg_temp
-AS $
+AS $$
 DECLARE
   v_project_id_type text;
   v_request_id uuid;
@@ -668,14 +668,14 @@ BEGIN
 
   RETURN v_request_id;
 END;
-$;
+$$;
 
 CREATE OR REPLACE FUNCTION public.ammar_accept_market_quote(p_quote_id uuid)
 RETURNS uuid
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public, pg_temp
-AS $
+AS $$
 DECLARE
   q public.ammar_market_quotes%ROWTYPE;
   r public.ammar_market_requests%ROWTYPE;
@@ -703,7 +703,7 @@ BEGIN
           jsonb_build_object('quote_id', q.id, 'amount', q.total_amount, 'currency', q.currency));
   RETURN r.id;
 END;
-$;
+$$;
 
 CREATE OR REPLACE FUNCTION public.ammar_advance_market_request(
   p_request_id uuid,
@@ -714,7 +714,7 @@ RETURNS text
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public, pg_temp
-AS $
+AS $$
 DECLARE
   r public.ammar_market_requests%ROWTYPE;
   v_supplier_owner uuid;
@@ -798,14 +798,14 @@ BEGIN
 
   RETURN p_next_status;
 END;
-$;
+$$;
 
 CREATE OR REPLACE FUNCTION public.ammar_accept_service_offer(p_offer_id uuid)
 RETURNS uuid
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public, pg_temp
-AS $
+AS $$
 DECLARE
   o public.ammar_service_offers%ROWTYPE;
   r public.ammar_service_requests%ROWTYPE;
@@ -824,14 +824,14 @@ BEGIN
 
   RETURN r.id;
 END;
-$;
+$$;
 
 CREATE OR REPLACE FUNCTION public.ammar_validate_agreement()
 RETURNS trigger
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public, pg_temp
-AS $
+AS $$
 BEGIN
   IF NEW.created_by <> auth.uid() OR auth.uid() NOT IN (NEW.client_id, NEW.provider_id) THEN
     RAISE EXCEPTION 'Only a contract party can create this agreement';
@@ -878,7 +878,7 @@ BEGIN
   END IF;
   RETURN NEW;
 END;
-$;
+$$;
 
 DROP TRIGGER IF EXISTS ammar_validate_agreement_trigger ON public.ammar_agreements;
 CREATE TRIGGER ammar_validate_agreement_trigger
@@ -890,13 +890,13 @@ RETURNS trigger
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public, pg_temp
-AS $
+AS $$
 BEGIN
   INSERT INTO public.ammar_agreement_events(agreement_id, actor_id, event_type, note)
   VALUES (NEW.id, NEW.created_by, 'created', 'تم إنشاء مسودة الاتفاق وإرسالها للطرف الآخر.');
   RETURN NEW;
 END;
-$;
+$$;
 
 DROP TRIGGER IF EXISTS ammar_agreement_created_trigger ON public.ammar_agreements;
 CREATE TRIGGER ammar_agreement_created_trigger
