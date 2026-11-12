@@ -49,6 +49,10 @@ jobs:
         env:
           PGPASSWORD: postgres
         run: psql -h 127.0.0.1 -U postgres -d ammar_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261112140000_ammir_storage_realtime.sql
+      - name: Optimize AMMIR RLS policies
+        env:
+          PGPASSWORD: postgres
+        run: psql -h 127.0.0.1 -U postgres -d ammar_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261112142000_optimize_ammir_rls_policies.sql
       - name: Run marketplace integration tests
         env:
           PGPASSWORD: postgres
