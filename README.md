@@ -1,58 +1,138 @@
-# عَمِّر | AMMAR
+# عَمِّر | AMMIR — مستودع التطوير
 
-AMMAR is a bilingual (Arabic/English) workspace for managing renovation and property-maintenance projects, from project setup through field execution and handover.
+مساحة لإدارة مشاريع البناء والترميم والصيانة، مع فرع تطوير مستقل يضيف سوق مواد البناء والموردين والخدمات والشراء والمراسلات المرتبطة بالمشروع.
 
-## Current capabilities
+> **تنبيه إصدار:** ميزات السوق والمراسلات الواردة أدناه موجودة في فرع `feature/ammar-market-messaging` وليست جزءاً من `main` أو نسخة الإنتاج إلى أن تكتمل بوابة staging والمراجعة والدمج والنشر.
 
-- Account registration, sign-in and password recovery through Supabase Auth.
-- Project creation, updates, search and shared project access.
-- Team invitations, role-based access and activity history.
-- Tasks, progress updates, contractor quotations and structured quotation comparison.
-- Expenses, budgets, payments and CSV project exports.
-- Private project documents and signed downloads through Supabase Storage.
-- Daily site reports, issue/defect tracking, scope-change approvals and handover checklists.
-- Bank-referenced milestone workflow with customer completion approval, dispute holds and payout audit records (AMMAR does not custody or transfer funds).
-- Arabic/English interface switching.
-- Installable PWA shell.
+## وحدات المشروع الأساسية
 
-## Technology
+الاسم التجاري المعتمد في واجهة التطبيق لهذا الفرع هو **عَمِّر | AMMIR**. أسماء ملفات الترحيل ومعرّفات الكود الداخلية التي تحتوي AMMAR بقيت كما هي لتجنب كسر التوافق التقني.
 
-- Static HTML, CSS and JavaScript in `index.html`.
-- Supabase Auth, Postgres, Row Level Security and Storage.
-- Vercel hosting.
-- PWA manifest, service worker and SVG application icon.
+- التسجيل والدخول واستعادة كلمة المرور عبر Supabase Auth.
+- إنشاء المشاريع والبحث والمشاركة وإدارة أعضاء الفريق والأدوار.
+- المهام والتقدم والتعليقات وعروض المقاولين والمصروفات والميزانيات والمدفوعات.
+- تقارير المواقع اليومية وسجل النشاط والمشكلات والعيوب وطلبات التغيير وقوائم التسليم.
+- مستندات المشروع الخاصة وروابط التنزيل الموقعة من Supabase Storage.
+- واجهة أساسية تدعم العربية والإنجليزية، وغلاف PWA قابل للتثبيت.
 
-## Database migrations
+## قدرات السوق والرسائل في فرع التطوير
 
-Apply the migrations in order in the Supabase SQL Editor, only once per environment:
+أضيف تبويب **دليل الجهات** ببحث وتصفية للشركات والجهات العامة/المجتمعية المرشحة. كل بطاقة موسومة «جهة محتملة — غير معتمدة»؛ ولا تعني وجود شراكة أو حساب أو موافقة أو تحقق من الجهة. لا تُرفع أي جهة إلى حالة شريك/موثّق دون موافقة مكتوبة وفحص قانوني وتشغيلي.
+
+تم تجهيز ميزات السوق والمراسلات على قاعدة الإنتاج بعد تطبيق الترحيلين 006 و007 وترحيلات التخزين وRealtime وتحسين RLS التالية:
+
+### السوق والشراء
+- حسابات الموردين وملفاتهم التجارية.
+- نشر منتجات البناء مع الفئة والوحدة والسعر والعملة والتوفر والكمية وصورة المنتج.
+- البحث الإقليمي بحسب بيانات المدينة والمنطقة والسوق.
+- طلبات شراء مرتبطة بمورد وبمنتج، وعروض أسعار وقبولها.
+- متابعة حالات الطلب من الإرسال حتى التأكيد على الاستلام.
+- ربط إكمال معاملة المواد بمصروف المشروع.
+
+### المقاولون والخدمات والاتفاقات
+- ملفات مقدمي الخدمات والمقاولين.
+- طلبات خدمات وعروض تنفيذ وقبول العرض.
+- اتفاقات مرتبطة بصفقة، مع قبول الطرفين وسجل أحداث للاتفاق.
+- تقييمات وسجلات أولية للبلاغات والنزاعات.
+- تسجيل إكمال الخدمة ومصروف المشروع.
+
+### المراسلات الداخلية — ترحيل 007
+- محادثات مرتبطة بمنتج أو طلب شراء أو عرض سعر محدد أو عرض خدمة أو اتفاق أو مشروع أو ملف مورد.
+- رسائل نصية وصور وملفات وفيديو ومشاركة موقع.
+- مرفقات خاصة وروابط موقعة مؤقتة.
+- إيصالات إرسال وتسليم وقراءة، وعدّاد غير المقروء وإشعارات داخل التطبيق وتحديثات Realtime.
+- آخر ظهور مع خيار إخفائه، وأرشفة المحادثات.
+- بحث وتصفية المحادثات، وبحث في الرسائل المحملة.
+- الرد وإعادة توجيه الرسائل النصية والتثبيت والإبلاغ والحظر وإلغاء الحظر.
+- تحويل رسالة في محادثة مشروع إلى مهمة أو طلب تغيير.
+
+### حدود الرسائل الحالية
+- المحادثات ثنائية الطرف، وليست نظام مجموعات/قنوات متكاملاً.
+- واجهة الرسائل المضافة عربية في معظمها، ولم يكتمل تعريب/ترجمة كل العناصر للإنجليزية.
+- البحث في المحادثة محدود بالرسائل المحملة في الصفحة، وليس فهرسة غير محدودة لكل التاريخ.
+- إعادة التوجيه الحالية للرسائل النصية.
+- لا توجد حتى الآن رسائل صوتية أو مكالمات، ترجمة آلية، تنبيهات SLA لتأخر الردود، أو إشعارات Push/Email موثوقة.
+- البلاغات تُسجّل، لكن لوحة الإدارة والتحقيق والإغلاق ليست مكتملة.
+
+## العمولة والمدفوعات
+
+نسبة 5% قيمة ابتدائية محفوظة في قواعد إعداد العمولة، وليست نسبة سوقية مثبتة ولا التزاماً تجارياً نهائياً. يسجل النظام قيمة عمولة مستحقة بعد تحقق شروط الإكمال؛ لا يجمع عَمِّر الأموال ولا يحتفظ بها ولا ينقلها ولا يوفر Escrow. أي تحصيل أو دفع أو أموال محمية يتطلب مزوداً مرخصاً واتفاقاً مكتوباً ومراجعة تنظيمية.
+
+## التقنية
+
+- HTML/CSS/JavaScript في `index.html` و`ammar-marketplace.js`.
+- Supabase Auth وPostgreSQL وRLS وStorage وRealtime.
+- Vercel للاستضافة.
+- PWA manifest وService Worker.
+
+لا توفر PWA الحالية تحريراً كاملاً لبيانات المشاريع دون اتصال أو مزامنة خلفية موثوقة.
+
+## ترحيلات قاعدة البيانات
+
+ترتيب ملفات الترحيل في المستودع:
 
 1. `202611120001_project_management.sql`
-2. `202611120002_part1_schema.sql`
-3. `202611120002_part2_functions.sql`
-4. `202611120002_part3_policies.sql`
-5. `202611120003_team_member_privacy.sql`
-6. `202611120004_field_operations.sql`
-7. `202611120005_bank_payment_workflow.sql`
+2. `202611120002_collaboration_workflow_finance.sql` — النسخة الموحدة من المخطط والدوال والسياسات
+3. `202611120003_team_member_privacy.sql`
+4. `202611120004_field_operations.sql`
+5. `202611120005_bank_payment_workflow.sql` — سير عمل الدفعات البنكية المرحلية، مؤجل عن مراجعة الإصدار الحالية
+6. `202611120006_ammar_marketplace_messaging.sql` — أساس السوق والرسائل
+7. `202611120007_ammar_messaging_plus.sql` — الإيصالات والخصوصية والحظر والميزات المتقدمة
+8. `20261112131813_create_ammir_project_files_storage_bucket.sql`
+9. `20261112132359_harden_marketplace_messaging_definer_grants.sql`
+10. `20261112133000_reconcile_project_management_contract.sql`
+11. `20261112134500_optimize_project_rls_policies.sql`
+12. `20261112135000_add_marketplace_foreign_key_indexes.sql`
+13. `20261112135500_add_remaining_marketplace_fk_indexes.sql`
+14. `20261112140000_ammir_storage_realtime.sql` — مخازن مرفقات المحادثات وصور السوق وسياسات التخزين وRealtime
+15. `20261112142000_optimize_ammir_rls_policies.sql` — تحسين استدعاء auth.uid() في سياسات السوق والمراسلات والتخزين
 
-Do not rerun earlier migrations that have already been applied successfully. Keep a record of the environment and migration history.
+ملف baseline الخاص ببيئة الاختبار محفوظ في `tests/fixtures/ammir-staging-legacy-base.sql` ولا يُطبق على قاعدة الإنتاج
 
-## Deployment notes
+الأجزاء المنفصلة القديمة للترحيل 002 محفوظة في `docs/sql-manual-parts/` للرجوع فقط، وليست ملفات ترحيل مستقلة ولا تُشغّل مع النسخة الموحدة
 
-The site uses the Supabase publishable/anon key in the browser. This key is intended to be public; database security must therefore be enforced by RLS and least-privilege grants. Never put a Supabase service-role key or other server secret in `index.html`.
+**مهم:** قاعدة الإنتاج القديمة لا تحتوي سجل migrations تاريخياً كاملاً، لذلك لا تطبق 001–007 عليها عشوائياً ولا تعِد تشغيل ملف لمجرد أنه غير موجود في سجل التاريخ. يجب اعتماد baseline/repair بعد مطابقة schema لكل بيئة. الترحيل 005 يخص ميزة الدفعات البنكية المرحلية التي جرى تأجيلها، ولم يُطبق على بيئة staging في هذه المراجعة. ثبت أن 006 و007 يعملان في staging من دون 005 لأنهما لا يعتمدان على جدولي مراحل الدفعات أو أحداثها.
 
-Configure the production Supabase Auth site URL and redirect URLs to match the deployed domain. Email delivery for password recovery and invitations requires a verified sender/provider configuration.
+تم إنشاء staging باستخدام مشروع Supabase منفصل كان فارغاً، دون نسخ بيانات الإنتاج. يحتوي staging على 44 جدول public مع RLS وسياسات مناسبة، و3 buckets خاصة/عامة حسب الوظيفة، وRealtime للمراسلات. قاعدة الإنتاج أصبحت تحتوي 46 جدول public وجميعها عليها RLS. لم تُنسخ بيانات الإنتاج إلى staging.
 
-## Product and release boundaries
+## الاختبارات الحالية
 
-The service worker caches the application shell for quicker loading and an installable app experience. It does **not** currently provide full offline project-data editing or reliable background synchronization.
+آخر تشغيل GitHub Actions للفرع الحالي هو **#187** على commit `10c665bf8449f926b4f8d9eead08e6a17c1c47fd`، ونتيجته **success**. شمل إنشاء PostgreSQL اختباري، تطبيق 006 و007 و008 و009، واختبارات السوق والشراء والخدمات والاتفاقات والمراسلات والتخزين وRealtime وفحص JavaScript
 
-The current release is a project operations workspace, not yet a full multi-tenant contractor marketplace. Before broad public launch, complete a real-device/browser regression pass, database/RLS security review, backup and restore validation, monitoring/alerts, legal/privacy pages, billing and payment integrations where needed, and a supervised customer pilot in Sudan. Validate localization, currencies, date formats and operational workflows in each target market before expanding.
+[عرض تشغيل الاختبارات](https://github.com/mahmoudgood964-ui/ammar-app/actions/runs/43287805613)
 
-## Release verification
+هذه نتيجة **بيئة PostgreSQL آلية اصطناعية**، وهي لا تغني عن اختبار تسجيل الدخول الحقيقي ورفع الملفات من واجهة التطبيق وتجربة Android
 
-Syntax checks on the inline application JavaScript, service worker and manifest are useful preflight checks, but they do not replace browser, database-runtime, security or end-to-end acceptance tests.
+## الفروع والإصدار
+
+- الفرع الذي يحتوي على التغييرات: [feature/ammar-market-messaging](https://github.com/mahmoudgood964-ui/ammar-app/tree/feature/ammar-market-messaging)
+- طلب الدمج: [PR #1](https://github.com/mahmoudgood964-ui/ammar-app/pull/1)
+- آخر معاينة منشورة على Vercel للفرع الحالي: [AMMIR Preview](https://ammar-8tfvctbs5-mahmoudgood964-ui.vercel.app) — READY، HTTP 200، وعنوان الصفحة عَمِّر | AMMIR
+- نجح Vercel في بناء commit `10c665bf8449f926b4f8d9eead08e6a17c1c47fd`، كما نجحت فحوص GitHub Actions. نجاح البناء لا يثبت وحده قبول جميع الوظائف من مستخدم حقيقي.
+
+تم تجهيز مخطط الإنتاج ونجحت الاختبارات الآلية والمعاينة. تبقى اختبارات Auth الفعلية بحسابات مستقلة، تجربة رفع/تنزيل الملفات وRealtime من واجهة التطبيق، واختبار Android والشبكة الضعيفة. لا تعتبر هذه الاختبارات منجزة لمجرد نجاح CI.
+
+## قراءات المنتج والجاهزية
+
+- [مراجعة المنافسين والتموضع وفحص الاسم](docs/AMMAR_COMPETITIVE_POSITIONING_AND_NAME_REVIEW.md)
+- [تدقيق المراسلات والفجوات وبوابة الإطلاق](docs/AMMAR_MESSAGING_AND_RELEASE_GAP_AUDIT.md)
+
+**ملاحظة الاسم:** الاسم التجاري المعتمد حالياً هو **عَمِّر | AMMIR**. أفاد صاحب المشروع بأنه أجرى فحصاً ولم يجد الاسم مستخدماً. هذا اعتماد تشغيلي للهوية وليس شهادة تسجيل أو خلو قانوني؛ يجب حفظ نتيجة الفحص والتحقق من سجل العلامات في أسواق الإطلاق قبل طلب التسجيل أو الإطلاق التجاري. تطبيق «عمار لمواد البناء UCG» يستخدم تهجئة مختلفة (AMMAR)، ولا يجوز وصفه بأنه تطابق حرفي مع AMMIR.
+
+## متطلبات ما قبل الإطلاق العام
+
+- اختبار حسابين تجاريين وحساب ثالث للتحقق من عزل الطلبات والمحادثات والمرفقات على واجهة التطبيق.
+- اختبار تسجيل الحساب والملف الشخصي ودعوات الفريق وإعدادات Auth والبريد.
+- اختبار رفع وتنزيل مرفقات المحادثات وصور المنتجات وRealtime من جلسة مستخدم حقيقية.
+- تفعيل حماية كلمات المرور المسربة في إعدادات Auth قبل الإطلاق العام.
+- اختبار Android فعلياً والاتصال الضعيف وRTL واللغة الإنجليزية.
+- توثيق إجراءات تحقق الموردين، معالجة البلاغات والنزاعات، شروط الاستخدام والخصوصية.
+- إضافة BOQ وRFQ متعدد الموردين والمقارنة البندية والترسية الجزئية وإثبات التسليم؛ هذه فجوات تنافسية لم تُنجز بعد.
+- مراجعة قانونية للاسم والعلامة التجارية في السودان والإمارات والسعودية ومصر قبل الإطلاق.
+
+لا يوصف السوق أو الرسائل بأنها «متاحة للمستخدمين» إلا بعد اجتياز هذه المتطلبات ونشر نسخة إنتاج فعلية.
 
 
-## Payments and custody
+## شركاء البناء والإعمار في السودان
 
-The bank milestone workflow records deposit references, bank reconciliation, client acceptance, disputes, refunds and payout references. It does not move money or provide escrow. Do not receive customer funds into a personal or ordinary operating account. Any safeguarded balance, escrow arrangement, bank API, or automatic payout must be provided under a written agreement with a bank or licensed payment institution and reviewed for Sudanese regulatory requirements.
+راجع [دليل الجهات المرشحة](docs/OMAR_SUDAN_CONSTRUCTION_PARTNERS_DIRECTORY.md). جميع الأسماء جهات محتملة للتواصل وليست شراكات مؤكدة؛ لا تظهر كشركاء معتمدين داخل المنتج قبل التحقق والموافقة المكتوبة.

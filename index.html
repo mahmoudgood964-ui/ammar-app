@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#123f35">
-<meta name="description" content="عَمِّر — منصة تشغيل مشاريع الترميم والصيانة، من التخطيط والعروض إلى التنفيذ والاستلام."><meta name="application-name" content="AMMAR"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="AMMAR"><link rel="manifest" href="/manifest.webmanifest"><link rel="icon" type="image/svg+xml" href="/icon.svg">
-<title>عَمِّر | AMMAR</title>
+<meta name="description" content="عَمِّر — منصة تشغيل مشاريع الترميم والصيانة، من التخطيط والعروض إلى التنفيذ والاستلام."><meta name="application-name" content="AMMIR"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="AMMIR"><link rel="manifest" href="/manifest.webmanifest"><link rel="icon" type="image/svg+xml" href="/icon.svg">
+<title>عَمِّر | AMMIR</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 :root{--g:#176b57;--gd:#123f35;--gs:#e9f3ef;--ink:#17231f;--muted:#6b7772;--line:#e4eae6;--bg:#f4f7f5;--red:#b42318;--shadow:0 12px 35px rgba(19,53,42,.07);--r:16px}
@@ -66,7 +66,7 @@ html[lang="en"] .top-user{direction:ltr}
 <section class="public-landing" id="publicLanding" aria-labelledby="landingTitle">
  <span class="eyebrow" data-ar="منصة تشغيل مشاريع الترميم والصيانة" data-en="Renovation & property maintenance operations">منصة تشغيل مشاريع الترميم والصيانة</span>
  <h2 id="landingTitle" data-ar="من أول طلب ترميم… إلى التسليم النهائي." data-en="From the first repair request to final handover.">من أول طلب ترميم… إلى التسليم النهائي.</h2>
- <p class="lead" data-ar="عَمِّر يجمع إدارة المشروع، فريق العمل، عروض المقاولين، المصروفات، تقارير الموقع، متابعة العيوب، والموافقات في مساحة عمل واحدة واضحة." data-en="AMMAR brings project management, teams, contractor quotations, costs, site reports, issue tracking and approvals into one clear workspace.">عَمِّر يجمع إدارة المشروع، فريق العمل، عروض المقاولين، المصروفات، تقارير الموقع، متابعة العيوب، والموافقات في مساحة عمل واحدة واضحة.</p>
+ <p class="lead" data-ar="عَمِّر يجمع إدارة المشروع، فريق العمل، عروض المقاولين، المصروفات، تقارير الموقع، متابعة العيوب، والموافقات في مساحة عمل واحدة واضحة." data-en="AMMIR brings project management, teams, contractor quotations, costs, site reports, issue tracking and approvals into one clear workspace.">عَمِّر يجمع إدارة المشروع، فريق العمل، عروض المقاولين، المصروفات، تقارير الموقع، متابعة العيوب، والموافقات في مساحة عمل واحدة واضحة.</p>
  <p class="landing-proof" data-ar="مصمم لأصحاب العقارات وشركات إدارة المشاريع والمقاولين وفرق التنفيذ." data-en="Built for property owners, project management firms, contractors and field teams.">مصمم لأصحاب العقارات وشركات إدارة المشاريع والمقاولين وفرق التنفيذ.</p>
  <div class="landing-actions"><button class="btn primary" type="button" data-auth-panel="signup" data-ar="ابدأ مساحة عملك" data-en="Create your workspace">ابدأ مساحة عملك</button><button class="btn light" type="button" data-auth-panel="login" data-ar="تسجيل الدخول" data-en="Sign in">تسجيل الدخول</button><button id="marketingLang" class="landing-lang" type="button" aria-label="Switch language">EN</button></div>
  <div class="landing-grid">
@@ -76,7 +76,7 @@ html[lang="en"] .top-user{direction:ltr}
  </div>
 </section>
 <main class="auth-card">
- <div class="brand"><div class="brand-mark">ع</div><div><h1>عَمِّر | AMMAR</h1><small>إدارة مشاريع ترميم وصيانة العقارات</small></div></div>
+ <div class="brand"><div class="brand-mark">ع</div><div><h1>عَمِّر | AMMIR</h1><small>إدارة مشاريع ترميم وصيانة العقارات</small></div></div>
  <p class="auth-intro">مكان واحد لتنظيم مشاريع العقارات ومتابعة تفاصيلها.</p>
  <section id="loginPanel"><h2 class="panel-title">تسجيل الدخول</h2>
   <form id="loginForm"><div class="field"><label for="loginEmail">البريد الإلكتروني</label><input id="loginEmail" type="email" autocomplete="email" required placeholder="name@example.com"></div><div class="field"><label for="loginPassword">كلمة المرور</label><input id="loginPassword" type="password" autocomplete="current-password" required placeholder="كلمة المرور"></div><button id="loginButton" class="btn primary block" type="submit">دخول إلى عَمِّر</button></form>
@@ -88,7 +88,7 @@ html[lang="en"] .top-user{direction:ltr}
 </main></div>
 
 <div id="appShell" hidden>
-<header class="topbar"><div class="brand"><div class="brand-mark">ع</div><div><h1>عَمِّر | AMMAR</h1><small>إدارة مشاريع ترميم وصيانة العقارات</small></div></div><div class="top-user"><button class="btn light" id="installButton" type="button" data-action="install" hidden>تثبيت التطبيق</button><button class="btn light" type="button" id="appLangToggle" data-action="language">English</button><button class="btn light notification-toggle" type="button" data-action="notifications">الإشعارات <span id="notificationCount" class="notification-badge" hidden>0</span></button><span class="email-label" id="headerEmail"></span><span class="avatar" id="userAvatar">ع</span></div></header>
+<header class="topbar"><div class="brand"><div class="brand-mark">ع</div><div><h1>عَمِّر | AMMIR</h1><small>إدارة مشاريع ترميم وصيانة العقارات</small></div></div><div class="top-user"><button class="btn light" id="installButton" type="button" data-action="install" hidden>تثبيت التطبيق</button><button class="btn light" type="button" id="appLangToggle" data-action="language">English</button><button class="btn light notification-toggle" type="button" data-action="notifications">الإشعارات <span id="notificationCount" class="notification-badge" hidden>0</span></button><span class="email-label" id="headerEmail"></span><span class="avatar" id="userAvatar">ع</span></div></header>
 <div class="layout">
 <aside class="sidebar"><div class="side-label">مساحة العمل</div><button class="nav-btn active" type="button" data-view="dashboard"><span class="nav-icon">⌂</span>الرئيسية</button><button class="nav-btn" type="button" data-view="projects"><span class="nav-icon">▤</span>مشاريعي</button><button class="nav-btn" type="button" data-view="form"><span class="nav-icon">＋</span>إنشاء مشروع</button><div class="sidebar-bottom"><div class="side-label">الحساب</div><button class="nav-btn" type="button" data-action="logout"><span class="nav-icon">↪</span>تسجيل الخروج</button></div></aside>
 <main class="content"><div id="appMessage" class="message" role="status" aria-live="polite"></div>
@@ -136,7 +136,7 @@ const memberRoleLabels={manager:'مدير مشروع',supervisor:'مشرف',engi
 const translations={
 'إدارة مشاريع ترميم وصيانة العقارات':'Renovation & Property Maintenance Management',
 'مكان واحد لتنظيم مشاريع العقارات ومتابعة تفاصيلها.':'One place to organize property projects and track every detail.',
-'تسجيل الدخول':'Sign in','البريد الإلكتروني':'Email','كلمة المرور':'Password','دخول إلى عَمِّر':'Sign in to AMMAR',
+'تسجيل الدخول':'Sign in','البريد الإلكتروني':'Email','كلمة المرور':'Password','دخول إلى عَمِّر':'Sign in to AMMIR',
 'نسيت كلمة المرور؟':'Forgot password?','إنشاء حساب جديد':'Create account','العودة إلى تسجيل الدخول':'Back to sign in',
 'استعادة كلمة المرور':'Reset password','إرسال رابط الاستعادة':'Send reset link','كلمة المرور الجديدة':'New password',
 'تأكيد كلمة المرور':'Confirm password','حفظ كلمة المرور':'Save password','8 أحرف على الأقل':'At least 8 characters',
@@ -212,7 +212,7 @@ const translations={
 'إنشاء دفعة مرحلية':'Create a payment milestone',
 'الدفع البنكي المرحلي':'Bank milestone payments',
 'تنبيه:':'Notice:',
-'عَمِّر يسجل المراحل والمراجع فقط؛ لا يستقبل الأموال ولا يحجزها ولا يحولها.':'AMMAR records stages and references only; it does not receive, hold or transfer funds.',
+'عَمِّر يسجل المراحل والمراجع فقط؛ لا يستقبل الأموال ولا يحجزها ولا يحولها.':'AMMIR records stages and references only; it does not receive, hold or transfer funds.',
 'الإيصال المصور وحده ليس إثبات استلام.':'A receipt image alone is not proof of receipt.',
 'يجب مطابقة المبلغ والمرجع في بوابة البنك أو كشف الحساب.':'Match the amount and reference in the bank portal or account statement.',
 'لا تستخدم حساباً شخصياً أو حساب التشغيل لحفظ أموال العملاء.':'Do not use a personal or operating account to hold customer funds.',
@@ -306,10 +306,10 @@ function message(el,text,type){el.textContent=text||'';el.className='message'+(t
 function busy(button,on,label){if(!button)return;if(on){button.dataset.old=button.textContent;button.disabled=true;button.textContent=label||'جارٍ التنفيذ...';}else{button.disabled=false;if(button.dataset.old)button.textContent=button.dataset.old;delete button.dataset.old;}}
 function esc(value){return String(value==null?'':value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 function authPanel(name){['login','signup','reset'].forEach(p=>$(p+'Panel').hidden=p!==name);message($('authMessage'),'');}
-function showAuth(text,type){currentUser=null;if(notificationTimer){clearInterval(notificationTimer);notificationTimer=null;}$('appShell').hidden=true;$('authShell').hidden=false;authPanel('login');if(text)message($('authMessage'),text,type||'info');}
+function showAuth(text,type){currentUser=null;window.ammarCurrentUser=null;if(notificationTimer){clearInterval(notificationTimer);notificationTimer=null;}$('appShell').hidden=true;$('authShell').hidden=false;authPanel('login');if(text)message($('authMessage'),text,type||'info');}
 function showRecovery(){recoveryMode=true;authPanel('reset');$('resetRequestForm').hidden=true;$('newPasswordForm').hidden=false;message($('authMessage'),'أدخل كلمة المرور الجديدة.','info');}
 function activeView(name){['dashboard','projects','form'].forEach(v=>$(v+'View').classList.toggle('active',v===name));document.querySelectorAll('[data-view]').forEach(b=>b.classList.toggle('active',b.dataset.view===name));if(name==='projects')renderProjects();if(name==='dashboard')renderDashboard();}
-function showApp(user){if(recoveryMode)return;currentUser=user||currentUser;if(!currentUser)return;$('authShell').hidden=true;$('appShell').hidden=false;$('headerEmail').textContent=currentUser.email||'';$('userAvatar').textContent=(currentUser.email||'ع').trim().charAt(0).toUpperCase();activeView('dashboard');loadProjects();loadNotifications();if(!notificationTimer)notificationTimer=setInterval(()=>{if(currentUser&&!document.hidden)loadNotifications();},60000);if(pendingInviteToken)acceptPendingInvitation();}
+function showApp(user){if(recoveryMode)return;currentUser=user||currentUser;if(!currentUser)return;window.ammarSupabase=client;window.ammarCurrentUser=currentUser;$('authShell').hidden=true;$('appShell').hidden=false;$('headerEmail').textContent=currentUser.email||'';$('userAvatar').textContent=(currentUser.email||'ع').trim().charAt(0).toUpperCase();activeView('dashboard');loadProjects();loadNotifications();if(!notificationTimer)notificationTimer=setInterval(()=>{if(currentUser&&!document.hidden)loadNotifications();},60000);if(pendingInviteToken)acceptPendingInvitation();}
 function goForm(project){
  editingProjectId=project?String(project.id):null;$('projectForm').reset();
  $('formHeading').textContent=project?'تعديل بيانات المشروع':'إنشاء مشروع جديد';
@@ -365,7 +365,7 @@ function canDeleteModule(kind){
 function logActivity(eventType,summary,entityType,entityId,metadata){
  if(!activeProject||!client)return Promise.resolve();
  return client.from('project_activity').insert({project_id:activeProject.id,actor_id:currentUser.id,event_type:eventType,summary,entity_type:entityType||null,entity_id:entityId==null?null:String(entityId),metadata:metadata||{}})
- .then(r=>{if(r.error)console.warn('AMMAR activity log:',r.error.message);});
+ .then(r=>{if(r.error)console.warn('AMMIR activity log:',r.error.message);});
 }
 function workspaceTabs(){
  const tabs=[['tasks','المهام'],['progress','التقدم'],['quotes','العروض'],['expenses','المصروفات'],['finance','المالية'],['documents','الملفات'],['team','الفريق'],['siteReports','تقارير الموقع'],['issues','العيوب والملاحظات'],['changeOrders','طلبات التغيير'],['handover','الاستلام'],['paymentProtection','مراحل الدفع البنكي'],['comments','التعليقات'],['activity','سجل النشاط'],['overview','الملخص']];
@@ -569,7 +569,7 @@ async function submitModule(form){
   table='project_documents';payload={project_id:activeProject.id,title:v.title.trim(),file_path:path,mime_type:file.type||null,file_size:file.size,notes:v.notes.trim()||null,created_by:currentUser.id};eventType='document_uploaded';summary='تم رفع ملف: '+v.title.trim();
  }else return;
  const editingId=form.dataset.editId||null,r=editingId?await client.from(table).update(payload).eq('id',editingId).eq('project_id',activeProject.id):await client.from(table).insert(payload);
- if(r.error){if(kind==='documents'&&payload.file_path){const cleanup=await client.storage.from('ammar-project-files').remove([payload.file_path]);if(cleanup.error)console.warn('AMMAR upload cleanup:',cleanup.error.message);}throw r.error;}delete form.dataset.editId;
+ if(r.error){if(kind==='documents'&&payload.file_path){const cleanup=await client.storage.from('ammar-project-files').remove([payload.file_path]);if(cleanup.error)console.warn('AMMIR upload cleanup:',cleanup.error.message);}throw r.error;}delete form.dataset.editId;
  const btn=form.querySelector('button[type="submit"]');if(btn)btn.textContent=({tasks:'إضافة المهمة',expenses:'تسجيل المصروف',quotes:'إضافة عرض السعر',payments:'تسجيل الدفعة'})[kind]||'حفظ';
  await logActivity(editingId?kind+'_updated':eventType,(editingId?'تم تعديل سجل. ':'')+summary,kind,editingId);await loadProjectModules();
 }
@@ -596,7 +596,7 @@ function csvCell(value){
 }
 function exportProjectReport(){
  if(!activeProject)return;
- const rows=[['AMMAR - Project Report'],['Project',activeProject.title],['Location',activeProject.property_location],['Property type',activeProject.property_type],['Status',projectStatusLabels[activeProject.status]||activeProject.status],['Start date',activeProject.start_date],['Target end date',activeProject.target_end_date],['Budget',activeProject.budget_amount,activeProject.budget_currency],[],['TASKS','Title','Status','Assigned to','Due date']];
+ const rows=[['AMMIR - Project Report'],['Project',activeProject.title],['Location',activeProject.property_location],['Property type',activeProject.property_type],['Status',projectStatusLabels[activeProject.status]||activeProject.status],['Start date',activeProject.start_date],['Target end date',activeProject.target_end_date],['Budget',activeProject.budget_amount,activeProject.budget_currency],[],['TASKS','Title','Status','Assigned to','Due date']];
  (moduleData.tasks||[]).forEach(x=>rows.push(['TASKS',x.title,x.status,assigneeLabel(x.assigned_to),x.due_date]));
  rows.push([],['EXPENSES','Description','Amount','Currency','Date','Notes']);
  (moduleData.expenses||[]).forEach(x=>rows.push(['EXPENSES',x.description,x.amount,x.currency,x.spent_on,x.notes]));
@@ -624,7 +624,7 @@ function exportProjectReport(){
  const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});
  const url=URL.createObjectURL(blob),a=document.createElement('a');
  const safe=(activeProject.title||'project').replace(/[^a-z0-9_-]+/gi,'_').slice(0,60)||'project';
- a.href=url;a.download='AMMAR_'+safe+'_report.csv';document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);
+ a.href=url;a.download='AMMIR_'+safe+'_report.csv';document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);
 }
 async function handleModuleClick(e){
  const exportButton=e.target.closest('[data-export-project]');if(exportButton){exportProjectReport();return;}
@@ -676,7 +676,7 @@ async function acceptPendingInvitation(){
 async function loadNotifications(){
  if(!client||!currentUser)return;
  try{const r=await client.from('project_notifications').select('id,project_id,title,body,created_at,read_at').eq('user_id',currentUser.id).order('created_at',{ascending:false}).limit(30);if(r.error)throw r.error;const unread=(r.data||[]).filter(x=>!x.read_at).length;$('notificationCount').textContent=String(unread);$('notificationCount').hidden=!unread;}
- catch(e){console.warn('AMMAR notifications:',e.message);}
+ catch(e){console.warn('AMMIR notifications:',e.message);}
 }
 async function openNotifications(){
  $('notificationBackdrop').hidden=false;$('notificationsContent').innerHTML='<div class="empty">جارٍ تحميل الإشعارات...</div>';
@@ -784,7 +784,7 @@ function init(){if(!window.supabase||typeof window.supabase.createClient!=='func
  setAppLanguage(appLanguage);
  const languageObserver=new MutationObserver(records=>{if(records.some(x=>x.addedNodes&&x.addedNodes.length))applyLanguage();});languageObserver.observe(document.body,{childList:true,subtree:true});
  window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredInstallPrompt=e;$('installButton').hidden=false;});
- if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').catch(e=>console.warn('AMMAR service worker:',e.message));
+ if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').catch(e=>console.warn('AMMIR service worker:',e.message));
  const hp=new URLSearchParams(location.hash.replace(/^#/,'')).get('type'),qp=new URLSearchParams(location.search).get('type');const hashError=new URLSearchParams(location.hash.replace(/^#/,'')).get('error_description')||new URLSearchParams(location.search).get('error_description');
  if(hp==='recovery'||qp==='recovery'){recoveryMode=true;authPanel('reset');$('resetRequestForm').hidden=true;$('newPasswordForm').hidden=false;message($('authMessage'),'جارٍ التحقق من رابط الاستعادة...');}if(pendingInviteToken&&!recoveryMode)message($('authMessage'),'تم فتح رابط دعوة. سجّل الدخول أو أنشئ حساباً بالبريد الذي تلقى الدعوة.','info');
  client.auth.getSession().then(r=>{if(r.error){showAuth('تعذر التحقق من الجلسة: '+r.error.message,'error');return;}if(recoveryMode){if(r.data.session)showRecovery();else message($('authMessage'),'رابط الاستعادة غير صالح أو منتهي. اطلب رابطاً جديداً.','error');}else if(r.data.session)showApp(r.data.session.user);else if(hashError)showAuth('تعذر إكمال رابط البريد: '+hashError,'error');else showAuth();}).catch(e=>showAuth('حدث خطأ أثناء فتح التطبيق: '+e.message,'error'));
@@ -792,5 +792,6 @@ function init(){if(!window.supabase||typeof window.supabase.createClient!=='func
 init();
 })();
 </script>
+<script src="/ammar-marketplace.js"></script>
 </body>
 </html>
