@@ -141,7 +141,7 @@ SET ROLE authenticated;
 SELECT set_config('request.jwt.claim.sub','33333333-3333-4333-8333-333333333333',false);
 SELECT set_config('ammar.test.conversation_id', :'conversation_id', false);
 SELECT set_config('ammar.test.file_path', :'conversation_id' || '/11111111-1111-4111-8111-111111111111/test.pdf', false);
-DO $ BEGIN
+DO $$ BEGIN
   IF EXISTS (SELECT 1 FROM public.ammar_conversations WHERE id=current_setting('ammar.test.conversation_id')::uuid) THEN
     RAISE EXCEPTION 'RLS failure: outsider can read a private conversation';
   END IF;
