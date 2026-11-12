@@ -80,7 +80,7 @@ const SUPABASE_URL='https://uutwijowzewmvvrzsaww.supabase.co';
 const SUPABASE_KEY='sb_publishable_o-zC0NdMggZbPPY2l1REhA_w8Sbvjw_';
 const APP_URL='https://ammar-app.vercel.app/';
 const $=id=>document.getElementById(id);
-let client=null,currentUser=null,projectsCache=[],editingProjectId=null,recoveryMode=false,lastViewedProjectId=null,activeProject=null,moduleTab='tasks',pendingInviteToken=new URLSearchParams(location.search).get('invite')||localStorage.getItem('ammar_pending_invite')||null,inviteAccepting=false,lastInviteUrl='',moduleData={tasks:[],expenses:[],quotes:[],updates:[],documents:[],payments:[],activity:[],comments:[],members:[],invitations:[]};
+let client=null,currentUser=null,projectsCache=[],editingProjectId=null,recoveryMode=false,lastViewedProjectId=null,activeProject=null,moduleTab='tasks',pendingInviteToken=new URLSearchParams(location.search).get('invite')||localStorage.getItem('ammar_pending_invite')||null,inviteAccepting=false,lastInviteUrl='',moduleData={tasks:[],expenses:[],quotes:[],updates:[],documents:[],payments:[],activity:[],comments:[],members:[],invitations:[]},moduleLoadWarnings=[];
 if(pendingInviteToken)localStorage.setItem('ammar_pending_invite',pendingInviteToken);
 const projectStatusLabels={planning:'قيد التخطيط',approved:'معتمد',in_progress:'قيد التنفيذ',on_hold:'متوقف مؤقتاً',completed:'مكتمل',cancelled:'ملغي'};
 const memberRoleLabels={manager:'مدير مشروع',supervisor:'مشرف',engineer:'مهندس',accountant:'محاسب',worker:'منفذ',viewer:'مشاهدة فقط'};
@@ -154,7 +154,14 @@ function workspaceTabs(){
  const tabs=[['tasks','المهام'],['progress','التقدم'],['quotes','العروض'],['expenses','المصروفات'],['finance','المالية'],['documents','الملفات'],['team','الفريق'],['comments','التعليقات'],['activity','سجل النشاط'],['overview','الملخص']];
  return '<div class="actions" style="margin:14px 0;gap:6px">'+tabs.map(([k,v])=>'<button class="btn '+(moduleTab===k?'primary':'quiet')+'" type="button" data-module-tab="'+k+'">'+v+'</button>').join('')+'<button class="btn light" type="button" data-export-project>تصدير التقرير</button></div><div id="modulePanel"></div>';
 }
-function renderWorkspace(){if(!activeProject)return;$('detailContent').innerHTML=workspaceTabs();renderModulePanel();}
+function renderWorkspace(){
+ if(!activeProject)return;
+ $('detailContent').innerHTML=workspaceTabs();renderModulePanel();
+ if(moduleLoadWarnings.length){
+  const box=$('modulePanel');
+  if(box)box.insertAdjacentHTML('afterbegin','<div class="message error">بعض أقسام المشروع لم تُحمّل ('+esc(moduleLoadWarnings.join('، '))+'). شغّل تحديث قاعدة البيانات الجديد مرة واحدة في Supabase لإكمال الفريق والمالية والتعليقات وسجل النشاط. بقية الأقسام المتاحة ستظل تعمل.</div>');
+ }
+}
 
 function moduleRows(items,kind){
  if(!items||!items.length)return '<div class="empty">لا توجد سجلات بعد.</div>';
@@ -256,12 +263,9 @@ async function loadProjectModules(){
    const r=await q;if(r.error)throw r.error;return[k,r.data||[]];
   }catch(error){failures.push({module:k,error});return[k,[]];}
  }));
- pairs.forEach(([k,v])=>moduleData[k]=v);renderWorkspace();
- if(failures.length){
-  const missing=failures.map(x=>x.module).join('، ');
-  const box=$('modulePanel');
-  if(box)box.insertAdjacentHTML('afterbegin','<div class="message error">بعض أقسام المشروع لم تُحمّل ('+esc(missing)+'). شغّل تحديث قاعدة البيانات الجديد مرة واحدة في Supabase لإكمال الفريق والمالية والتعليقات وسجل النشاط. بقية الأقسام المتاحة ستظل تعمل.</div>');
- }
+ pairs.forEach(([k,v])=>moduleData[k]=v);
+ moduleLoadWarnings=failures.map(x=>x.module);
+ renderWorkspace();
 }
 
 async function submitModule(form){
