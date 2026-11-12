@@ -5,7 +5,8 @@
 BEGIN;
 
 DROP POLICY IF EXISTS ammir_market_requests_insert ON public.ammar_market_requests;
-CREATE POLICY ammir_market_requests_insert
+DROP POLICY IF EXISTS ammar_market_requests_insert ON public.ammar_market_requests;
+CREATE POLICY ammar_market_requests_insert
 ON public.ammar_market_requests
 FOR INSERT TO authenticated
 WITH CHECK (
