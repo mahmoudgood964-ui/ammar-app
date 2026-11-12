@@ -58,6 +58,10 @@ jobs:
         env:
           PGPASSWORD: postgres
         run: psql -h 127.0.0.1 -U postgres -d ammar_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261112200000_ammir_trust_and_admin_access.sql
+      - name: Apply AMMIR provider verification audit migration
+        env:
+          PGPASSWORD: postgres
+        run: psql -h 127.0.0.1 -U postgres -d ammar_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261112203000_ammir_provider_verification_audit.sql
       - name: Run AMMIR trust and admin permission tests
         env:
           PGPASSWORD: postgres
