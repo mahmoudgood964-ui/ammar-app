@@ -68,7 +68,7 @@
     const sidebar=document.querySelector('.sidebar'),mobile=document.querySelector('.mobile-nav');
     const make=(small)=>{
       const b=document.createElement('button');b.type='button';b.className='nav-btn';b.dataset.ammarOpen='market';
-      b.innerHTML='<span class="nav-icon">▦</span>'+(small?'السوق':'السوق والرسائل')+' <span id="ecoUnreadCount" class="notification-badge" hidden>0</span>';
+      b.innerHTML='<span class="nav-icon">▦</span>'+(small?'السوق':'السوق والرسائل')+' <span class="notification-badge eco-unread-count" data-eco-unread hidden>0</span>';
       return b;
     };
     if(sidebar&&!sidebar.querySelector('[data-ammar-open]'))sidebar.insertBefore(make(false),sidebar.querySelector('.sidebar-bottom')||null);
@@ -147,10 +147,10 @@
   }
 
   async function refreshUnreadCount(){
-    const badge=$('ecoUnreadCount');if(!badge||!user)return;
+    const badges=document.querySelectorAll('[data-eco-unread]');if(!badges.length||!user)return;
     const r=await db.from('ammar_user_notifications').select('id',{count:'exact',head:true}).eq('user_id',user.id).is('read_at',null);
     if(r.error)return;
-    badge.textContent=String(r.count||0);badge.hidden=!r.count;
+    badges.forEach(b=>{b.textContent=String(r.count||0);b.hidden=!r.count;});
   }
 
   function chooseTab(next){
@@ -427,7 +427,7 @@
         await startConversation(b.dataset.owner,'market_product',b.dataset.ecoContact,'استفسار عن: '+(p?.title||'منتج'));return;
       }
       if(b.dataset.ecoOpenChat){
-        activeConversation=b.dataset.ecoOpenChat;await render();realtime(activeConversation);return;
+        activeConversation=b.dataset.ecoOpenChat;await render();switchRealtime(activeConversation);return;
       }
       if(b.dataset.ecoToggleProduct){
         const res=await db.from('ammar_market_products').update({is_active:b.dataset.active!=='true'}).eq('id',b.dataset.ecoToggleProduct);
@@ -545,13 +545,6 @@
       }
     }catch(err){tell('تعذر الحفظ: '+(err.message||'خطأ غير معروف'),'error');}
     finally{if(btn){btn.disabled=false;btn.textContent=btn.dataset.oldText||'حفظ';}}
-  }
-
-  function realtime(id){
-    if(messageChannel)db.removeChannel(messageChannel).catch(()=>{});
-    messageChannel=db.channel('ammar-chat-'+id).on('postgres_changes',{event:'INSERT',schema:'public',table:'ammar_messages',filter:'conversation_id=eq.'+id},()=>{
-      if(tab==='messages'&&activeConversation===id)render().catch(e=>tell(e.message,'error'));
-    }).subscribe();
   }
 
   function bind(){
