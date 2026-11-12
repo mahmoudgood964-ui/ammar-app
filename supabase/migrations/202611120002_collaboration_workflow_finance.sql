@@ -344,6 +344,44 @@ GRANT EXECUTE ON FUNCTION public.ammar_create_project_invitation(text,text,text)
 GRANT EXECUTE ON FUNCTION public.ammar_accept_project_invitation(text) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.ammar_update_project_member_role(text,uuid,text) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.ammar_remove_project_member(text,uuid) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.ammar_revoke_project_invitation(text,uuid) TO authenticated;
+
+CREATE OR REPLACE FUNCTION public.ammar_revoke_project_invitation(
+  p_project_id text,
+  p_invitation_id uuid
+)
+RETURNS boolean
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $
+DECLARE v_project_id text;
+        v_email text;
+BEGIN
+  IF auth.uid() IS NULL OR NOT EXISTS (
+    SELECT 1 FROM public.projects p
+    WHERE p.id::text=p_project_id AND p.client_id=auth.uid()
+  ) THEN RAISE EXCEPTION 'Only the project owner can revoke invitations'; END IF;
+
+  UPDATE public.project_invitations
+  SET status='revoked'
+  WHERE id=p_invitation_id
+    AND project_id::text=p_project_id
+    AND status='pending'
+  RETURNING project_id::text,email INTO v_project_id,v_email;
+
+  IF NOT FOUND THEN RAISE EXCEPTION 'Pending invitation not found'; END IF;
+
+  INSERT INTO public.project_activity(project_id,actor_id,event_type,summary,entity_type,metadata)
+  SELECT p.id,auth.uid(),'invitation_revoked','تم إلغاء دعوة عضو: '||v_email,'team',
+         jsonb_build_object('email',v_email)
+  FROM public.projects p WHERE p.id::text=p_project_id;
+
+  RETURN true;
+END;
+$;
+
+GRANT EXECUTE ON FUNCTION public.ammar_revoke_project_invitation(text,uuid) TO authenticated;
 
 -- Replace legacy owner-only module policies with role-aware policies.
 DO $$
@@ -542,6 +580,7 @@ REVOKE EXECUTE ON FUNCTION public.ammar_create_project_invitation(text,text,text
 REVOKE EXECUTE ON FUNCTION public.ammar_accept_project_invitation(text) FROM PUBLIC;
 REVOKE EXECUTE ON FUNCTION public.ammar_update_project_member_role(text,uuid,text) FROM PUBLIC;
 REVOKE EXECUTE ON FUNCTION public.ammar_remove_project_member(text,uuid) FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.ammar_revoke_project_invitation(text,uuid) FROM PUBLIC;
 REVOKE EXECUTE ON FUNCTION public.ammar_notify_project_activity() FROM PUBLIC;
 REVOKE EXECUTE ON FUNCTION public.ammar_touch_updated_at() FROM PUBLIC;
 REVOKE EXECUTE ON FUNCTION public.ammar_set_project_completion_time() FROM PUBLIC;
