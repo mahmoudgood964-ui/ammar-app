@@ -22,7 +22,8 @@ INSERT INTO public.ammar_market_suppliers(
 ) VALUES (
   'aaaaaaaa-1000-4000-8000-000000000001',
   'AMMIR Trust Test Supplier','suspended',true,now()
-) RETURNING id AS supplier_id \gset
+) RETURNING id AS supplier_id \\gset
+SELECT set_config('ammir.test.supplier_id', :'supplier_id', false);
 
 DO $test$
 BEGIN
@@ -63,7 +64,8 @@ INSERT INTO public.ammar_service_providers(
 ) VALUES (
   'aaaaaaaa-1000-4000-8000-000000000001',
   'AMMIR Trust Test Contractor','contractor','suspended',true,now()
-) RETURNING id AS provider_id \gset
+) RETURNING id AS provider_id \\gset
+SELECT set_config('ammir.test.provider_id', :'provider_id', false);
 
 DO $test$
 BEGIN
@@ -112,7 +114,8 @@ INSERT INTO public.ammar_message_reports(
   'bbbbbbbb-1000-4000-8000-000000000002',
   'aaaaaaaa-1000-4000-8000-000000000001',
   'Test report for AMMIR moderation access'
-) RETURNING id AS report_id \gset
+) RETURNING id AS report_id \\gset
+SELECT set_config('ammir.test.report_id', :'report_id', false);
 
 -- Only an admin can use the reported-message review RPC and manage trust state
 RESET ROLE;
@@ -165,7 +168,7 @@ BEGIN
   END IF;
   IF NOT EXISTS (
     SELECT 1 FROM public.ammar_message_reports
-    WHERE id=:'report_id'::uuid AND status='investigating'
+    WHERE id=current_setting('ammir.test.report_id')::uuid AND status='investigating'
       AND reviewed_by='aaaaaaaa-1000-4000-8000-000000000002'
   ) THEN
     RAISE EXCEPTION 'Administrator could not update a message report';
