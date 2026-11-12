@@ -14,7 +14,7 @@
 
   let db=null,user=null,supplier=null,provider=null,products=[],myProducts=[],projects=[];
   let tab='market',activeConversation=null,messageChannel=null,refreshTimer=null,presenceTimer=null,mounted=false;
-  let replyToMessageId=null,availableConversations=[],showLastSeen=true;
+  let replyToMessageId=null,availableConversations=[],showLastSeen=true,isAdmin=false;
 
   function styles(){
     if($('ammarEcosystemStyles'))return;
@@ -100,6 +100,7 @@
           <button class="eco-tab" type="button" data-eco-tab="services">المقاولون والخدمات</button>
           <button class="eco-tab" type="button" data-eco-tab="agreements">الاتفاقات</button>
           <button class="eco-tab" type="button" data-eco-tab="partners">دليل الجهات</button>
+          <button id="ecoAdminTab" class="eco-tab" type="button" data-eco-tab="admin" hidden>إدارة عَمِّر</button>
         </div>
         <div id="ecoNotice" class="message" role="status" aria-live="polite"></div>
         <div id="ecoPanel"><div class="eco-empty">جارٍ تحميل سوق عَمِّر...</div></div>
@@ -107,7 +108,13 @@
     document.querySelector('#appShell .content').appendChild(view);
     view.addEventListener('click',click);view.addEventListener('submit',submit);
     view.addEventListener('input',e=>{if(e.target.id==='ecoChatSearch')filterChatList();if(e.target.id==='ecoMessageSearch')filterMessageBubbles();if(e.target.id==='ecoPartnerSearch'||e.target.id==='ecoPartnerType')filterPartnerDirectory();});
-    view.addEventListener('change',e=>{if(e.target.id==='ecoChatFilter')filterChatList();});
+    view.addEventListener('change',e=>{
+      if(e.target.id==='ecoChatFilter')filterChatList();
+      const report=e.target.closest('[data-admin-report-status]');
+      if(report)handleAdminReportChange(report).catch(err=>tell(err.message,'error'));
+      const dispute=e.target.closest('[data-admin-dispute-status]');
+      if(dispute)handleAdminDisputeChange(dispute).catch(err=>tell(err.message,'error'));
+    });
     mounted=true;
   }
 
@@ -220,6 +227,171 @@
     const q=($('ecoPartnerSearch')?.value||'').trim().toLowerCase(),type=$('ecoPartnerType')?.value||'all';
     const rows=partnerLeads.filter(p=>(type==='all'||p.type===type)&&[p.name,p.scope,p.contact].join(' ').toLowerCase().includes(q));
     grid.innerHTML=partnerCards(rows);
+  }
+
+  async function adminDashboardHtml(){
+    if(!isAdmin)throw new Error('صلاحية المدير مطلوبة');
+    const [s,p,r,d,e]=await Promise.all([
+      db.from('ammar_market_suppliers')
+        .select('id,business_name,owner_id,contact_name,contact_phone,whatsapp_phone,governorate,city,status,is_verified,created_at')
+        .order('created_at',{ascending:false}).limit(100),
+      db.from('ammar_service_providers')
+        .select('id,business_name,owner_id,contact_name,contact_phone,governorate,city,provider_type,status,is_verified,created_at')
+        .order('created_at',{ascending:false}).limit(100),
+      db.rpc('ammar_admin_list_message_reports',{p_limit:100}),
+      db.from('ammar_disputes')
+        .select('id,request_id,raised_by,reason,status,resolution_note,created_at')
+        .order('created_at',{ascending:false}).limit(100),
+      db.from('ammar_provider_verification_events')
+        .select('id,entity_type,entity_id,business_name_snapshot,decision,reason,evidence_reference,actor_id,created_at')
+        .order('created_at',{ascending:false}).limit(20)
+    ]);
+    for(const x of [s,p,r,d,e])if(x.error)throw x.error;
+    const suppliers=s.data||[],providers=p.data||[],reports=r.data||[],disputes=d.data||[],events=e.data||[];
+    const pendingProviders=[...suppliers.map(x=>({...x,_type:'supplier'})),...providers.map(x=>({...x,_type:'service_provider'}))]
+      .filter(x=>!x.is_verified||x.status==='suspended');
+    const openReports=reports.filter(x=>['pending','investigating'].includes(x.report_status)).length;
+    const openDisputes=disputes.filter(x=>['open','under_review'].includes(x.status)).length;
+    return `
+      <div class="eco-note"><strong>لوحة الإدارة محمية بصلاحية المدير فقط</strong> — لا تعتمد أي مورد أو مقاول قبل مراجعة مستندات التسجيل، وهوية المفوض، والمراجع التشغيلية. كل قرار اعتماد أو رفض أو تعليق يُحفظ في سجل تدقيق غير قابل للتعديل من واجهة المستخدم. هذه اللوحة لا تعني أن أي جهة مدرجة شريك تجاري تلقائياً.</div>
+      <div class="eco-grid" style="margin-bottom:16px">
+        <article class="eco-card"><span class="eco-meta">موردون ومقدمو خدمات بانتظار المراجعة</span><h2>${pendingProviders.length}</h2></article>
+        <article class="eco-card"><span class="eco-meta">بلاغات مفتوحة أو قيد التحقيق</span><h2>${openReports}</h2></article>
+        <article class="eco-card"><span class="eco-meta">نزاعات مفتوحة</span><h2>${openDisputes}</h2></article>
+      </div>
+      <section class="eco-subsection"><h3>اعتماد الموردين ومقدمي الخدمات</h3>
+        ${providerReviewCards(pendingProviders)}
+      </section>
+      <section class="eco-subsection"><h3>مراجعة البلاغات على الرسائل</h3>
+        ${adminReportCards(reports)}
+      </section>
+      <section class="eco-subsection"><h3>مراجعة النزاعات التجارية</h3>
+        ${adminDisputeCards(disputes)}
+      </section>
+      <section class="eco-subsection"><h3>سجل قرارات التحقق</h3>
+        ${adminVerificationEvents(events)}
+      </section>
+    `;
+  }
+
+  function providerReviewCards(rows){
+    if(!rows.length)return '<div class="eco-empty">لا توجد ملفات معلقة للمراجعة حالياً</div>';
+    return rows.map(x=>{
+      const typeLabel=x._type==='supplier'?'مورد مواد':'مقدم خدمة';
+      const statusLabel=x.status==='suspended'?'معلق':x.status==='paused'?'متوقف مؤقتاً':'نشط';
+      const type=x._type;
+      return `<article class="eco-card">
+        <h4>${esc(x.business_name)}</h4>
+        <div class="eco-meta">
+          <span class="eco-pill">${typeLabel}</span>
+          <span class="eco-pill">${x.is_verified?'موثّق':'غير موثّق'}</span>
+          <span class="eco-pill">${statusLabel}</span>
+        </div>
+        <p>${esc([x.governorate,x.city].filter(Boolean).join(' — ')||'الموقع غير محدد')}</p>
+        <p class="muted">${esc(x.contact_name||'')} · ${esc(x.contact_phone||'')}</p>
+        <p class="hint">معرّف الحساب: ${esc(x.owner_id)}</p>
+        <div class="eco-actions">
+          <button class="btn primary" type="button" data-admin-review data-entity-type="${type}" data-entity-id="${x.id}" data-decision="approved">اعتماد بعد التحقق</button>
+          <button class="btn light" type="button" data-admin-review data-entity-type="${type}" data-entity-id="${x.id}" data-decision="rejected">رفض وإيقاف</button>
+          <button class="btn quiet" type="button" data-admin-review data-entity-type="${type}" data-entity-id="${x.id}" data-decision="suspended">تعليق</button>
+          ${x.status==='suspended'?'<button class="btn light" type="button" data-admin-review data-entity-type="'+type+'" data-entity-id="'+x.id+'" data-decision="reactivated">إعادة تفعيل</button>':''}
+          ${x.is_verified?'<button class="btn quiet" type="button" data-admin-review data-entity-type="'+type+'" data-entity-id="'+x.id+'" data-decision="verification_revoked">سحب التوثيق</button>':''}
+        </div>
+      </article>`;
+    }).join('');
+  }
+
+  function adminReportCards(rows){
+    if(!rows.length)return '<div class="eco-empty">لا توجد بلاغات مسجلة</div>';
+    return rows.map(r=>{
+      const body=r.message_type==='text'?(r.message_body||'رسالة نصية بلا محتوى'):('مرفق من نوع '+esc(r.message_type||'غير معروف')+' — '+esc(r.file_name||'اسم المرفق غير متاح'));
+      return `<article class="eco-card">
+        <div class="eco-meta"><span class="eco-pill">بلاغ ${esc(r.report_status)}</span><span class="eco-pill">رسالة ${esc(r.message_type)}</span></div>
+        <p><strong>سبب البلاغ:</strong> ${esc(r.reason)}</p>
+        <p><strong>محتوى الرسالة المبلّغ عنها:</strong> ${esc(body)}</p>
+        <p class="hint">المرسل: ${esc(r.sender_id)} · المبلّغ: ${esc(r.reporter_id)} · ${esc(r.report_created_at)}</p>
+        <label>حالة المراجعة
+          <select data-admin-report-status="${r.report_id}">
+            <option value="pending" ${r.report_status==='pending'?'selected':''}>جديد</option>
+            <option value="investigating" ${r.report_status==='investigating'?'selected':''}>قيد التحقيق</option>
+            <option value="actioned" ${r.report_status==='actioned'?'selected':''}>تم اتخاذ إجراء</option>
+            <option value="dismissed" ${r.report_status==='dismissed'?'selected':''}>مرفوض</option>
+          </select>
+        </label>
+      </article>`;
+    }).join('');
+  }
+
+  function adminDisputeCards(rows){
+    if(!rows.length)return '<div class="eco-empty">لا توجد نزاعات مسجلة</div>';
+    return rows.map(d=>`<article class="eco-card">
+      <div class="eco-meta"><span class="eco-pill">نزاع ${esc(d.status)}</span><span class="eco-pill">طلب #${esc(short(d.request_id))}</span></div>
+      <p>${esc(d.reason)}</p>
+      <p class="muted">صاحب البلاغ: ${esc(d.raised_by)} · ${esc(d.created_at)}</p>
+      <textarea id="admin-dispute-note-${d.id}" placeholder="سجّل قرار المعالجة وأسبابه" maxlength="5000">${esc(d.resolution_note||'')}</textarea>
+      <label>حالة النزاع
+        <select data-admin-dispute-status="${d.id}">
+          <option value="open" ${d.status==='open'?'selected':''}>مفتوح</option>
+          <option value="under_review" ${d.status==='under_review'?'selected':''}>قيد المراجعة</option>
+          <option value="resolved" ${d.status==='resolved'?'selected':''}>تمت المعالجة</option>
+          <option value="rejected" ${d.status==='rejected'?'selected':''}>رُفض</option>
+        </select>
+      </label>
+    </article>`).join('');
+  }
+
+  function adminVerificationEvents(rows){
+    if(!rows.length)return '<div class="eco-empty">لا يوجد سجل قرارات حتى الآن</div>';
+    const names={approved:'تم الاعتماد',rejected:'رُفض وأوقف',suspended:'تم التعليق',reactivated:'أعيد التفعيل',verification_revoked:'سُحب التوثيق'};
+    return '<div class="eco-list">'+rows.map(x=>`<div class="eco-card">
+      <strong>${esc(x.business_name_snapshot)}</strong>
+      <span class="eco-pill">${esc(names[x.decision]||x.decision)}</span>
+      <p>${esc(x.reason)}</p>
+      <p class="hint">${esc(x.entity_type)} · ${esc(x.created_at)} · المدير ${esc(x.actor_id)}</p>
+      ${x.evidence_reference?'<p class="hint">مرجع الإثبات: '+esc(x.evidence_reference)+'</p>':''}
+    </div>`).join('')+'</div>';
+  }
+
+  async function handleAdminClick(button){
+    if(!isAdmin)throw new Error('ليست لديك صلاحية إدارة عَمِّر');
+    const entityType=button.dataset.entityType,entityId=button.dataset.entityId,decision=button.dataset.decision;
+    const business=button.closest('.eco-card')?.querySelector('h4')?.textContent||'هذا الملف';
+    const reason=window.prompt('سجّل سبب القرار بعد مراجعة المستندات والمراجع التشغيلية (5 أحرف على الأقل):');
+    if(!reason||reason.trim().length<5)throw new Error('سبب القرار مطلوب');
+    const evidence=window.prompt('مرجع المستندات أو نتيجة التحقق (اختياري):')||null;
+    const result=await db.rpc('ammar_admin_review_provider',{
+      p_entity_type:entityType,p_entity_id:entityId,p_decision:decision,
+      p_reason:reason.trim(),p_evidence_reference:evidence
+    });
+    if(result.error)throw result.error;
+    await render();
+    tell('تم تسجيل قرار ${decision} للجهة '+business+' مع حفظ أثر التدقيق.','success');
+  }
+
+  async function handleAdminReportChange(select){
+    if(!isAdmin)throw new Error('ليست لديك صلاحية إدارة عَمِّر');
+    const status=select.value;
+    const result=await db.from('ammar_message_reports').update({
+      status,reviewed_at:new Date().toISOString(),reviewed_by:user.id
+    }).eq('id',select.dataset.adminReportStatus);
+    if(result.error)throw result.error;
+    await render();tell('تم تحديث حالة البلاغ وحفظ هوية المراجع.','success');
+  }
+
+  async function handleAdminDisputeChange(select){
+    if(!isAdmin)throw new Error('ليست لديك صلاحية إدارة عَمِّر');
+    const note=$('admin-dispute-note-'+select.dataset.adminDisputeStatus)?.value.trim()||'';
+    if(['resolved','rejected'].includes(select.value)&&note.length<10){
+      throw new Error('اكتب قرار المعالجة بالتفصيل قبل إغلاق النزاع');
+    }
+    const result=await db.from('ammar_disputes').update({
+      status:select.value,
+      resolution_note:note||null,
+      resolved_at:['resolved','rejected'].includes(select.value)?new Date().toISOString():null,
+      updated_at:new Date().toISOString()
+    }).eq('id',select.dataset.adminDisputeStatus);
+    if(result.error)throw result.error;
+    await render();tell('تم تحديث قرار النزاع.','success');
   }
 
   function marketHtml(){
@@ -642,6 +814,8 @@ async function servicesHtml(){
 
   async function click(e){
     const t=e.target.closest('[data-eco-tab]');if(t){chooseTab(t.dataset.ecoTab);return;}
+    const adminButton=e.target.closest('[data-admin-review]');
+    if(adminButton){handleAdminClick(adminButton).catch(err=>tell('تعذر حفظ قرار التحقق: '+(err.message||'خطأ'),'error'));return;}
     const b=e.target.closest('[data-eco-action],[data-eco-buy],[data-eco-contact],[data-eco-toggle-product],[data-eco-open-chat],[data-eco-accept-quote],[data-eco-submit-quote],[data-eco-advance],[data-eco-order-chat],[data-eco-create-agreement],[data-eco-service-offer],[data-eco-accept-service],[data-eco-service-chat],[data-eco-service-agreement],[data-eco-complete-service],[data-eco-accept-agreement],[data-eco-submit-review],[data-eco-quote-chat],[data-eco-agreement-chat],[data-eco-reply],[data-eco-clear-reply],[data-eco-pin],[data-eco-unpin],[data-eco-report],[data-eco-forward],[data-eco-archive],[data-eco-block],[data-eco-presence-toggle],[data-eco-location],[data-eco-to-task],[data-eco-to-change],[data-eco-unblock]');
     if(!b)return;
     try{
@@ -878,7 +1052,15 @@ async function servicesHtml(){
     db.from('ammar_user_presence').select('show_last_seen').eq('user_id',user.id).maybeSingle()
       .then(r=>{if(!r.error&&r.data)showLastSeen=r.data.show_last_seen!==false;})
       .finally(()=>db.rpc('ammar_set_presence',{p_show_last_seen:showLastSeen}).then(()=>{}).catch(()=>{}));
-    Promise.all([loadProfiles(),loadProjects()]).then(()=>render()).catch(err=>{
+    Promise.all([
+      loadProfiles(),
+      loadProjects(),
+      db.rpc('is_admin').then(result=>{
+        isAdmin=!result.error&&result.data===true;
+        const adminTab=$('ecoAdminTab');if(adminTab)adminTab.hidden=!isAdmin;
+        if(!isAdmin&&tab==='admin')tab='market';
+      })
+    ]).then(()=>render()).catch(err=>{
       const p=$('ecoPanel');
       if(p)p.innerHTML=`<div class="eco-empty">لم يتم تهيئة السوق بعد. طبّق ترحيل <strong>202611120006_ammar_marketplace_messaging.sql</strong> في Supabase ثم أعد تحميل التطبيق.<br><small>${esc(err.message||'')}</small></div>`;
     });
@@ -894,7 +1076,8 @@ async function servicesHtml(){
     db.auth.onAuthStateChange((event,session)=>{
       if(session?.user)start(session.user);
       else{
-        user=null;activeConversation=null;
+        user=null;activeConversation=null;isAdmin=false;
+        if($('ecoAdminTab'))$('ecoAdminTab').hidden=true;
         if(refreshTimer)clearInterval(refreshTimer);
         if(presenceTimer)clearInterval(presenceTimer);
         if(messageChannel)db.removeChannel(messageChannel).catch(()=>{});
