@@ -1294,6 +1294,62 @@ FOR DELETE TO authenticated USING (
   AND public.ammar_is_conversation_member((storage.foldername(name))[1]::uuid, auth.uid())
 );
 
+-- Public read-only product imagery; upload and replacement remain supplier-owned.
+INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+VALUES (
+  'ammar-market-files', 'ammar-market-files', true, 5242880,
+  ARRAY['image/jpeg','image/png','image/webp']
+)
+ON CONFLICT (id) DO NOTHING;
+
+DROP POLICY IF EXISTS ammar_market_images_public_read ON storage.objects;
+CREATE POLICY ammar_market_images_public_read ON storage.objects
+FOR SELECT TO public USING (bucket_id = 'ammar-market-files');
+
+DROP POLICY IF EXISTS ammar_market_images_supplier_insert ON storage.objects;
+CREATE POLICY ammar_market_images_supplier_insert ON storage.objects
+FOR INSERT TO authenticated WITH CHECK (
+  bucket_id = 'ammar-market-files'
+  AND (storage.foldername(name))[2] = auth.uid()::text
+  AND EXISTS (
+    SELECT 1 FROM public.ammar_market_suppliers s
+    WHERE s.id::text = (storage.foldername(name))[1]
+      AND s.owner_id = auth.uid()
+  )
+);
+
+DROP POLICY IF EXISTS ammar_market_images_supplier_update ON storage.objects;
+CREATE POLICY ammar_market_images_supplier_update ON storage.objects
+FOR UPDATE TO authenticated USING (
+  bucket_id = 'ammar-market-files'
+  AND (storage.foldername(name))[2] = auth.uid()::text
+  AND EXISTS (
+    SELECT 1 FROM public.ammar_market_suppliers s
+    WHERE s.id::text = (storage.foldername(name))[1]
+      AND s.owner_id = auth.uid()
+  )
+) WITH CHECK (
+  bucket_id = 'ammar-market-files'
+  AND (storage.foldername(name))[2] = auth.uid()::text
+  AND EXISTS (
+    SELECT 1 FROM public.ammar_market_suppliers s
+    WHERE s.id::text = (storage.foldername(name))[1]
+      AND s.owner_id = auth.uid()
+  )
+);
+
+DROP POLICY IF EXISTS ammar_market_images_supplier_delete ON storage.objects;
+CREATE POLICY ammar_market_images_supplier_delete ON storage.objects
+FOR DELETE TO authenticated USING (
+  bucket_id = 'ammar-market-files'
+  AND (storage.foldername(name))[2] = auth.uid()::text
+  AND EXISTS (
+    SELECT 1 FROM public.ammar_market_suppliers s
+    WHERE s.id::text = (storage.foldername(name))[1]
+      AND s.owner_id = auth.uid()
+  )
+);
+
 -- Add only if Supabase Realtime publication exists and these tables are not present.
 DO $ammar_realtime$
 DECLARE t text;
