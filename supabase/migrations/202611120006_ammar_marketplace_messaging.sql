@@ -1,7 +1,8 @@
 -- AMMAR ecosystem foundation: supplier marketplace, service RFQs, messaging,
 -- agreements, trust records and configurable transaction commission.
 -- Additive only: does not alter or delete existing AMMAR project records.
--- Apply after 202611120005_bank_payment_workflow.sql.
+-- Apply after the project-management, collaboration, team-privacy and field-operations migrations
+-- (001–004). This marketplace migration does not depend on the separate bank milestone workflow in 005.
 
 BEGIN;
 
