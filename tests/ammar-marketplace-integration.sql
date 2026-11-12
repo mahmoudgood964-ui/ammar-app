@@ -36,11 +36,11 @@ RETURNING id AS quote_id \gset
 
 RESET ROLE;
 SELECT set_config('ammar.test.request_id', :'request_id', false);
-DO $$ BEGIN
+DO $ammar_test$ BEGIN
   IF (SELECT status FROM public.ammar_market_requests WHERE id=current_setting('ammar.test.request_id')::uuid) <> 'quoted' THEN
     RAISE EXCEPTION 'Quote trigger did not set request status to quoted';
   END IF;
-END $$;
+END $ammar_test$;
 SET ROLE authenticated;
 SELECT set_config('request.jwt.claim.sub','11111111-1111-4111-8111-111111111111',false);
 SELECT public.ammar_accept_market_quote(:'quote_id');
@@ -149,7 +149,7 @@ SET ROLE authenticated;
 SELECT set_config('request.jwt.claim.sub','33333333-3333-4333-8333-333333333333',false);
 SELECT set_config('ammar.test.conversation_id', :'conversation_id', false);
 SELECT set_config('ammar.test.file_path', :'conversation_id' || '/11111111-1111-4111-8111-111111111111/test.pdf', false);
-DO $$ BEGIN
+DO $ammar_test$ BEGIN
   IF EXISTS (SELECT 1 FROM public.ammar_conversations WHERE id=current_setting('ammar.test.conversation_id')::uuid) THEN
     RAISE EXCEPTION 'RLS failure: outsider can read a private conversation';
   END IF;
@@ -159,7 +159,7 @@ DO $$ BEGIN
   IF EXISTS (SELECT 1 FROM storage.objects WHERE bucket_id='ammar-chat-files' AND name=current_setting('ammar.test.file_path')) THEN
     RAISE EXCEPTION 'RLS failure: outsider can read a private attachment';
   END IF;
-END $$;
+END $ammar_test$;
 
 RESET ROLE;
 
@@ -167,7 +167,7 @@ RESET ROLE;
 SELECT set_config('ammar.test.request_id', :'request_id', false);
 SELECT set_config('ammar.test.service_offer_id', :'service_offer_id', false);
 SELECT set_config('ammar.test.service_request_id', :'service_request_id', false);
-DO $$
+DO $ammar_test$
 DECLARE v_expenses integer; v_commission numeric; v_notifications integer;
 BEGIN
   SELECT count(*) INTO v_expenses FROM public.project_expenses
@@ -190,6 +190,6 @@ BEGIN
   WHERE user_id='22222222-2222-4222-8222-222222222222'
     AND notification_type='new_message';
   IF v_notifications <> 1 THEN RAISE EXCEPTION 'Expected one new-message notification, got %',v_notifications; END IF;
-END $$;
+END $ammar_test$;
 
 SELECT 'AMMAR ECOSYSTEM INTEGRATION TESTS PASSED' AS result;
