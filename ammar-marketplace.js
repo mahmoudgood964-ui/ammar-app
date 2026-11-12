@@ -366,7 +366,7 @@
     });
     if(result.error)throw result.error;
     await render();
-    tell('تم تسجيل قرار ${decision} للجهة '+business+' مع حفظ أثر التدقيق.','success');
+    tell('تم حفظ قرار المراجعة للجهة '+business+' مع تسجيل سبب القرار وأثر التدقيق.','success');
   }
 
   async function handleAdminReportChange(select){
@@ -414,12 +414,13 @@
       const own=s?.owner_id===user.id;
       const imageUrl=p.image_path?db.storage.from('ammar-market-files').getPublicUrl(p.image_path).data.publicUrl:null;
       return `<article class="eco-card">${imageUrl?`<img src="${esc(imageUrl)}" alt="${esc(p.title)}" loading="lazy" style="width:100%;max-height:170px;object-fit:cover;border-radius:10px;margin-bottom:9px">`:''}<h3>${esc(p.title)}</h3>
-        <div class="eco-meta"><span class="eco-pill">${esc(p.category)}</span><span class="eco-pill">${esc(p.availability==='limited'?'كمية محدودة':'متوفر')}</span>${s?.is_verified?'<span class="eco-pill">AMMIR Verified</span>':''}</div>
+        <div class="eco-meta"><span class="eco-pill">${esc(p.category)}</span><span class="eco-pill">${esc(p.availability==='limited'?'كمية محدودة':'متوفر')}</span>${s?.is_verified?'<span class="eco-pill">AMMIR Verified</span>':'<span class="eco-pill" style="background:#fff1d6;color:#805300">غير موثّق</span>'}</div>
         <p>${esc(p.description||p.brand||'')}</p><div class="eco-price">${money(p.price,p.currency)} / ${esc(p.unit)}</div>
         <p><strong>${esc(s?.business_name||'مورد')}</strong></p><p>${esc(loc||'الموقع غير محدد')}</p>
         <p class="muted">آخر تحديث للسعر: ${esc(p.price_updated_at?new Date(p.price_updated_at).toLocaleString('ar'):'غير متاح')}</p>
-        <div class="eco-actions">${own?'<span class="eco-pill">منتجك</span>':`<input class="eco-inline-input" style="width:92px" type="number" min="0.001" step="0.001" value="1" aria-label="الكمية" id="ecoQty-${esc(p.id)}">
+        <div class="eco-actions">${own?'<span class="eco-pill">منتجك</span>':s?.is_verified&&s?.status==='active'?`<input class="eco-inline-input" style="width:92px" type="number" min="0.001" step="0.001" value="1" aria-label="الكمية" id="ecoQty-${esc(p.id)}">
           <button class="btn primary" type="button" data-eco-buy="${esc(p.id)}">طلب شراء</button>
+          <button class="btn light" type="button" data-eco-contact="${esc(p.id)}" data-owner="${esc(s?.owner_id)}">مراسلة المورد</button>`:`<span class="eco-pill" style="background:#fff1d6;color:#805300">الشراء متاح بعد اعتماد المورد</span>
           <button class="btn light" type="button" data-eco-contact="${esc(p.id)}" data-owner="${esc(s?.owner_id)}">مراسلة المورد</button>`}</div>
       </article>`;
     }).join('');
@@ -744,11 +745,11 @@ async function servicesHtml(){
           +(o.status==='accepted'?'<button class="btn light" type="button" data-eco-service-agreement="'+esc(o.id)+'">إنشاء اتفاق</button>':'');
         return '<div class="eco-row"><div><strong>'+esc(sp?.business_name||'مقدم خدمة')+'</strong><div class="muted">'+money(o.amount,o.currency)+' · '+esc(o.duration_days==null?'المدة غير محددة':o.duration_days+' يوم')+' · '+esc(statusText[o.status]||o.status)+'</div></div><div class="eco-actions">'+actions+'</div></div>';
       }).join('');
-      const offerForm=provider&&!own&&r.status==='open'?'<div class="eco-form"><div><label>عرضك المالي</label><input id="ecoSvcAmount-'+esc(r.id)+'" type="number" min="0" step="0.01"></div><div><label>مدة التنفيذ (يوم)</label><input id="ecoSvcDays-'+esc(r.id)+'" type="number" min="1"></div><div class="wide"><button class="btn primary" type="button" data-eco-service-offer="'+esc(r.id)+'">تقديم عرض</button></div></div>':'';
+      const offerForm=provider&&provider.is_verified===true&&provider.status==='active'&&!own&&r.status==='open'?'<div class="eco-form"><div><label>عرضك المالي</label><input id="ecoSvcAmount-'+esc(r.id)+'" type="number" min="0" step="0.01"></div><div><label>مدة التنفيذ (يوم)</label><input id="ecoSvcDays-'+esc(r.id)+'" type="number" min="1"></div><div class="wide"><button class="btn primary" type="button" data-eco-service-offer="'+esc(r.id)+'">تقديم عرض</button></div></div>':'';
       const completeAction=own&&r.status==='awarded'?'<button class="btn primary" type="button" data-eco-complete-service="'+esc(r.id)+'">تأكيد اكتمال الخدمة</button>':'';
       return '<article class="eco-card"><h3>'+esc(r.title)+'</h3><div class="eco-meta"><span class="eco-pill">'+esc(r.service_type)+'</span><span class="eco-pill">'+esc(r.city||'الموقع غير محدد')+'</span><span class="eco-pill">'+esc(statusText[r.status]||r.status)+'</span></div><p>'+esc(r.description)+'</p><p>الميزانية القصوى: '+(r.budget_max==null?'غير محددة':money(r.budget_max,r.currency))+'</p>'+offerForm+'<div class="eco-subsection"><strong>العروض المقدمة</strong>'+(offersHtml||'<p class="muted">لا توجد عروض بعد.</p>')+'</div>'+completeAction+'</article>';
     }).join('');
-    return `${profile}<section class="eco-card eco-subsection"><h3>نشر طلب خدمة أو مقاول</h3>
+    return `${profile}${provider&&(!provider.is_verified||provider.status!=='active')?'<div class="eco-note">ملف مقدم الخدمة غير معتمد حالياً، لذلك يمكنك استعراض الطلبات والتواصل مع أصحابها، لكن تقديم العروض الرسمية يتاح بعد اعتماد حسابك من إدارة عَمِّر</div>':''}<section class="eco-card eco-subsection"><h3>نشر طلب خدمة أو مقاول</h3>
       <form id="ecoServiceRequestForm" class="eco-form">
         <div><label>نوع الخدمة *</label><select name="service_type"><option value="contractor">مقاولات</option><option value="renovation">ترميم</option><option value="maintenance">صيانة</option><option value="engineering">هندسة</option><option value="inspection">معاينة</option><option value="transport">نقل</option><option value="equipment_rental">تأجير معدات</option><option value="other">أخرى</option></select></div>
         <div><label>عنوان الطلب *</label><input name="title" required minlength="5" maxlength="180"></div>
