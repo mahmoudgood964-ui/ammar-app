@@ -36,8 +36,6 @@ RETURNING id AS quote_id \gset
 
 RESET ROLE;
 SELECT set_config('ammar.test.request_id', :'request_id', false);
-SELECT set_config('ammar.test.service_offer_id', :'service_offer_id', false);
-SELECT set_config('ammar.test.service_request_id', :'service_request_id', false);
 DO $ BEGIN
   IF (SELECT status FROM public.ammar_market_requests WHERE id=current_setting('ammar.test.request_id')::uuid) <> 'quoted' THEN
     RAISE EXCEPTION 'Quote trigger did not set request status to quoted';
@@ -165,7 +163,9 @@ RESET ROLE;
 
 -- Final assertions under database owner.
 SELECT set_config('ammar.test.request_id', :'request_id', false);
-DO $$
+SELECT set_config('ammar.test.service_offer_id', :'service_offer_id', false);
+SELECT set_config('ammar.test.service_request_id', :'service_request_id', false);
+DO $
 DECLARE v_expenses integer; v_commission numeric; v_notifications integer;
 BEGIN
   SELECT count(*) INTO v_expenses FROM public.project_expenses
