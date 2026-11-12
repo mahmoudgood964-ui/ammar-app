@@ -86,7 +86,7 @@ ALTER TABLE public.project_quotes
   ADD COLUMN IF NOT EXISTS exclusions text;
 
 -- Protect future quotation records while retaining any historical values.
-DO $
+DO $$
 BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM pg_constraint
@@ -106,7 +106,7 @@ BEGIN
       ADD CONSTRAINT project_quotes_warranty_months_ammar_check
       CHECK (warranty_months IS NULL OR warranty_months BETWEEN 0 AND 600) NOT VALID;
   END IF;
-END $;
+END $$;
 
 CREATE INDEX IF NOT EXISTS project_site_reports_project_date_idx
   ON public.project_site_reports(project_id, report_date DESC, created_at DESC);
