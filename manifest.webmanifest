@@ -1,0 +1,22 @@
+{
+  "id": "/",
+  "name": "عَمِّر | AMMAR",
+  "short_name": "AMMAR",
+  "description": "إدارة مشاريع ترميم وصيانة العقارات من التخطيط إلى الاستلام.",
+  "lang": "ar",
+  "dir": "rtl",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#f4f7f5",
+  "theme_color": "#123f35",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
