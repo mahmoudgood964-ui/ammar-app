@@ -115,6 +115,6 @@
 - [اختبارات المراسلات المتقدمة](../tests/ammar-messaging-plus.sql)
 - [سير عمل التحقق الآلي](../.github/workflows/ammar-ecosystem-validation.yml)
 
-**نتيجة GitHub Actions run #61:** كل الخطوات ناجحة، بما فيها إعداد قاعدة PostgreSQL الاختبارية، تطبيق الترحيلين 006 و007، اختبار تكامل السوق والرسائل، اختبار الرسائل المتقدمة، وفحص كود المتصفح وربط الترحيلات. هذه نتيجة اختبار في بيئة اصطناعية وليست اعتماداً للإنتاج.
+**نتيجة GitHub Actions run #92:** كل الخطوات ناجحة، بما فيها إعداد قاعدة PostgreSQL الاختبارية، تطبيق الترحيلين 006 و007، اختبار تكامل السوق والرسائل، اختبار الرسائل المتقدمة، وفحص كود المتصفح وربط الترحيلات. هذه نتيجة اختبار في بيئة اصطناعية وليست اعتماداً للإنتاج.
 
 CI environment note: **synthetic PostgreSQL CI environment** only; this is not the live Supabase staging or production database.
