@@ -7,6 +7,9 @@ const moduleSource = fs.readFileSync('ammar-marketplace.js', 'utf8');
 const serviceWorker = fs.readFileSync('sw.js', 'utf8');
 const migration = fs.readFileSync('supabase/migrations/202611120006_ammar_marketplace_messaging.sql', 'utf8');
 const messagingPlus = fs.readFileSync('supabase/migrations/202611120007_ammar_messaging_plus.sql', 'utf8');
+const trustMigration = fs.readFileSync('supabase/migrations/20261112200000_ammir_trust_and_admin_access.sql', 'utf8');
+const verificationMigration = fs.readFileSync('supabase/migrations/20261112203000_ammir_provider_verification_audit.sql', 'utf8');
+const trustTests = fs.readFileSync('tests/ammar-trust-admin.sql', 'utf8');
 const messagingTests = fs.readFileSync('tests/ammar-messaging-plus.sql', 'utf8');
 const competitiveAudit = fs.readFileSync('docs/AMMAR_COMPETITIVE_POSITIONING_AND_NAME_REVIEW.md', 'utf8');
 const releaseAudit = fs.readFileSync('docs/AMMAR_MESSAGING_AND_RELEASE_GAP_AUDIT.md', 'utf8');
@@ -96,4 +99,15 @@ assert.ok(moduleSource.includes('UN-Habitat Sudan'), 'Housing support organizati
 assert.ok(moduleSource.includes('ATC Group'), 'Construction company lead is missing');
 assert.ok(moduleSource.includes('info@ctiunited.com'), 'CTI public contact is missing');
 
-console.log('AMMAR static application and migration checks passed.');
+
+assert.ok(trustMigration.includes('ammir_guard_provider_trust_fields'), 'Provider self-verification trigger is missing');
+assert.ok(trustMigration.includes('ammar_admin_list_message_reports'), 'Admin report review RPC is missing');
+assert.ok(trustMigration.includes('ammir_admin_message_reports_update'), 'Admin report moderation policy is missing');
+assert.ok(verificationMigration.includes('ammar_provider_verification_events'), 'Provider verification audit log is missing');
+assert.ok(verificationMigration.includes('ammar_admin_review_provider'), 'Audited admin verification RPC is missing');
+assert.ok(verificationMigration.includes('SET search_path ='), 'Admin verification RPC must lock its search_path');
+assert.ok(trustTests.includes('Supplier self-verification or self-suspension was not blocked'), 'Trust regression tests are missing');
+assert.ok(trustTests.includes('Non-admin was able to approve a supplier'), 'Non-admin privilege-escalation test is missing');
+assert.ok(trustTests.includes('AMMIR TRUST AND ADMIN ACCESS TESTS PASSED'), 'Trust/admin integration test completion marker is missing');
+
+console.log('AMMIR static application and migration checks passed.');
