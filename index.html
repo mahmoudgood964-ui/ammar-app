@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#123f35">
-<meta name="description" content="عَمِّر | AMMIR — منصة تشغيل المشاريع والمشتريات، من إدارة المشروع وطلبات الشراء إلى عروض الموردين ومتابعة التنفيذ والاستلام."><meta name="application-name" content="AMMIR"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="AMMIR"><link rel="manifest" href="/manifest.webmanifest"><link rel="icon" type="image/svg+xml" href="/icon.svg">
+<meta name="description" content="عَمِّر | AMMIR — نظام تشغيل رحلة البناء والترميم، من تحديد الاحتياج إلى إدارة التنفيذ وتوثيق الاستلام."><meta name="application-name" content="AMMIR"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="AMMIR"><link rel="manifest" href="/manifest.webmanifest"><link rel="icon" type="image/svg+xml" href="/icon.svg">
 <title>عَمِّر | AMMIR</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
@@ -78,20 +78,237 @@ html[lang="en"] .search-input{text-align:left}
 html[lang="en"] .detail-label,html[lang="en"] .detail-value{text-align:left}
 html[lang="en"] .topbar .brand{direction:ltr}
 html[lang="en"] .top-user{direction:ltr}
+
+/* AMMIR Command Center — product-grade workspace */
+:root{--g:#176b57;--gd:#102f29;--gs:#e7f0ec;--ink:#17231f;--muted:#738079;--line:#e3e9e5;--bg:#f3f5f2;--accent:#d69a58;--shadow:0 16px 42px rgba(17,44,35,.07);--r:18px}
+body{background:var(--bg);font-family:"Noto Sans Arabic",Tahoma,Arial,sans-serif}
+.topbar{height:76px;padding-inline:clamp(18px,4vw,52px);background:rgba(255,255,255,.94);backdrop-filter:blur(16px);border-bottom-color:#e8ece8}
+.topbar .brand-mark{width:42px;height:42px;border-radius:13px;background:var(--gd);box-shadow:0 7px 18px #102f2924}
+.topbar .brand h1{font-size:21px;letter-spacing:-.5px}
+.layout{max-width:1600px;grid-template-columns:248px minmax(0,1fr);gap:28px;padding:28px clamp(18px,3vw,42px)}
+.sidebar{border:0;border-radius:20px;padding:16px 13px;height:calc(100vh - 132px);top:104px;box-shadow:0 8px 30px rgba(17,44,35,.045)}
+.side-label{padding-inline:12px;letter-spacing:.3px}
+.nav-btn{padding:13px 14px;border-radius:12px;transition:background .18s,color .18s,transform .18s}
+.nav-btn:hover{transform:translateX(-2px)}
+.nav-btn.active{background:#eaf2ee;color:var(--gd);box-shadow:inset -3px 0 0 var(--g)}
+.nav-icon{font-size:19px}
+.content{max-width:1240px;margin-inline:auto;width:100%}
+#dashboardView .heading{align-items:center;margin:3px 0 24px}
+#dashboardView .heading h2{font-size:29px;letter-spacing:-.6px;color:var(--gd)}
+#dashboardView .heading p{font-size:14px;margin-top:7px}
+#dashboardView .heading .btn{border-radius:12px;padding:13px 18px;box-shadow:0 8px 18px #176b5724}
+.ammir-welcome{position:relative;overflow:hidden;display:grid;grid-template-columns:minmax(0,1.35fr) minmax(220px,.65fr);gap:22px;align-items:center;padding:30px 32px;border-radius:22px;background:linear-gradient(118deg,#102f29 0%,#17483d 58%,#236451 100%);color:#fff;box-shadow:0 18px 40px rgba(16,47,41,.17);margin-bottom:22px}
+.ammir-welcome:before,.ammir-welcome:after{content:"";position:absolute;border:1px solid rgba(255,255,255,.10);border-radius:50%;pointer-events:none}
+.ammir-welcome:before{width:360px;height:360px;left:-110px;top:-210px}
+.ammir-welcome:after{width:230px;height:230px;left:20px;bottom:-175px}
+.ammir-welcome-copy,.ammir-welcome-side{position:relative;z-index:1}
+.ammir-kicker{display:inline-flex;align-items:center;gap:8px;color:#c9ddd4;font-size:12px;font-weight:700;margin-bottom:13px}
+.ammir-kicker:before{content:"";width:7px;height:7px;border-radius:50%;background:#e2ad72;box-shadow:0 0 0 5px #e2ad7224}
+.ammir-welcome h3{font-size:clamp(23px,3vw,34px);line-height:1.35;margin:0 0 9px;letter-spacing:-.5px}
+.ammir-welcome p{font-size:13px;color:#d1e0d9;line-height:1.9;margin:0;max-width:590px}
+.ammir-welcome-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:21px}
+.ammir-welcome-actions .btn{border-radius:11px;padding:11px 16px}
+.ammir-welcome-actions .btn.primary{background:#f1d4ae;color:#273a32}
+.ammir-welcome-actions .btn.welcome-ghost{background:#ffffff14;color:#fff;border:1px solid #ffffff35}
+.ammir-welcome-side{justify-self:end;width:min(100%,260px);padding:19px 20px;border:1px solid #ffffff25;border-radius:17px;background:#ffffff0c;backdrop-filter:blur(8px)}
+.ammir-welcome-side small{display:block;color:#c4d8cf;font-size:11px}
+.ammir-welcome-side strong{display:block;font-size:43px;line-height:1.25;margin:5px 0 2px;letter-spacing:-1px}
+.ammir-welcome-side span{font-size:12px;color:#d5e3dc}
+.ammir-section-head{display:flex;align-items:end;justify-content:space-between;gap:12px;margin:27px 0 13px}
+.ammir-section-head h3{font-size:17px;color:var(--gd);margin:0;letter-spacing:-.2px}
+.ammir-section-head p{font-size:12px;color:var(--muted);margin:4px 0 0}
+.ammir-overview{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:13px;margin-bottom:22px}
+.ammir-metric{background:#fff;border:1px solid var(--line);border-radius:16px;padding:17px 18px;min-width:0;box-shadow:0 4px 16px rgba(20,50,38,.025)}
+.ammir-metric-top{display:flex;align-items:center;justify-content:space-between;gap:8px;color:var(--muted);font-size:12px}
+.ammir-metric-icon{width:32px;height:32px;border-radius:10px;display:grid;place-items:center;background:#edf3ef;color:var(--gd);font-size:15px;font-weight:800}
+.ammir-metric strong{display:block;font-size:29px;line-height:1.3;color:var(--gd);margin-top:10px;direction:ltr;text-align:right}
+.ammir-metric small{display:block;font-size:11px;color:#87928c;margin-top:4px}
+.ammir-dashboard-grid{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(260px,.75fr);gap:17px;align-items:start}
+.ammir-surface{background:#fff;border:1px solid var(--line);border-radius:18px;padding:20px;box-shadow:0 4px 18px rgba(20,50,38,.025);min-width:0}
+.ammir-surface .panel-head{margin-bottom:15px}
+.ammir-surface .panel-head h3{font-size:16px;color:var(--gd)}
+.ammir-status-list{display:grid;gap:17px}
+.ammir-status-row{display:grid;grid-template-columns:100px minmax(0,1fr) 28px;align-items:center;gap:10px;font-size:12px;color:#52615a}
+.ammir-status-track{height:7px;border-radius:10px;background:#edf1ee;overflow:hidden}
+.ammir-status-fill{height:100%;border-radius:10px;background:linear-gradient(90deg,#236451,#7da995);min-width:0}
+.ammir-status-count{font-weight:800;color:var(--gd);text-align:left;direction:ltr}
+.ammir-insight{border-radius:14px;background:#f5f7f4;padding:15px;margin-top:17px}
+.ammir-insight strong{font-size:13px;color:var(--gd);display:block}
+.ammir-insight p{font-size:12px;line-height:1.8;color:#68756e;margin:6px 0 0}
+.ammir-quick-actions{display:grid;gap:9px}
+.ammir-quick-action{display:flex;align-items:center;gap:12px;padding:13px;border:1px solid var(--line);border-radius:13px;background:#fff;color:var(--ink);text-align:right;width:100%;transition:border .18s,background .18s,transform .18s}
+.ammir-quick-action:hover{border-color:#b8cec2;background:#f8faf8;transform:translateY(-1px)}
+.ammir-quick-icon{width:38px;height:38px;flex:0 0 38px;display:grid;place-items:center;border-radius:11px;background:#edf3ef;color:var(--gd);font-size:18px}
+.ammir-quick-action strong{display:block;font-size:12px;color:var(--gd)}
+.ammir-quick-action small{display:block;font-size:11px;color:var(--muted);margin-top:3px}
+#recentProjects.project-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+#recentProjects .project-card{border-radius:14px;padding:15px;border-color:#e9eeea}
+#recentProjects .project-card h4{font-size:15px}
+#recentProjects .project-card .actions .btn{border-radius:9px}
+.ammir-empty{padding:28px 18px;text-align:center;border:1px dashed #cbd8d0;border-radius:15px;background:#fafcfb}
+.ammir-empty-mark{width:52px;height:52px;margin:0 auto 12px;border-radius:16px;background:#eaf2ee;color:var(--gd);display:grid;place-items:center;font-size:24px}
+.ammir-empty h4{margin:0;color:var(--gd);font-size:15px}
+.ammir-empty p{margin:7px auto 15px;max-width:360px;font-size:12px;line-height:1.8;color:var(--muted)}
+#dashboardView .notice{border-radius:12px;margin-top:17px;background:#eef3ef;border-right-color:#b58b5c}
+@media(max-width:1050px){.ammir-overview{grid-template-columns:repeat(2,minmax(0,1fr))}.ammir-dashboard-grid{grid-template-columns:1fr}.ammir-welcome{grid-template-columns:1fr}.ammir-welcome-side{justify-self:start;width:100%;max-width:260px}}
+@media(max-width:680px){
+ .topbar{height:64px;padding:0 14px}.topbar .brand h1{font-size:17px}.topbar .brand small{font-size:10px}.topbar .brand-mark{width:36px;height:36px}
+ .top-user{gap:6px}.top-user .btn{padding:8px 9px;font-size:11px}.top-user .notification-toggle{font-size:0;gap:0}.top-user .notification-badge{font-size:10px}
+ .layout{padding:13px 12px 94px;gap:0}
+ #dashboardView .heading{margin:4px 1px 16px;align-items:center}
+ #dashboardView .heading h2{font-size:23px}
+ #dashboardView .heading p{font-size:12px}
+ #dashboardView .heading .btn{padding:10px 12px;font-size:11px}
+ .ammir-welcome{padding:22px 19px;border-radius:18px;gap:17px;margin-bottom:16px}
+ .ammir-welcome h3{font-size:23px}
+ .ammir-welcome p{font-size:12px}
+ .ammir-welcome-side{max-width:none;padding:13px 15px;display:flex;align-items:center;gap:12px}
+ .ammir-welcome-side strong{font-size:31px;margin:0}
+ .ammir-welcome-side small{margin:0}
+ .ammir-welcome-side span{font-size:11px}
+ .ammir-overview{gap:8px;margin-bottom:16px}
+ .ammir-metric{padding:12px;border-radius:13px}
+ .ammir-metric-top{font-size:10px}
+ .ammir-metric-icon{width:28px;height:28px}
+ .ammir-metric strong{font-size:24px;margin-top:7px}
+ .ammir-metric small{font-size:10px}
+ .ammir-section-head{margin:20px 1px 11px}
+ .ammir-surface{padding:14px;border-radius:15px}
+ #recentProjects.project-grid{grid-template-columns:1fr}
+ #recentProjects .project-card{padding:13px}
+ .ammir-status-row{grid-template-columns:88px minmax(0,1fr) 22px;gap:7px;font-size:11px}
+ .ammir-quick-actions{grid-template-columns:1fr 1fr}
+ .ammir-quick-action{padding:10px;gap:8px;align-items:flex-start}
+ .ammir-quick-icon{width:31px;height:31px;flex-basis:31px;font-size:15px}
+ .ammir-quick-action strong{font-size:11px}
+ .ammir-quick-action small{font-size:10px}
+ .mobile-nav{padding:7px 7px calc(7px + env(safe-area-inset-bottom));box-shadow:0 -8px 24px rgba(17,44,35,.07)}
+ .mobile-nav .nav-btn{min-width:65px;border-radius:10px}
+}
+
+
+/* AMMIR project workspace — project-first operating surface */
+#detailBackdrop{padding:14px;background:rgba(7,22,17,.72);backdrop-filter:blur(9px);z-index:30}
+#detailBackdrop .ammir-workspace-modal{width:min(1480px,100%);height:min(960px,calc(100dvh - 28px));max-height:calc(100dvh - 28px);padding:0;overflow:hidden;border-radius:24px;display:flex;flex-direction:column;background:#f4f7f4;box-shadow:0 30px 100px rgba(0,0,0,.28)}
+.ammir-workspace-modal>.modal-head,.ammir-workspace-modal>.form-actions{display:none!important}
+.ammir-workspace-modal #detailContent{height:100%;min-height:0;overflow-y:auto;overscroll-behavior:contain;background:#f4f7f4;scrollbar-gutter:stable}
+.ammir-project-workspace{min-height:100%;display:flex;flex-direction:column;color:#17231f}
+.ammir-project-toolbar{position:sticky;top:0;z-index:12;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px clamp(16px,3vw,38px);background:rgba(255,255,255,.94);backdrop-filter:blur(16px);border-bottom:1px solid #e4ebe6}
+.ammir-project-breadcrumb{display:flex;align-items:center;gap:9px;min-width:0;color:#75827b;font-size:12px}
+.ammir-project-breadcrumb strong{color:#183c32;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:min(42vw,460px)}
+.ammir-project-toolbar-actions{display:flex;align-items:center;gap:8px;flex:0 0 auto}
+.ammir-project-toolbar-actions .btn{padding:9px 12px;border-radius:10px;font-size:12px}
+.ammir-project-close{width:36px;height:36px;border:1px solid #e2e9e4;border-radius:11px;background:#f7f9f7;color:#46564e;font-size:20px;line-height:1}
+.ammir-project-hero{position:relative;overflow:hidden;margin:22px clamp(16px,3vw,38px) 0;padding:26px 28px 22px;border-radius:21px;background:linear-gradient(118deg,#102f29 0%,#17483d 58%,#24634f 100%);color:#fff;box-shadow:0 17px 38px rgba(16,47,41,.14)}
+.ammir-project-hero:before,.ammir-project-hero:after{content:"";position:absolute;border:1px solid rgba(255,255,255,.11);border-radius:50%;pointer-events:none}
+.ammir-project-hero:before{width:390px;height:390px;left:-125px;top:-270px}
+.ammir-project-hero:after{width:230px;height:230px;right:-115px;bottom:-175px}
+.ammir-project-hero-main,.ammir-project-meta{position:relative;z-index:1}
+.ammir-project-eyebrow{display:flex;align-items:center;gap:8px;color:#c7ddd3;font-size:11px;font-weight:700;margin-bottom:10px}
+.ammir-project-eyebrow:before{content:"";width:7px;height:7px;border-radius:50%;background:#e2ad72;box-shadow:0 0 0 5px #e2ad7224}
+.ammir-project-title-row{display:flex;align-items:center;gap:11px;flex-wrap:wrap}
+.ammir-project-title-row h2{font-size:clamp(22px,3vw,32px);line-height:1.35;letter-spacing:-.45px;color:#fff;margin:0;overflow-wrap:anywhere}
+.ammir-project-status{display:inline-flex;align-items:center;gap:6px;border:1px solid #ffffff3b;background:#ffffff15;border-radius:30px;padding:5px 10px;color:#fff;font-size:11px;white-space:nowrap}
+.ammir-project-status:before{content:"";width:6px;height:6px;border-radius:50%;background:#e3b77e}
+.ammir-project-description{max-width:850px;margin:9px 0 0;color:#d3e2db;font-size:13px;line-height:1.9;overflow-wrap:anywhere}
+.ammir-project-meta{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}
+.ammir-project-meta span{display:inline-flex;align-items:center;gap:6px;border:1px solid #ffffff2b;background:#ffffff10;border-radius:9px;padding:7px 10px;color:#e0ebe5;font-size:11px;max-width:100%;overflow-wrap:anywhere}
+.ammir-project-pulse{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:11px;margin:16px clamp(16px,3vw,38px) 0}
+.ammir-pulse-card{min-width:0;padding:14px 16px;background:#fff;border:1px solid #e4ebe6;border-radius:14px;box-shadow:0 4px 16px rgba(20,50,38,.025)}
+.ammir-pulse-label{display:flex;align-items:center;justify-content:space-between;gap:8px;color:#718078;font-size:11px}
+.ammir-pulse-icon{width:27px;height:27px;display:grid;place-items:center;border-radius:9px;background:#edf3ef;color:#17483d;font-size:14px;font-weight:800}
+.ammir-pulse-value{display:block;margin-top:7px;color:#143e33;font-size:25px;line-height:1.3;font-weight:800;direction:ltr;text-align:right}
+.ammir-pulse-foot{display:block;margin-top:3px;color:#87938c;font-size:10px;line-height:1.6}
+.ammir-project-navigation{position:sticky;top:62px;z-index:10;margin-top:18px;padding:12px clamp(16px,3vw,38px) 10px;background:rgba(244,247,244,.96);backdrop-filter:blur(12px);border-bottom:1px solid #e3eae5}
+.ammir-tab-groups{display:flex;gap:15px;overflow-x:auto;overscroll-behavior-x:contain;scrollbar-width:thin;padding-bottom:3px}
+.ammir-tab-group{display:flex;align-items:center;gap:5px;flex:0 0 auto;min-width:max-content}
+.ammir-tab-group-label{color:#87938c;font-size:10px;font-weight:800;margin-inline-end:4px;white-space:nowrap}
+.ammir-project-tab{display:inline-flex;align-items:center;gap:6px;border:1px solid transparent;border-radius:10px;background:transparent;color:#607068;padding:9px 11px;font-size:11px;font-weight:700;white-space:nowrap}
+.ammir-project-tab:hover{background:#eaf1ed;color:#173e33}
+.ammir-project-tab.active{background:#173f34;color:#fff;box-shadow:0 5px 12px rgba(23,63,52,.16)}
+.ammir-module-loading{min-height:190px;display:flex;align-items:center;justify-content:center;gap:13px;padding:30px;border:1px solid #e4ebe6;border-radius:16px;background:#fff;color:#173f34;text-align:right}
+.ammir-module-loading strong{display:block;font-size:13px}
+.ammir-module-loading small{display:block;margin-top:5px;color:#829087;font-size:11px}
+.ammir-loading-mark{width:26px;height:26px;flex:0 0 26px;border:3px solid #e5eee8;border-top-color:#1a5746;border-radius:50%;animation:ammir-spin .8s linear infinite}
+@keyframes ammir-spin{to{transform:rotate(360deg)}}
+.ammir-project-section{padding:18px clamp(16px,3vw,38px) 34px;min-width:0}
+.ammir-project-section #modulePanel{max-width:1280px;margin:0 auto}
+.ammir-project-section #modulePanel>.panel{border-radius:16px;border-color:#e4ebe6;box-shadow:0 4px 18px rgba(20,50,38,.025)}
+.ammir-project-section #modulePanel .panel-head h3{color:#173f34}
+.ammir-project-section #modulePanel .project-card,.ammir-project-section #modulePanel .module-record{border-radius:13px;border-color:#e5ebe7}
+.ammir-project-section #modulePanel .btn{border-radius:9px}
+.ammir-overview-cards{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:11px;margin-bottom:15px}
+.ammir-overview-card{background:#fff;border:1px solid #e4ebe6;border-radius:14px;padding:15px}
+.ammir-overview-card small{display:block;color:#7b8981;font-size:11px}
+.ammir-overview-card strong{display:block;color:#143e33;font-size:24px;margin-top:5px;overflow-wrap:anywhere}
+.ammir-overview-columns{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(260px,.7fr);gap:14px;align-items:start}
+.ammir-overview-list{background:#fff;border:1px solid #e4ebe6;border-radius:15px;padding:16px}
+.ammir-overview-list h3{margin:0 0 11px;font-size:15px;color:#173f34}
+.ammir-overview-description{white-space:pre-wrap;overflow-wrap:anywhere;color:#58675f;font-size:13px;line-height:1.9;margin:8px 0 0}
+.ammir-currency-line{display:flex;align-items:center;justify-content:space-between;gap:10px;border-bottom:1px solid #edf1ee;padding:9px 0;font-size:12px}
+.ammir-currency-line:last-child{border-bottom:0}
+.ammir-currency-line strong{color:#173f34;direction:ltr}
+.ammir-workspace-warning{margin:14px clamp(16px,3vw,38px) 0}
+@media(max-width:900px){.ammir-project-pulse{grid-template-columns:repeat(2,minmax(0,1fr))}.ammir-overview-cards{grid-template-columns:repeat(2,minmax(0,1fr))}.ammir-overview-columns{grid-template-columns:1fr}}
+@media(max-width:680px){
+ #detailBackdrop{padding:0;display:block}
+ #detailBackdrop .ammir-workspace-modal{width:100%;height:100dvh;max-height:100dvh;border-radius:0}
+ .ammir-project-toolbar{padding:10px 12px;gap:7px}
+ .ammir-project-breadcrumb{font-size:10px;gap:5px}
+ .ammir-project-breadcrumb strong{max-width:34vw;font-size:11px}
+ .ammir-project-toolbar-actions{gap:5px}
+ .ammir-project-toolbar-actions .btn{font-size:10px;padding:8px 9px}
+ .ammir-project-close{width:33px;height:33px}
+ .ammir-project-hero{margin:12px 12px 0;padding:19px 17px 16px;border-radius:17px}
+ .ammir-project-title-row h2{font-size:22px}
+ .ammir-project-description{font-size:12px}
+ .ammir-project-meta{gap:6px;margin-top:13px}
+ .ammir-project-meta span{font-size:10px;padding:6px 8px}
+ .ammir-project-pulse{margin:10px 12px 0;gap:7px}
+ .ammir-pulse-card{padding:11px;border-radius:12px}
+ .ammir-pulse-label{font-size:10px}
+ .ammir-pulse-value{font-size:22px}
+ .ammir-project-navigation{top:54px;margin-top:12px;padding:9px 12px 7px}
+ .ammir-tab-groups{gap:11px}
+ .ammir-tab-group-label{display:none}
+ .ammir-project-tab{padding:8px 10px;font-size:10px}
+ .ammir-project-section{padding:12px 12px 26px}
+ .ammir-overview-cards{gap:7px}
+ .ammir-overview-card{padding:12px;border-radius:12px}
+ .ammir-overview-card strong{font-size:21px}
+ .ammir-overview-columns{gap:9px}
+ .ammir-overview-list{padding:13px}
+ .ammir-workspace-warning{margin:10px 12px 0;font-size:11px}
+}
+
+/* AMMIR — project journey positioning */
+.public-landing{max-width:1180px;padding:18px clamp(12px,2vw,28px) 34px}
+.public-landing .eyebrow{background:#e8efe9;border-color:#d6e2d9;letter-spacing:.02em}
+.public-landing h2{max-width:820px;font-size:clamp(32px,4.8vw,56px);line-height:1.28;letter-spacing:-1px}
+.public-landing .lead{max-width:790px;font-size:16px;line-height:2}
+.landing-actions .btn{min-height:46px;padding-inline:20px}
+.landing-feature,.landing-role,.landing-step{box-shadow:0 8px 24px rgba(16,47,41,.035);transition:transform .18s,border-color .18s,box-shadow .18s}
+.landing-feature:hover,.landing-role:hover,.landing-step:hover{transform:translateY(-2px);border-color:#b9cec1;box-shadow:0 12px 28px rgba(16,47,41,.07)}
+.landing-record{background:#fff;border:1px solid var(--line);border-radius:18px;padding:20px;margin-top:22px;box-shadow:0 8px 28px rgba(16,47,41,.035)}
+.landing-record-flow{display:flex;align-items:center;justify-content:space-between;gap:7px;flex-wrap:wrap;margin:15px 0}
+.landing-record-flow span{background:#edf4ef;color:var(--gd);border:1px solid #dce8df;border-radius:10px;padding:9px 12px;font-size:12px;font-weight:800}
+.landing-record-flow i{color:#91a79a;font-style:normal;font-weight:800}
+.landing-record>p{font-size:12px;line-height:1.9;color:var(--muted);margin:8px 0 0;max-width:900px}
+@media(max-width:680px){.public-landing{padding:8px 4px 22px}.public-landing h2{font-size:29px;letter-spacing:-.4px}.landing-record{padding:14px}.landing-record-flow{justify-content:flex-start}.landing-record-flow i{display:none}.landing-record-flow span{font-size:11px}}
 </style>
 </head>
 <body>
 <div id="authShell" class="auth-shell">
 <section class="public-landing" id="publicLanding" aria-labelledby="landingTitle">
- <span class="eyebrow" data-ar="منصة تشغيل المشاريع والمشتريات" data-en="Project operations & procurement network">منصة تشغيل المشاريع والمشتريات</span>
- <h2 id="landingTitle" data-ar="كل تفاصيل المشروع… من أول مواصفة إلى آخر استلام." data-en="Every project detail — from the first specification to final handover.">كل تفاصيل المشروع… من أول مواصفة إلى آخر استلام.</h2>
- <p class="lead" data-ar="عَمِّر يجمع إدارة المشاريع، الموردين، المقاولين، طلبات الشراء، عروض الأسعار، فرق التنفيذ، تقارير الموقع والاتفاقات في مساحة عمل واحدة مترابطة." data-en="AMMIR connects project management, suppliers, contractors, purchase requests, quotations, field teams, site reports and agreements in one coordinated workspace.">عَمِّر يجمع إدارة المشاريع، الموردين، المقاولين، طلبات الشراء، عروض الأسعار، فرق التنفيذ، تقارير الموقع والاتفاقات في مساحة عمل واحدة مترابطة.</p>
- <p class="landing-proof" data-ar="لأصحاب العقارات والمشروعات، شركات إدارة المشاريع، المقاولين، موردي مواد البناء وفرق الموقع." data-en="For property owners, project firms, contractors, building-material suppliers and field teams.">لأصحاب العقارات والمشروعات، شركات إدارة المشاريع، المقاولين، موردي مواد البناء وفرق الموقع.</p>
+ <span class="eyebrow" data-ar="نظام تشغيل رحلة البناء" data-en="The operating system for the building journey">نظام تشغيل رحلة البناء</span>
+ <h2 id="landingTitle" data-ar="من أول فكرة إلى مشروع منظم، تنفيذ موثّق، واستلام واضح" data-en="From the first idea to a managed project, documented execution and clear handover">من أول فكرة إلى مشروع منظم، تنفيذ موثّق، واستلام واضح</h2>
+ <p class="lead" data-ar="عَمِّر يساعد صاحب المشروع على تنظيم رحلة البناء والترميم: تحديد الاحتياج، الوصول إلى المهندسين والمقاولين والمتخصصين، مقارنة العروض، متابعة التنفيذ، ضبط التكاليف، وتوثيق الاستلام في مساحة عمل واحدة." data-en="AMMIR helps project owners organize the full construction journey: define needs, reach engineers and contractors, compare proposals, track execution, control costs and document handover in one workspace.">عَمِّر يساعد صاحب المشروع على تنظيم رحلة البناء والترميم: تحديد الاحتياج، الوصول إلى المهندسين والمقاولين والمتخصصين، مقارنة العروض، متابعة التنفيذ، ضبط التكاليف، وتوثيق الاستلام في مساحة عمل واحدة.</p>
+ <p class="landing-proof" data-ar="لأصحاب المنازل والعقارات والمشروعات، والمكاتب الهندسية، والمقاولين، ومديري المشاريع وفرق التنفيذ." data-en="For homeowners, property and project owners, engineering firms, contractors, project managers and delivery teams.">لأصحاب المنازل والعقارات والمشروعات، والمكاتب الهندسية، والمقاولين، ومديري المشاريع وفرق التنفيذ.</p>
  <div class="landing-actions"><button class="btn primary" type="button" data-auth-panel="signup" data-ar="أنشئ مساحة عملك" data-en="Create your workspace">أنشئ مساحة عملك</button><button class="btn light" type="button" data-auth-panel="login" data-ar="تسجيل الدخول" data-en="Sign in">تسجيل الدخول</button><button id="marketingLang" class="landing-lang" type="button" aria-label="Switch language">EN</button></div>
 
  <div class="landing-grid">
-  <article class="landing-feature"><strong data-ar="شغّل المشروع" data-en="Run the project">شغّل المشروع</strong><p data-ar="المهام، الفريق، الميزانية، القرارات، التقارير ومتابعة التنفيذ." data-en="Tasks, teams, budgets, decisions, reports and execution tracking.">المهام، الفريق، الميزانية، القرارات، التقارير ومتابعة التنفيذ.</p></article>
-  <article class="landing-feature"><strong data-ar="نظّم المشتريات" data-en="Coordinate procurement">نظّم المشتريات</strong><p data-ar="منتجات الموردين، طلبات الشراء، عروض الأسعار والاتفاقات." data-en="Supplier products, purchase requests, quotations and agreements.">منتجات الموردين، طلبات الشراء، عروض الأسعار والاتفاقات.</p></article>
+  <article class="landing-feature"><strong data-ar="أدر رحلة المشروع" data-en="Manage the project journey">أدر رحلة المشروع</strong><p data-ar="خطط العمل، الفريق، الميزانية، القرارات، التقارير ومتابعة التنفيذ حتى الاستلام." data-en="Plans, teams, budgets, decisions and field reporting through handover.">خطط العمل، الفريق، الميزانية، القرارات، التقارير ومتابعة التنفيذ حتى الاستلام.</p></article>
+  <article class="landing-feature"><strong data-ar="نظّم المشتريات" data-en="Coordinate procurement">نظّم المشتريات</strong><p data-ar="المشتريات والعروض والاتفاقات كجزء من احتياجات المشروع، لا كغاية مستقلة." data-en="Procurement, proposals and agreements as part of the project — not the product itself.">المشتريات والعروض والاتفاقات كجزء من احتياجات المشروع، لا كغاية مستقلة.</p></article>
   <article class="landing-feature"><strong data-ar="تابع الموقع" data-en="See field progress">تابع الموقع</strong><p data-ar="تقارير ميدانية، صور، عيوب، ملاحظات وقائمة استلام." data-en="Field reports, photos, defects, notes and handover checks.">تقارير ميدانية، صور، عيوب، ملاحظات وقائمة استلام.</p></article>
  </div>
 
@@ -103,7 +320,7 @@ html[lang="en"] .top-user{direction:ltr}
   <div class="landing-roles">
    <article class="landing-role"><span>01</span><strong data-ar="مالك المشروع" data-en="Project owner">مالك المشروع</strong><p data-ar="أنشئ مشروعك، راقب التكلفة، اطلب العروض، واعتمد القرارات والاستلام." data-en="Create your project, monitor costs, request offers and approve decisions and handover.">أنشئ مشروعك، راقب التكلفة، اطلب العروض، واعتمد القرارات والاستلام.</p></article>
    <article class="landing-role"><span>02</span><strong data-ar="المقاول ومقدم الخدمة" data-en="Contractor & service provider">المقاول ومقدم الخدمة</strong><p data-ar="اعرض خدماتك، استقبل الطلبات، قدّم عرضك، ووثّق نطاق العمل والاتفاق." data-en="Present your services, receive requests, submit offers and document scope and agreements.">اعرض خدماتك، استقبل الطلبات، قدّم عرضك، ووثّق نطاق العمل والاتفاق.</p></article>
-   <article class="landing-role"><span>03</span><strong data-ar="مورد مواد البناء" data-en="Building-material supplier">مورد مواد البناء</strong><p data-ar="أنشئ كتالوجك، حدّث الأسعار والتوفر، واستقبل طلبات الشراء." data-en="Create your catalogue, update prices and availability, and receive purchase requests.">أنشئ كتالوجك، حدّث الأسعار والتوفر، واستقبل طلبات الشراء.</p></article>
+   <article class="landing-role"><span>03</span><strong data-ar="المورد ومقدم الحلول" data-en="Supplier & solution provider">المورد ومقدم الحلول</strong><p data-ar="قدّم المواد أو المعدات أو الحلول المرتبطة باحتياجات مشروع محدد." data-en="Offer materials, equipment or solutions in response to a project need.">قدّم المواد أو المعدات أو الحلول المرتبطة باحتياجات مشروع محدد.</p></article>
    <article class="landing-role"><span>04</span><strong data-ar="مدير المشروع وفريق الموقع" data-en="Project manager & field team">مدير المشروع وفريق الموقع</strong><p data-ar="وزّع المهام، أرسل التقارير، عالج الملاحظات، وتابع التقدم." data-en="Assign tasks, submit reports, resolve issues and track progress.">وزّع المهام، أرسل التقارير، عالج الملاحظات، وتابع التقدم.</p></article>
   </div>
  </section>
@@ -111,25 +328,35 @@ html[lang="en"] .top-user{direction:ltr}
  <section class="landing-deck" aria-labelledby="landingFlowTitle">
   <div class="landing-section-heading">
    <span class="landing-kicker" data-ar="سير عمل مترابط" data-en="A connected workflow">سير عمل مترابط</span>
-   <h3 id="landingFlowTitle" data-ar="من الطلب إلى التنفيذ والتسليم" data-en="From request to execution and handover">من الطلب إلى التنفيذ والتسليم</h3>
+   <h3 id="landingFlowTitle" data-ar="من الفكرة إلى إدارة المشروع والاستلام" data-en="From idea to project management and handover">من الفكرة إلى إدارة المشروع والاستلام</h3>
   </div>
   <div class="landing-steps">
    <div class="landing-step"><span>01</span><strong data-ar="حدّد" data-en="Define">حدّد</strong><p data-ar="المشروع والاحتياج" data-en="The project and need">المشروع والاحتياج</p></div>
-   <div class="landing-step"><span>02</span><strong data-ar="اطلب" data-en="Request">اطلب</strong><p data-ar="الخدمة أو مواد البناء" data-en="Service or materials">الخدمة أو مواد البناء</p></div>
-   <div class="landing-step"><span>03</span><strong data-ar="قارن" data-en="Compare">قارن</strong><p data-ar="العروض والشروط" data-en="Offers and terms">العروض والشروط</p></div>
+   <div class="landing-step"><span>02</span><strong data-ar="اطلب" data-en="Request">اطلب</strong><p data-ar="مع المتخصص المناسب" data-en="The right specialist">مع المتخصص المناسب</p></div>
+   <div class="landing-step"><span>03</span><strong data-ar="قارن" data-en="Compare">قارن</strong><p data-ar="النطاق والتكلفة والمدة والضمان" data-en="Scope, cost, timeline and warranty">النطاق والتكلفة والمدة والضمان</p></div>
    <div class="landing-step"><span>04</span><strong data-ar="نفّذ" data-en="Execute">نفّذ</strong><p data-ar="تابع الفريق والتوريد" data-en="Track teams and supply">تابع الفريق والتوريد</p></div>
    <div class="landing-step"><span>05</span><strong data-ar="استلم" data-en="Handover">استلم</strong><p data-ar="وثّق النتيجة والتكلفة" data-en="Record outcome and cost">وثّق النتيجة والتكلفة</p></div>
   </div>
  </section>
 
+ <section class="landing-deck landing-record" aria-labelledby="landingRecordTitle">
+  <div class="landing-section-heading">
+   <span class="landing-kicker" data-ar="الميزة التي تتراكم مع كل مشروع" data-en="An advantage that compounds with every project">الميزة التي تتراكم مع كل مشروع</span>
+   <h3 id="landingRecordTitle" data-ar="سجل تنفيذ موثّق، لا مجرد دليل أسماء." data-en="A verified execution record — not just a directory.">سجل تنفيذ موثّق، لا مجرد دليل أسماء.</h3>
+  </div>
+  <div class="landing-record-flow">
+   <span>المشروع</span><i>←</i><span>نطاق العمل</span><i>←</i><span>العروض والاتفاق</span><i>←</i><span>التنفيذ والتكلفة</span><i>←</i><span>المشكلات والاستلام</span>
+  </div>
+  <p data-ar="مع توثيق المشاريع الفعلية، يستطيع عَمِّر بناء سجل أداء يعتمد على معاملات ومراحل تنفيذ حقيقية. لا نعرض تقديرات تكلفة أو درجات أداء قبل توافر بيانات كافية ومتحقق منها." data-en="As real projects are documented, AMMIR can build performance records from actual transactions and delivery stages. Cost estimates and performance scores remain unavailable until sufficient verified data exists.">مع توثيق المشاريع الفعلية، يستطيع عَمِّر بناء سجل أداء يعتمد على معاملات ومراحل تنفيذ حقيقية. لا نعرض تقديرات تكلفة أو درجات أداء قبل توافر بيانات كافية ومتحقق منها.</p>
+ </section>
  <div class="landing-trust">
   <strong data-ar="الوضوح قبل الوعود" data-en="Clarity before promises">الوضوح قبل الوعود</strong>
   <p data-ar="عَمِّر ينظم الطلبات والعروض والقرارات وسجل المشروع. بيانات الموردين والأسعار والتوفر تأتي من أصحابها، ولا تُعرض الجهة كشريك معتمد أو موثّق قبل استكمال التحقق." data-en="AMMIR organizes requests, offers, decisions and project records. Supplier details, prices and availability come from their owners; no business is labelled verified before its checks are completed.">عَمِّر ينظم الطلبات والعروض والقرارات وسجل المشروع. بيانات الموردين والأسعار والتوفر تأتي من أصحابها، ولا تُعرض الجهة كشريك معتمد أو موثّق قبل استكمال التحقق.</p>
  </div>
 </section>
 <main class="auth-card">
- <div class="brand"><div class="brand-mark">ع</div><div><h1>عَمِّر | AMMIR</h1><small>تشغيل المشاريع والمشتريات والتوريد</small></div></div>
- <p class="auth-intro">مساحة واحدة تربط المشروع والمشتريات والتنفيذ.</p>
+ <div class="brand"><div class="brand-mark">ع</div><div><h1>عَمِّر | AMMIR</h1><small>نظام تشغيل رحلة البناء</small></div></div>
+ <p class="auth-intro">من التخطيط إلى التنفيذ والاستلام، في سجل مشروع واحد.</p>
  <section id="loginPanel"><h2 class="panel-title">تسجيل الدخول</h2>
   <form id="loginForm"><div class="field"><label for="loginEmail">البريد الإلكتروني</label><input id="loginEmail" type="email" autocomplete="email" required placeholder="name@example.com"></div><div class="field"><label for="loginPassword">كلمة المرور</label><input id="loginPassword" type="password" autocomplete="current-password" required placeholder="كلمة المرور"></div><button id="loginButton" class="btn primary block" type="submit">دخول إلى عَمِّر</button></form>
   <button class="text-link" type="button" data-auth-panel="reset">نسيت كلمة المرور؟</button><button class="text-link" type="button" data-auth-panel="signup">إنشاء حساب جديد</button>
@@ -140,14 +367,45 @@ html[lang="en"] .top-user{direction:ltr}
 </main></div>
 
 <div id="appShell" hidden>
-<header class="topbar"><div class="brand"><div class="brand-mark">ع</div><div><h1>عَمِّر | AMMIR</h1><small>تشغيل المشاريع والمشتريات والتوريد</small></div></div><div class="top-user"><button class="btn light" id="installButton" type="button" data-action="install" hidden>تثبيت التطبيق</button><button class="btn light" type="button" id="appLangToggle" data-action="language">English</button><button class="btn light notification-toggle" type="button" data-action="notifications">الإشعارات <span id="notificationCount" class="notification-badge" hidden>0</span></button><span class="email-label" id="headerEmail"></span><span class="avatar" id="userAvatar">ع</span></div></header>
+<header class="topbar"><div class="brand"><div class="brand-mark">ع</div><div><h1>عَمِّر | AMMIR</h1><small>نظام تشغيل رحلة البناء</small></div></div><div class="top-user"><button class="btn light" id="installButton" type="button" data-action="install" hidden>تثبيت التطبيق</button><button class="btn light" type="button" id="appLangToggle" data-action="language" data-language-switch>English</button><button class="btn light notification-toggle" type="button" data-action="notifications">الإشعارات <span id="notificationCount" class="notification-badge" hidden>0</span></button><span class="email-label" id="headerEmail"></span><span class="avatar" id="userAvatar">ع</span></div></header>
 <div class="layout">
-<aside class="sidebar"><div class="side-label">مساحة العمل</div><button class="nav-btn active" type="button" data-view="dashboard"><span class="nav-icon">⌂</span>الرئيسية</button><button class="nav-btn" type="button" data-view="projects"><span class="nav-icon">▤</span>مشاريعي</button><button class="nav-btn" type="button" data-view="form"><span class="nav-icon">＋</span>إنشاء مشروع</button><div class="sidebar-bottom"><div class="side-label">الحساب</div><button class="nav-btn" type="button" data-action="logout"><span class="nav-icon">↪</span>تسجيل الخروج</button></div></aside>
+<aside class="sidebar"><div class="side-label">مساحة العمل</div><button class="nav-btn active" type="button" data-view="dashboard"><span class="nav-icon">⌂</span>الرئيسية</button><button class="nav-btn" type="button" data-view="projects"><span class="nav-icon">▤</span>مشاريعي</button><button class="nav-btn" type="button" data-view="form"><span class="nav-icon">＋</span>إنشاء مشروع</button><button class="nav-btn" type="button" data-view="rfqInbox"><span class="nav-icon">✉</span>دعوات الأسعار</button><div class="sidebar-bottom"><div class="side-label">الحساب</div><button class="nav-btn" type="button" data-action="logout"><span class="nav-icon">↪</span>تسجيل الخروج</button></div></aside>
 <main class="content"><div id="appMessage" class="message" role="status" aria-live="polite"></div>
-<section id="dashboardView" class="view active"><div class="heading"><div><h2>الرئيسية</h2><p>نظرة عامة على مشاريعك العقارية.</p></div><button class="btn primary" type="button" data-view="form">＋ مشروع جديد</button></div>
- <div class="stats"><article class="stat"><div class="stat-label">إجمالي المشاريع</div><div class="stat-value" id="statProjects">—</div></article><article class="stat"><div class="stat-label">آخر مشروع أُضيف</div><div class="stat-value" id="statLatest" style="font-size:17px;direction:rtl">—</div></article><article class="stat"><div class="stat-label">حالة الاتصال</div><div class="stat-value" id="statConnection" style="font-size:17px;direction:rtl">متصل</div></article></div>
- <section class="panel"><div class="panel-head"><h3>أحدث المشاريع</h3><button class="btn light" type="button" data-view="projects">عرض الكل</button></div><div id="recentProjects" class="project-grid"><div class="empty">جارٍ تحميل المشاريع...</div></div></section>
- <div class="notice">بيانات المشاريع خاصة بحسابك وفق صلاحيات قاعدة البيانات. لا تشارك كلمة المرور، وسجّل الخروج عند استخدام جهاز مشترك.</div>
+
+<section id="dashboardView" class="view active">
+ <div class="heading"><div><h2>مساحة عملك</h2><p>صورة واضحة لما يجري في مشاريعك، دون أرقام تقديرية أو بيانات مصطنعة</p></div><button class="btn primary" type="button" data-view="form">＋ مشروع جديد</button></div>
+ <section class="ammir-welcome" aria-label="ملخص مساحة العمل">
+  <div class="ammir-welcome-copy"><span class="ammir-kicker">AMMIR PROJECT OPERATING SYSTEM</span><h3>من أول قرار إلى آخر تفصيلة في الموقع</h3><p>اجمع المشروع والفريق والميزانية والمشتريات والتنفيذ في سجل واحد يمكن الرجوع إليه ومراجعته</p>
+   <div class="ammir-welcome-actions"><button class="btn primary" type="button" data-view="form">ابدأ مشروعاً جديداً <span aria-hidden="true">←</span></button><button class="btn welcome-ghost" type="button" data-view="projects">استعرض المشاريع</button></div>
+  </div>
+  <div class="ammir-welcome-side"><div><small>إجمالي المشاريع المسجلة</small><strong id="statProjects">—</strong><span>المشاريع التي تملكها أو تشارك فيها</span></div></div>
+ </section>
+ <div class="ammir-section-head"><div><h3>مؤشرات المحفظة</h3><p>أرقام محسوبة من سجلات مشاريعك الفعلية</p></div><span id="statRequestion" class="pill">جارٍ التحقق من الاتصال</span></div>
+ <div class="ammir-overview">
+  <article class="ammir-metric"><div class="ammir-metric-top"><span>قيد التنفيذ</span><span class="ammir-metric-icon">↗</span></div><strong id="metricInProgress">—</strong><small>مشاريع بحالة تنفيذ</small></article>
+  <article class="ammir-metric"><div class="ammir-metric-top"><span>قيد التخطيط</span><span class="ammir-metric-icon">◷</span></div><strong id="metricPlanning">—</strong><small>مشاريع قبل بدء التنفيذ</small></article>
+  <article class="ammir-metric"><div class="ammir-metric-top"><span>مكتملة</span><span class="ammir-metric-icon">✓</span></div><strong id="metricCompleted">—</strong><small>مشاريع أُغلقت حالتها كمكتملة</small></article>
+  <article class="ammir-metric"><div class="ammir-metric-top"><span>مشتركة معك</span><span class="ammir-metric-icon">◎</span></div><strong id="metricShared">—</strong><small>مشاريع أنت عضو في فريقها</small></article>
+ </div>
+ <div class="ammir-dashboard-grid">
+  <section class="ammir-surface">
+   <div class="panel-head"><div><h3>توزيع حالات المشاريع</h3><p class="muted">التوزيع الحالي حسب حالة كل مشروع</p></div><button class="btn quiet" type="button" data-view="projects">كل المشاريع</button></div>
+   <div id="projectStatusBreakdown" class="ammir-status-list"></div>
+   <div class="ammir-insight"><strong>مبدأ عَمِّر التشغيلي</strong><p>كل تغيير في المشروع يجب أن يرتبط بمسؤول وقرار وتاريخ وسجل يمكن مراجعته، بدلاً من الاعتماد على رسائل متفرقة ووعود غير موثقة</p></div>
+  </section>
+  <section class="ammir-surface">
+   <div class="panel-head"><div><h3>اختصارات العمل</h3><p class="muted">انتقل مباشرة إلى الإجراء التالي</p></div></div>
+   <div class="ammir-quick-actions">
+    <button class="ammir-quick-action" type="button" data-view="form"><span class="ammir-quick-icon">＋</span><span><strong>إنشاء مشروع</strong><small>ابدأ مساحة تشغيل جديدة</small></span></button>
+    <button class="ammir-quick-action" type="button" data-view="projects"><span class="ammir-quick-icon">▤</span><span><strong>إدارة المشاريع</strong><small>افتح السجل وابحث</small></span></button>
+    <button class="ammir-quick-action" type="button" data-action="refresh"><span class="ammir-quick-icon">↻</span><span><strong>تحديث البيانات</strong><small>مزامنة السجلات الحالية</small></span></button>
+    <button class="ammir-quick-action" type="button" data-action="notifications"><span class="ammir-quick-icon">♧</span><span><strong>مركز الإشعارات</strong><small>راجع آخر التنبيهات</small></span></button>
+   </div>
+  </section>
+ </div>
+ <div class="ammir-section-head"><div><h3>آخر المشاريع</h3><p>أحدث السجلات التي لديك صلاحية الوصول إليها</p></div><button class="btn light" type="button" data-view="projects">عرض السجل الكامل ←</button></div>
+ <div id="recentProjects" class="project-grid"><div class="empty">جارٍ تحميل المشاريع...</div></div>
+ <div class="notice">البيانات المعروضة مرتبطة بسجلات حسابك وصلاحياته، ولا تُنشأ مؤشرات تقدم أو أسعار أو تقييمات دون بيانات موثقة</div>
 </section>
 <section id="projectsView" class="view"><div class="heading"><div><h2>مشاريعي</h2><p>استعرض المشاريع وابحث فيها وعدّل بياناتها.</p></div><button class="btn primary" type="button" data-view="form">＋ مشروع جديد</button></div>
  <section class="panel"><div class="panel-head"><h3>قائمة المشاريع</h3><button class="btn quiet" type="button" data-action="refresh">تحديث ↻</button></div><div class="toolbar"><input id="projectSearch" class="search-input" type="search" placeholder="ابحث بالعنوان أو الموقع أو الوصف..." aria-label="ابحث في المشاريع"></div><p id="projectCount" class="muted"></p><div id="allProjects" class="project-grid"><div class="empty">جارٍ تحميل المشاريع...</div></div></section>
@@ -167,11 +425,12 @@ html[lang="en"] .top-user{direction:ltr}
  </div><div class="form-actions"><button id="saveProjectButton" class="btn primary" type="submit">حفظ المشروع</button><button id="cancelProjectButton" class="btn quiet" type="button">إلغاء</button></div></form><div id="formMessage" class="message" role="status" aria-live="polite"></div></section>
  <div class="notice">يمكنك تعديل المعلومات الأساسية لاحقاً. لا توجد خاصية حذف نهائي حالياً حتى لا تفقد بيانات المشاريع بالخطأ.</div>
 </section>
+<section id="rfqInboxView" class="view"><div class="heading"><div><h2>دعوات عروض الأسعار</h2><p>الطلبات والترسيات الموجهة إليك كمورد أو مقدم خدمة</p></div><button class="btn light" type="button" data-rfq-inbox-action="refresh">تحديث ↻</button></div><div id="rfqInboxContent"><div class="empty">جارٍ التحميل...</div></div></section>
 </main></div>
-<nav class="mobile-nav" aria-label="التنقل الرئيسي"><button class="nav-btn active" type="button" data-view="dashboard"><span class="nav-icon">⌂</span>الرئيسية</button><button class="nav-btn" type="button" data-view="projects"><span class="nav-icon">▤</span>مشاريعي</button><button class="nav-btn" type="button" data-view="form"><span class="nav-icon">＋</span>مشروع جديد</button><button class="nav-btn" type="button" data-action="logout"><span class="nav-icon">↪</span>خروج</button></nav>
+<nav class="mobile-nav" aria-label="التنقل الرئيسي"><button class="nav-btn active" type="button" data-view="dashboard"><span class="nav-icon">⌂</span>الرئيسية</button><button class="nav-btn" type="button" data-view="projects"><span class="nav-icon">▤</span>مشاريعي</button><button class="nav-btn" type="button" data-view="form"><span class="nav-icon">＋</span>مشروع جديد</button><button class="nav-btn" type="button" data-view="rfqInbox"><span class="nav-icon">✉</span>دعوات</button><button class="nav-btn" type="button" data-action="logout"><span class="nav-icon">↪</span>خروج</button></nav>
 </div>
 
-<div id="detailBackdrop" class="modal-backdrop" hidden><section class="modal" role="dialog" aria-modal="true" aria-labelledby="detailTitle"><div class="modal-head"><h3 id="detailTitle">تفاصيل المشروع</h3><button id="closeDetail" class="modal-close" type="button" aria-label="إغلاق">×</button></div><div id="detailContent"></div><div class="form-actions"><button id="detailEdit" class="btn primary" type="button">تعديل بيانات المشروع</button><button id="detailCloseButton" class="btn quiet" type="button">إغلاق</button></div></section></div><div id="notificationBackdrop" class="modal-backdrop" hidden><section class="modal" role="dialog" aria-modal="true" aria-labelledby="notificationTitle"><div class="modal-head"><h3 id="notificationTitle">الإشعارات</h3><button id="closeNotifications" class="modal-close" type="button" aria-label="إغلاق">×</button></div><div id="notificationsContent"><div class="empty">جارٍ التحميل...</div></div></section></div>
+<div id="detailBackdrop" class="modal-backdrop" hidden><section class="modal ammir-workspace-modal" role="dialog" aria-modal="true" aria-labelledby="detailTitle"><div class="modal-head"><h3 id="detailTitle">تفاصيل المشروع</h3><button id="closeDetail" class="modal-close" type="button" aria-label="إغلاق">×</button></div><div id="detailContent"></div><div class="form-actions"><button id="detailEdit" class="btn primary" type="button">تعديل بيانات المشروع</button><button id="detailCloseButton" class="btn quiet" type="button">إغلاق</button></div></section></div><div id="notificationBackdrop" class="modal-backdrop" hidden><section class="modal" role="dialog" aria-modal="true" aria-labelledby="notificationTitle"><div class="modal-head"><h3 id="notificationTitle">الإشعارات</h3><button id="closeNotifications" class="modal-close" type="button" aria-label="إغلاق">×</button></div><div id="notificationsContent"><div class="empty">جارٍ التحميل...</div></div></section></div>
 
 <script>
 (function(){
@@ -180,21 +439,21 @@ const SUPABASE_URL='https://uutwijowzewmvvrzsaww.supabase.co';
 const SUPABASE_KEY='sb_publishable_o-zC0NdMggZbPPY2l1REhA_w8Sbvjw_';
 const APP_URL='https://ammar-app.vercel.app/';
 const $=id=>document.getElementById(id);
-let client=null,currentUser=null,deferredInstallPrompt=null,projectsCache=[],editingProjectId=null,recoveryMode=false,lastViewedProjectId=null,activeProject=null,moduleTab='tasks',pendingInviteToken=new URLSearchParams(location.search).get('invite')||localStorage.getItem('ammar_pending_invite')||null,inviteAccepting=false,notificationTimer=null,lastInviteUrl='',moduleData={tasks:[],expenses:[],quotes:[],updates:[],documents:[],payments:[],activity:[],comments:[],members:[],invitations:[],siteReports:[],issues:[],changeOrders:[],handover:[],paymentMilestones:[],paymentEvents:[]},moduleLoadWarnings=[];
+let client=null,currentUser=null,deferredInstallPrompt=null,projectsCache=[],editingProjectId=null,recoveryMode=false,lastViewedProjectId=null,activeProject=null,moduleTab='tasks',pendingInviteToken=new URLSearchParams(location.search).get('invite')||localStorage.getItem('ammar_pending_invite')||null,inviteAccepting=false,notificationTimer=null,lastInviteUrl='',moduleData={tasks:[],expenses:[],quotes:[],updates:[],documents:[],payments:[],activity:[],comments:[],members:[],invitations:[],siteReports:[],issues:[],changeOrders:[],handover:[],paymentMilestones:[],paymentEvents:[],verifiedProviders:[]},moduleLoadWarnings=[],moduleLoading=false,moduleLoadRequest=0;
 if(pendingInviteToken)localStorage.setItem('ammar_pending_invite',pendingInviteToken);
 const projectStatusLabels={planning:'قيد التخطيط',approved:'معتمد',in_progress:'قيد التنفيذ',on_hold:'متوقف مؤقتاً',completed:'مكتمل',cancelled:'ملغي'};
 const memberRoleLabels={manager:'مدير مشروع',supervisor:'مشرف',engineer:'مهندس',accountant:'محاسب',worker:'منفذ',viewer:'مشاهدة فقط'};
 
 const translations={
-'إدارة مشاريع ترميم وصيانة العقارات':'Renovation & Property Maintenance Management',
-'مكان واحد لتنظيم مشاريع العقارات ومتابعة تفاصيلها.':'One place to organize property projects and track every detail.',
+'إدارة مشاريع البناء والترميم والمقاولات':'Construction, Renovation & Contracting Project Management',
+'منصة واحدة لإدارة مشاريع البناء والمقاولات والتوريد ومتابعة التنفيذ':'One workspace for construction, contracting, procurement and project delivery.',
 'تسجيل الدخول':'Sign in','البريد الإلكتروني':'Email','كلمة المرور':'Password','دخول إلى عَمِّر':'Sign in to AMMIR',
 'نسيت كلمة المرور؟':'Forgot password?','إنشاء حساب جديد':'Create account','العودة إلى تسجيل الدخول':'Back to sign in',
 'استعادة كلمة المرور':'Reset password','إرسال رابط الاستعادة':'Send reset link','كلمة المرور الجديدة':'New password',
 'تأكيد كلمة المرور':'Confirm password','حفظ كلمة المرور':'Save password','8 أحرف على الأقل':'At least 8 characters',
-'الرئيسية':'Dashboard','نظرة عامة على مشاريعك العقارية.':'An overview of your property projects.',
-'مشاريعي':'My projects','إنشاء مشروع':'Create project','مشروع جديد':'New project','حالة الاتصال':'Connection status',
-'متصل':'Connected','أحدث المشاريع':'Recent projects','عرض الكل':'View all','قائمة المشاريع':'Project list',
+'الرئيسية':'Dashboard','نظرة عامة على مشاريع البناء والمقاولات الخاصة بك.':'An overview of your construction and contracting projects.',
+'مشاريعي':'My projects','إنشاء مشروع':'Create project','مشروع جديد':'New project','حالة الاتصال':'Requestion status',
+'متصل':'Requested','أحدث المشاريع':'Recent projects','عرض الكل':'View all','قائمة المشاريع':'Project list',
 'تحديث ↻':'Refresh ↻','عنوان المشروع':'Project title','وصف المشروع':'Project description','موقع العقار':'Property location',
 'نوع العقار':'Property type','وصف الميزانية (اختياري)':'Budget description (optional)','قيمة الميزانية المعتمدة':'Approved budget',
 'عملة الميزانية':'Budget currency','حالة المشروع':'Project status','تاريخ البداية':'Start date',
@@ -204,7 +463,7 @@ const translations={
 'ابحث بالعنوان أو الموقع أو الوصف...':'Search by title, location or description...','التفاصيل':'Details',
 'تعديل':'Edit','الميزانية:':'Budget:','أُنشئ:':'Created:','الموقع غير محدد':'Location not specified',
 'نوع العقار غير محدد':'Property type not specified','مشروع مشترك':'Shared project','لا يوجد وصف مضاف.':'No description added.',
-'لا توجد مشاريع حتى الآن':'No projects yet','ابدأ بإضافة أول مشروع لترميم أو صيانة عقار.':'Create your first renovation or maintenance project.',
+'لا توجد مشاريع حتى الآن':'No projects yet','ابدأ بإنشاء أول مشروع بناء أو ترميم.':'Create your first construction or renovation project.',
 'تثبيت التطبيق':'Install app','الإشعارات':'Notifications','مساحة العمل':'Workspace','الحساب':'Account',
 'تسجيل الخروج':'Sign out','المهام':'Tasks','التقدم':'Progress','العروض':'Quotations','المصروفات':'Expenses',
 'المالية':'Finance','الملفات':'Files','الفريق':'Team','تقارير الموقع':'Site reports','العيوب والملاحظات':'Issues & defects',
@@ -314,9 +573,56 @@ const translations={
 };
 const originalTextNodes=new WeakMap(),originalAttributes=new WeakMap();
 let appLanguage=localStorage.getItem('ammar_language')||'ar';
+Object.assign(translations,{
+ 'مساحة المشروع':'Project workspace',
+ '◷ مالك المشروع':'◷ Project owner',
+ '◷ مدير المشروع':'◷ Project manager',
+ '◷ مشرف':'◷ Supervisor',
+ '◷ مهندس':'◷ Engineer',
+ '◷ محاسب':'◷ Accountant',
+ '◷ عضو فريق':'◷ Team member',
+ '◷ مشاهدة فقط':'◷ Read only',
+ 'تجاري':'Commercial','سكني':'Residential','إداري':'Administrative',
+ 'وصف المشروع':'Project description',
+'مشاريعي':'My projects','إغلاق مساحة المشروع':'Close project workspace',
+ 'تعديل المشروع':'Edit project','تصدير التقرير':'Export report','إدارة المشروع':'Project management',
+ 'التوريد والمالية':'Procurement & finance','الموقع والجودة':'Site & quality','الفريق والسجلات':'Team & records',
+ 'الملخص':'Overview','المهام':'Tasks','التقدم':'Progress','العروض':'Quotations','المصروفات':'Expenses',
+ 'المالية':'Financials','مراحل الدفع البنكي':'Bank payment milestones','تقارير الموقع':'Site reports',
+ 'العيوب والملاحظات':'Issues & observations','طلبات التغيير':'Change requests','الاستلام':'Handover',
+ 'الفريق':'Team','الملفات':'Files','التعليقات':'Comments','سجل النشاط':'Activity log',
+ 'مالك المشروع':'Project owner','مدير المشروع':'Project manager','مشرف':'Supervisor','مهندس':'Engineer',
+ 'محاسب':'Accountant','عضو فريق':'Team member','مشاهدة فقط':'Read only',
+ 'المهام المكتملة':'Completed tasks','ملاحظات مفتوحة':'Open issues','عروض الأسعار':'Quotations',
+ 'فريق المشروع':'Project team','العروض المسجلة لهذا المشروع':'Quotations recorded for this project',
+ 'المالك والأعضاء المسجلون':'Owner and registered members','الموقع غير محدد':'Location not set',
+ 'نوع العقار غير محدد':'Property type not set','تعريف المشروع':'Project details',
+ 'تاريخ البداية':'Start date','التسليم المستهدف':'Target handover','الميزانية الرقمية':'Budget',
+ 'المصروفات المسجلة حسب العملة':'Expenses by currency','آخر النشاطات المسجلة':'Latest recorded activity',
+ 'سجل النشاط الكامل':'Full activity log','الوحدات المتاحة في هذا المشروع':'Available project modules',
+ 'بنود استلام معلقة':'Pending handover items','لا توجد مصروفات مسجلة بعد.':'No expenses recorded yet.',
+ 'لم تُسجل مهام بعد':'No tasks recorded yet','من إجمالي المهام المسجلة':'of all recorded tasks',
+ 'لا يوجد نشاط مسجل بعد. ستظهر هنا الإجراءات والقرارات التي تحفظها وحدات المشروع.':'No activity has been recorded yet. Actions and decisions saved in project modules will appear here.',
+ 'جارٍ تحميل بيانات المشروع...':'Loading project data...',
+ 'جارٍ التحميل...':'Loading...',
+ 'تاريخ الإنشاء:':'Created:',
+ 'البداية:':'Start:',
+ 'التسليم المستهدف:':'Target handover:',
+ 'تعريف المشروع':'Project details',
+ 'ملاحظات مسجلة إجمالاً':'observations recorded in total',
+ 'إجمالي المصروفات':'Total expenses',
+ 'لا يوجد وصف تفصيلي للمشروع حتى الآن. أضف وصفاً واضحاً لنطاق العمل لتوحيد فهم المالك والفريق.':'No project description yet. Add a clear scope so the owner and team share the same understanding.',
+ 'تحديث المبنى ومعالجة الواجهات':'Building upgrades and facade repairs'
+});
 function translated(value){
  const trimmed=value.trim();
  if(translations[trimmed])return value.replace(trimmed,translations[trimmed]);
+ const budgetMatch=trimmed.match(/^(◉ )?الميزانية:\s*(.+)$/);if(budgetMatch)return value.replace(trimmed,(budgetMatch[1]||'')+'Budget: '+budgetMatch[2]);
+ const createdMatch=trimmed.match(/^تاريخ الإنشاء:\s*(.+)$/);if(createdMatch)return value.replace(trimmed,'Created: '+createdMatch[1]);
+ const startMatch=trimmed.match(/^البداية:\s*(.+)$/);if(startMatch)return value.replace(trimmed,'Start: '+startMatch[1]);
+ const targetMatch=trimmed.match(/^التسليم المستهدف:\s*(.+)$/);if(targetMatch)return value.replace(trimmed,'Target handover: '+targetMatch[1]);
+ const expenseMatch=trimmed.match(/^إجمالي المصروفات · (.+)$/);if(expenseMatch)return value.replace(trimmed,'Total expenses · '+expenseMatch[1]);
+ const observationMatch=trimmed.match(/^(\d+) ملاحظة مسجلة إجمالاً$/);if(observationMatch)return value.replace(trimmed,observationMatch[1]+' observations recorded in total');
  const m=trimmed.match(/^عرض (\d+) من (\d+) مشروع$/);
  if(m)return value.replace(trimmed,'Showing '+m[1]+' of '+m[2]+' projects');
  const durationMatch=trimmed.match(/^التنفيذ: (\d+) يوم$/);if(durationMatch)return value.replace(trimmed,'Duration: '+durationMatch[1]+' days');
@@ -345,7 +651,7 @@ function applyLanguage(){
   if(!attrs){attrs={};['placeholder','aria-label','title'].forEach(k=>{if(el.hasAttribute(k))attrs[k]=el.getAttribute(k);});originalAttributes.set(el,attrs);}
   ['placeholder','aria-label','title'].forEach(k=>{if(attrs[k]!==undefined)el.setAttribute(k,en?translated(attrs[k]):attrs[k]);});
  });
- const toggle=$('appLangToggle');if(toggle){const label=en?'العربية':'English';if(toggle.textContent!==label)toggle.textContent=label;}
+ document.querySelectorAll('[data-language-switch]').forEach(toggle=>{const label=en?'العربية':'English';if(toggle.textContent!==label)toggle.textContent=label;});
  const landing=$('publicLanding');
  if(landing){landing.querySelectorAll('[data-ar][data-en]').forEach(el=>{const value=en?el.dataset.en:el.dataset.ar;if(el.textContent!==value)el.textContent=value;});landing.dir=en?'ltr':'rtl';landing.style.textAlign=en?'left':'right';}
  const marketing=$('marketingLang');if(marketing){const label=en?'العربية':'EN';if(marketing.textContent!==label)marketing.textContent=label;}
@@ -360,7 +666,7 @@ function esc(value){return String(value==null?'':value).replace(/[&<>"']/g,c=>({
 function authPanel(name){['login','signup','reset'].forEach(p=>$(p+'Panel').hidden=p!==name);message($('authMessage'),'');}
 function showAuth(text,type){currentUser=null;window.ammarCurrentUser=null;if(notificationTimer){clearInterval(notificationTimer);notificationTimer=null;}$('appShell').hidden=true;$('authShell').hidden=false;authPanel('login');if(text)message($('authMessage'),text,type||'info');}
 function showRecovery(){recoveryMode=true;authPanel('reset');$('resetRequestForm').hidden=true;$('newPasswordForm').hidden=false;message($('authMessage'),'أدخل كلمة المرور الجديدة.','info');}
-function activeView(name){['dashboard','projects','form'].forEach(v=>$(v+'View').classList.toggle('active',v===name));document.querySelectorAll('[data-view]').forEach(b=>b.classList.toggle('active',b.dataset.view===name));if(name==='projects')renderProjects();if(name==='dashboard')renderDashboard();}
+function activeView(name){['dashboard','projects','form','rfqInbox'].forEach(v=>{const n=$(v+'View');if(n)n.classList.toggle('active',v===name);});document.querySelectorAll('[data-view]').forEach(b=>b.classList.toggle('active',b.dataset.view===name));if(name==='projects')renderProjects();if(name==='dashboard')renderDashboard();if(name==='rfqInbox')loadRfqInbox();}
 function showApp(user){if(recoveryMode)return;currentUser=user||currentUser;if(!currentUser)return;window.ammarSupabase=client;window.ammarCurrentUser=currentUser;$('authShell').hidden=true;$('appShell').hidden=false;$('headerEmail').textContent=currentUser.email||'';$('userAvatar').textContent=(currentUser.email||'ع').trim().charAt(0).toUpperCase();activeView('dashboard');loadProjects();loadNotifications();if(!notificationTimer)notificationTimer=setInterval(()=>{if(currentUser&&!document.hidden)loadNotifications();},60000);if(pendingInviteToken)acceptPendingInvitation();}
 function goForm(project){
  editingProjectId=project?String(project.id):null;$('projectForm').reset();
@@ -381,7 +687,12 @@ function goForm(project){
 function dateText(value){if(!value)return appLanguage==='en'?'Unavailable':'غير متاح';const d=new Date(value);if(Number.isNaN(d.getTime()))return appLanguage==='en'?'Unavailable':'غير متاح';try{return new Intl.DateTimeFormat(appLanguage==='en'?'en-US':'ar',{year:'numeric',month:'short',day:'numeric'}).format(d);}catch(e){return d.toLocaleDateString();}}
 function row(label,value){return'<div class="detail-row"><div class="detail-label">'+esc(label)+'</div><div class="detail-value">'+esc(value||'غير محدد')+'</div></div>';}
 function details(project){
- if(!project)return;if(!activeProject||String(activeProject.id)!==String(project.id)){lastInviteUrl='';moduleLoadWarnings=[];moduleData={tasks:[],expenses:[],quotes:[],updates:[],documents:[],payments:[],activity:[],comments:[],members:[],invitations:[],siteReports:[],issues:[],changeOrders:[],handover:[],paymentMilestones:[],paymentEvents:[]};}activeProject=project;lastViewedProjectId=String(project.id);moduleTab='tasks';
+ if(!project)return;
+ if(!activeProject||String(activeProject.id)!==String(project.id)){
+  lastInviteUrl='';moduleLoadWarnings=[];
+  moduleData={tasks:[],expenses:[],quotes:[],updates:[],documents:[],payments:[],activity:[],comments:[],members:[],invitations:[],siteReports:[],issues:[],changeOrders:[],handover:[],paymentMilestones:[],paymentEvents:[],verifiedProviders:[]};
+ }
+ activeProject=project;lastViewedProjectId=String(project.id);moduleLoading=true;moduleTab='overview';
  $('detailTitle').textContent=project.title||'تفاصيل المشروع';
  $('detailEdit').hidden=String(project.client_id)!==String(currentUser.id);
  $('detailBackdrop').hidden=false;renderWorkspace();loadProjectModules();
@@ -420,16 +731,54 @@ function logActivity(eventType,summary,entityType,entityId,metadata){
  .then(r=>{if(r.error)console.warn('AMMIR activity log:',r.error.message);});
 }
 function workspaceTabs(){
- const tabs=[['tasks','المهام'],['progress','التقدم'],['quotes','العروض'],['expenses','المصروفات'],['finance','المالية'],['documents','الملفات'],['team','الفريق'],['siteReports','تقارير الموقع'],['issues','العيوب والملاحظات'],['changeOrders','طلبات التغيير'],['handover','الاستلام'],['paymentProtection','مراحل الدفع البنكي'],['comments','التعليقات'],['activity','سجل النشاط'],['overview','الملخص']];
- return '<div class="actions" style="margin:14px 0;gap:6px">'+tabs.map(([k,v])=>'<button class="btn '+(moduleTab===k?'primary':'quiet')+'" type="button" data-module-tab="'+k+'">'+v+'</button>').join('')+'<button class="btn light" type="button" data-export-project>تصدير التقرير</button></div><div id="modulePanel"></div>';
+ const groups=[
+  {label:'إدارة المشروع',items:[['overview','الملخص','⌂'],['tasks','المهام','✓'],['progress','التقدم','↗']]},
+  {label:'إدارة التنفيذ',items:[['execution','نطاق العمل وطلبات العروض','▦']]},
+  {label:'التوريد والمالية',items:[['quotes','العروض','▤'],['expenses','المصروفات','◉'],['finance','المالية','＄'],['paymentProtection','مراحل الدفع البنكي','⇄']]},
+  {label:'الموقع والجودة',items:[['siteReports','تقارير الموقع','▧'],['issues','العيوب والملاحظات','!'],['changeOrders','طلبات التغيير','↔'],['handover','الاستلام','✓']]},
+  {label:'الفريق والسجلات',items:[['team','الفريق','◎'],['documents','الملفات','▣'],['comments','التعليقات','…'],['activity','سجل النشاط','◷']]}
+ ];
+ return '<div class="ammir-project-navigation"><div class="ammir-tab-groups" role="tablist" aria-label="أقسام المشروع">'+groups.map(group=>'<div class="ammir-tab-group"><span class="ammir-tab-group-label">'+group.label+'</span>'+group.items.map(([k,label,icon])=>'<button class="ammir-project-tab '+(moduleTab===k?'active':'')+'" type="button" role="tab" aria-selected="'+(moduleTab===k?'true':'false')+'" data-module-tab="'+k+'"><span aria-hidden="true">'+icon+'</span>'+label+'</button>').join('')+'</div>').join('')+'</div></div><div class="ammir-project-section"><div id="modulePanel" role="tabpanel"></div></div>';
 }
 function renderWorkspace(){
  if(!activeProject)return;
- $('detailContent').innerHTML=workspaceTabs();renderModulePanel();
- if(moduleLoadWarnings.length){
-  const box=$('modulePanel');
-  if(box)box.insertAdjacentHTML('afterbegin','<div class="message error">بعض أقسام المشروع لم تُحمّل ('+esc(moduleLoadWarnings.join('، '))+'). تأكد من تطبيق آخر ترحيل قاعدة بيانات في Supabase. بقية الأقسام المتاحة ستظل تعمل.</div>');
- }
+ const p=activeProject,owner=String(p.client_id)===String(currentUser.id);
+ const status=projectStatusLabels[p.status]||projectStatusLabels.planning;
+ const role=currentProjectRole();
+ const roleLabels={owner:'مالك المشروع',manager:'مدير المشروع',supervisor:'مشرف',engineer:'مهندس',accountant:'محاسب',worker:'عضو فريق',viewer:'مشاهدة فقط'};
+ const doneTasks=(moduleData.tasks||[]).filter(x=>x.status==='done').length;
+ const openIssues=(moduleData.issues||[]).filter(x=>['open','in_progress'].includes(x.status)).length;
+ const quoteCount=(moduleData.quotes||[]).length;
+ const memberCount=(moduleData.members||[]).length+1;
+ const budget=p.budget_amount!=null?(Number(p.budget_amount).toLocaleString('en-US')+' '+String(p.budget_currency||'')):(String(p.budget||'').trim()||'غير محددة');
+ const meta=[
+  '<span>⌖ '+esc(p.property_location||'الموقع غير محدد')+'</span>',
+  '<span>▦ '+esc(p.property_type||'نوع العقار غير محدد')+'</span>',
+  '<span>◷ '+esc(roleLabels[role]||role)+'</span>',
+  '<span>◉ '+esc('الميزانية: '+budget)+'</span>'
+ ].join('');
+ $('detailContent').innerHTML='<div class="ammir-project-workspace">'+
+  '<header class="ammir-project-toolbar"><div class="ammir-project-breadcrumb"><span>عَمِّر</span><span aria-hidden="true">/</span><span>مشاريعي</span><span aria-hidden="true">/</span><strong>'+esc(p.title||'تفاصيل المشروع')+'</strong></div>'+
+  '<div class="ammir-project-toolbar-actions"><button class="btn light" type="button" data-workspace-language data-language-switch aria-label="تغيير اللغة">English</button><button class="btn light" type="button" data-export-project>تصدير التقرير</button>'+
+   (owner?'<button class="btn primary" type="button" data-workspace-edit>تعديل المشروع</button>':'')+
+   '<button class="ammir-project-close" type="button" data-workspace-close aria-label="إغلاق مساحة المشروع">×</button></div></header>'+
+  '<section class="ammir-project-hero"><div class="ammir-project-hero-main"><div class="ammir-project-eyebrow">AMMIR · PROJECT WORKSPACE</div>'+
+   '<div class="ammir-project-title-row"><h2>'+esc(p.title||'مشروع بدون عنوان')+'</h2><span class="ammir-project-status">'+esc(status)+'</span></div>'+
+   '<p class="ammir-project-description">'+esc(p.description||'لا يوجد وصف تفصيلي للمشروع حتى الآن. أضف وصفاً واضحاً لنطاق العمل لتوحيد فهم المالك والفريق.')+'</p>'+
+   '<div class="ammir-project-meta">'+meta+'<span>تاريخ الإنشاء: '+esc(dateText(p.created_at))+'</span><span>البداية: '+esc(dateText(p.start_date))+'</span><span>التسليم المستهدف: '+esc(dateText(p.target_end_date))+'</span></div>'+
+  '</div></section>'+
+  '<section class="ammir-project-pulse" aria-label="مؤشرات المشروع">'+
+   '<article class="ammir-pulse-card"><div class="ammir-pulse-label"><span>المهام المكتملة</span><span class="ammir-pulse-icon">✓</span></div><strong class="ammir-pulse-value">'+(moduleLoading?'—':doneTasks+'/'+(moduleData.tasks||[]).length)+'</strong><small class="ammir-pulse-foot">'+(moduleLoading?'جارٍ التحميل...':((moduleData.tasks||[]).length?'من إجمالي المهام المسجلة':'لم تُسجل مهام بعد'))+'</small></article>'+
+   '<article class="ammir-pulse-card"><div class="ammir-pulse-label"><span>ملاحظات مفتوحة</span><span class="ammir-pulse-icon">!</span></div><strong class="ammir-pulse-value">'+(moduleLoading?'—':openIssues)+'</strong><small class="ammir-pulse-foot">'+(moduleData.issues||[]).length+' ملاحظة مسجلة إجمالاً</small></article>'+
+   '<article class="ammir-pulse-card"><div class="ammir-pulse-label"><span>عروض الأسعار</span><span class="ammir-pulse-icon">▤</span></div><strong class="ammir-pulse-value">'+(moduleLoading?'—':quoteCount)+'</strong><small class="ammir-pulse-foot">العروض المسجلة لهذا المشروع</small></article>'+
+   '<article class="ammir-pulse-card"><div class="ammir-pulse-label"><span>فريق المشروع</span><span class="ammir-pulse-icon">◎</span></div><strong class="ammir-pulse-value">'+(moduleLoading?'—':memberCount)+'</strong><small class="ammir-pulse-foot">المالك والأعضاء المسجلون</small></article>'+
+  '</section>'+
+  (moduleLoadWarnings.length?'<div class="message error ammir-workspace-warning">تعذر تحميل بعض الأقسام: '+esc(moduleLoadWarnings.join('، '))+'. الأقسام الأخرى متاحة. لا تعتبر هذه السجلات فارغة حتى ينجح الاتصال بها.</div>':'')+
+  workspaceTabs()+
+  '</div>';
+ renderModulePanel();
+ const languageSwitch=$('detailContent').querySelector('[data-workspace-language]');
+ if(languageSwitch)languageSwitch.addEventListener('click',()=>setAppLanguage(appLanguage==='en'?'ar':'en'));
 }
 
 function moduleRows(items,kind){
@@ -466,7 +815,7 @@ function assigneeLabel(id){
 function moduleForm(kind){
  if(kind==='tasks')return '<form data-module-form="tasks"><div class="field"><label>اسم المهمة *</label><input name="title" maxlength="180" required></div><div class="field"><label>التفاصيل</label><textarea name="details"></textarea></div><div class="form-grid"><div class="field"><label>المسؤول من فريق المشروع</label><select name="assigned_to">'+taskAssigneeOptions()+'</select></div><div class="field"><label>تاريخ الاستحقاق</label><input name="due_date" type="date"></div></div><button class="btn primary" type="submit">إضافة المهمة</button></form>';
  if(kind==='expenses')return '<form data-module-form="expenses"><div class="field"><label>وصف المصروف *</label><input name="description" maxlength="240" required></div><div class="form-grid"><div class="field"><label>المبلغ *</label><input name="amount" type="number" min="0" step="0.01" required></div><div class="field"><label>العملة</label><input name="currency" maxlength="12"></div><div class="field"><label>التاريخ</label><input name="spent_on" type="date"></div></div><div class="field"><label>ملاحظات</label><textarea name="notes"></textarea></div><button class="btn primary" type="submit">تسجيل المصروف</button></form>';
- if(kind==='quotes')return '<form data-module-form="quotes"><div class="field"><label>اسم المقاول أو المورد *</label><input name="supplier_name" maxlength="180" required></div><div class="field"><label>عنوان العرض *</label><input name="title" maxlength="180" required></div><div class="form-grid"><div class="field"><label>قيمة العرض</label><input name="amount" type="number" min="0" step="0.01"></div><div class="field"><label>العملة (رمز ISO مثل SDG / SAR / AED / USD)</label><input name="currency" maxlength="3" pattern="[A-Za-z]{3}"></div><div class="field"><label>البريد للتواصل</label><input name="contact_email" type="email" maxlength="254"></div><div class="field"><label>الهاتف / واتساب</label><input name="contact_phone" maxlength="40"></div><div class="field"><label>مدة التنفيذ (أيام)</label><input name="duration_days" type="number" min="1" max="3650"></div><div class="field"><label>مدة الضمان (أشهر)</label><input name="warranty_months" type="number" min="0" max="600"></div><div class="field"><label>صلاحية العرض حتى</label><input name="valid_until" type="date"></div></div><div class="field"><label>التفاصيل ونطاق العمل</label><textarea name="details" maxlength="5000"></textarea></div><div class="field"><label>يشمل العرض</label><textarea name="inclusions" maxlength="3000"></textarea></div><div class="field"><label>لا يشمل العرض</label><textarea name="exclusions" maxlength="3000"></textarea></div><button class="btn primary" type="submit">إضافة عرض السعر</button></form>';
+ if(kind==='quotes')return '<form data-module-form="quotes"><div class="field"><label>اسم المقاول أو المورد *</label><input name="supplier_name" maxlength="180" required></div><div class="field"><label>عنوان العرض *</label><input name="title" maxlength="180" required></div><div class="form-grid"><div class="field"><label>قيمة العرض</label><input name="amount" type="number" min="0" step="0.01"></div><div class="field"><label>العملة (رمز ISO مثل SDG / SAR / AED / USD)</label><input name="currency" maxlength="3" pattern="[A-Za-z]{3}"></div><div class="field"><label>البريد للاطلب</label><input name="contact_email" type="email" maxlength="254"></div><div class="field"><label>الهاتف / واتساب</label><input name="contact_phone" maxlength="40"></div><div class="field"><label>مدة التنفيذ (أيام)</label><input name="duration_days" type="number" min="1" max="3650"></div><div class="field"><label>مدة الضمان (أشهر)</label><input name="warranty_months" type="number" min="0" max="600"></div><div class="field"><label>صلاحية العرض حتى</label><input name="valid_until" type="date"></div></div><div class="field"><label>التفاصيل ونطاق العمل</label><textarea name="details" maxlength="5000"></textarea></div><div class="field"><label>يشمل العرض</label><textarea name="inclusions" maxlength="3000"></textarea></div><div class="field"><label>لا يشمل العرض</label><textarea name="exclusions" maxlength="3000"></textarea></div><button class="btn primary" type="submit">إضافة عرض السعر</button></form>';
  if(kind==='progress')return '<form data-module-form="progress"><div class="field"><label>نسبة الإنجاز: <output id="progressOutput">0%</output></label><input name="progress" type="range" min="0" max="100" value="0" oninput="document.getElementById(\'progressOutput\').value=this.value+\'%\'"></div><div class="field"><label>ملاحظات التقدم</label><textarea name="note" maxlength="2000"></textarea></div><button class="btn primary" type="submit">حفظ تحديث التقدم</button></form>';
 
  if(kind==='siteReports')return '<form data-module-form="siteReports"><div class="form-grid"><div class="field"><label>تاريخ التقرير</label><input name="report_date" type="date" value="'+new Date().toISOString().slice(0,10)+'"></div><div class="field"><label>حالة الطقس</label><input name="weather" maxlength="80" placeholder="مشمس، ممطر..."></div><div class="field"><label>عدد أفراد الطاقم</label><input name="crew_count" type="number" min="0" max="10000" value="0"></div><div class="field"><label>نسبة التقدم (اختياري)</label><input name="progress_percent" type="number" min="0" max="100" placeholder="0 - 100"></div></div><div class="field"><label>الأعمال المنفذة اليوم *</label><textarea name="completed_work" maxlength="5000" required></textarea></div><div class="field"><label>المعوقات والتأخيرات</label><textarea name="blockers" maxlength="3000"></textarea></div><div class="field"><label>ملاحظات السلامة</label><textarea name="safety_notes" maxlength="3000"></textarea></div><button class="btn primary" type="submit">حفظ تقرير الموقع</button></form>';
@@ -564,34 +913,325 @@ function renderQuotesPanel(){
  const compare=Object.entries(groups).map(([c,values])=>{const sorted=values.slice().sort((a,b)=>a-b);return '<div class="finance-metric"><span class="muted">أقل سعر مسجل · '+esc(c)+'</span><strong>'+esc(sorted[0].toLocaleString('en-US'))+'</strong><small class="muted">'+values.length+' عرض · أعلى '+esc(sorted[sorted.length-1].toLocaleString('en-US'))+'</small></div>';}).join('');
  return '<section class="panel"><div class="panel-head"><h3>مقارنة عروض المقاولين والموردين</h3><span class="muted">'+items.length+' عرض</span></div><div class="notice">المقارنة السعرية تتم داخل العملة نفسها فقط. السعر الأقل لا يعني العرض الأفضل؛ راجع نطاق العمل والمدة والضمان والاستثناءات قبل الاختيار.</div>'+(compare?'<div class="finance-grid">'+compare+'</div>':'<div class="notice">أدخل عروضاً بعملة واضحة للمقارنة. لا تتم مقارنة أسعار بعملات مختلفة.</div>')+(canWriteModule('quotes')?moduleForm('quotes'):'<div class="notice">صلاحية مشاهدة فقط.</div>')+'</section><section class="panel"><h3>العروض المسجلة</h3><div class="project-grid">'+moduleRows(items,'quotes')+'</div></section>';
 }
+
+function parseAmmirCsv(text){
+ const rows=[];let row=[],cell='',quoted=false;
+ const source=String(text||'').replace(/^\uFEFF/,'');
+ for(let i=0;i<source.length;i++){
+  const ch=source[i],next=source[i+1];
+  if(quoted){if(ch==='"'&&next==='"'){cell+='"';i++;}else if(ch==='"')quoted=false;else cell+=ch;}
+  else if(ch==='"')quoted=true;
+  else if(ch===','){row.push(cell);cell='';}
+  else if(ch==='\n'){row.push(cell.replace(/\r$/,''));if(row.some(x=>String(x).trim()))rows.push(row);row=[];cell='';}
+  else cell+=ch;
+ }
+ row.push(cell.replace(/\r$/,''));if(row.some(x=>String(x).trim()))rows.push(row);
+ if(rows.length<2)throw new Error('ملف CSV فارغ أو لا يحتوي صفوف بنود');
+ const aliases={
+  item_code:['item_code','code','كود البند','الرمز'],
+  category:['category','التصنيف'],
+  description:['description','item','الوصف','البند'],
+  specification:['specification','spec','المواصفات'],
+  unit:['unit','الوحدة'],
+  quantity:['quantity','qty','الكمية'],
+  unit_rate:['unit_rate','rate','سعر الوحدة'],
+  currency:['currency','العملة'],
+  notes:['notes','ملاحظات']
+ };
+ const header=rows[0].map(x=>String(x).trim().replace(/^\uFEFF/,'').toLowerCase());
+ const positions={};
+ for(const [key,names] of Object.entries(aliases)){const index=header.findIndex(h=>names.includes(h));if(index>=0)positions[key]=index;}
+ if(!('description' in positions)||!('unit' in positions)||!('quantity' in positions))throw new Error('يجب أن يحتوي الملف على أعمدة description وunit وquantity على الأقل');
+ return rows.slice(1).filter(r=>r.some(x=>String(x).trim())).map((r,index)=>{
+  const get=k=>positions[k]===undefined?'':String(r[positions[k]]??'').trim();
+  const quantity=Number(get('quantity')),rateText=get('unit_rate'),rate=rateText===''?null:Number(rateText);
+  if(!get('description')||!get('unit')||!Number.isFinite(quantity)||quantity<=0)throw new Error('بيانات البند رقم '+(index+2)+' غير مكتملة: الوصف والوحدة والكمية مطلوبة');
+  if(rate!==null&&(!Number.isFinite(rate)||rate<0))throw new Error('سعر الوحدة غير صالح في الصف '+(index+2));
+  return {item_code:get('item_code')||null,category:get('category')||null,description:get('description'),specification:get('specification')||null,unit:get('unit'),quantity,unit_rate:rate,currency:(get('currency')||'SDG').toUpperCase(),notes:get('notes')||null};
+ });
+}
+function downloadAmmirCsv(filename,rows){
+ const cell=value=>{const text=String(value==null?'':value);return /[",\r\n]/.test(text)?'"'+text.replace(/"/g,'""')+'"':text;};
+ const csv='\uFEFF'+rows.map(row=>row.map(cell).join(',')).join('\r\n');
+ const blob=new Blob([csv],{type:'text/csv;charset=utf-8'}),url=URL.createObjectURL(blob),link=document.createElement('a');
+ link.href=url;link.download=filename;document.body.appendChild(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+function renderExecutionPanel(){
+ const versions=moduleData.boqVersions||[],items=moduleData.boqItems||[],rfqs=moduleData.rfqs||[],invites=moduleData.rfqInvites||[],quotes=moduleData.rfqQuotes||[],awards=moduleData.awards||[],deliveries=moduleData.deliveries||[];
+ const activeVersion=versions.slice().sort((a,b)=>Number(b.version_no)-Number(a.version_no))[0];
+ const versionOptions=versions.filter(v=>v.status==='published').map(v=>'<option value="'+esc(v.id)+'">V'+esc(v.version_no)+' · '+esc(v.title)+'</option>').join('');
+ const rfqOptions=rfqs.filter(r=>r.status==='open').map(r=>'<option value="'+esc(r.id)+'">'+esc(r.reference_code)+' · '+esc(r.title)+'</option>').join('');
+ const itemRows=items.map(x=>'<tr><td>'+esc(x.item_code||'—')+'</td><td>'+esc(x.description)+'</td><td>'+esc(x.specification||'—')+'</td><td>'+esc(x.quantity)+' '+esc(x.unit)+'</td><td>'+esc(x.unit_rate==null?'—':x.unit_rate)+' '+esc(x.currency||'')+'</td></tr>').join('');
+ const rfqRows=rfqs.map(r=>'<article class="project-card"><h4>'+esc(r.reference_code)+' · '+esc(r.title)+'</h4><p>'+esc(r.scope_description||'')+'</p><div class="meta"><span class="pill">'+esc(r.status)+'</span><span class="pill">'+esc(r.currency)+'</span><span class="pill">'+esc(r.delivery_location||'موقع غير محدد')+'</span></div><small class="muted">دعوات: '+invites.filter(i=>i.rfq_id===r.id).length+' · عروض: '+quotes.filter(q=>q.rfq_id===r.id).length+'</small></article>').join('');
+ const rfqItemRows=(moduleData.rfqItems||[]).map(x=>'<tr><td><code>'+esc(x.id)+'</code></td><td>'+esc(x.description)+'</td><td>'+esc(x.specification||'—')+'</td><td>'+esc(x.quantity)+' '+esc(x.unit)+'</td></tr>').join('');
+ const quoteItemRows=(moduleData.quoteItems||[]).map(x=>'<tr><td><code>'+esc(x.id)+'</code></td><td>'+esc(x.rfq_item_id)+'</td><td>'+esc(x.quoted_quantity)+'</td><td>'+esc(x.unit_rate)+'</td><td>'+esc(x.line_total||Number(x.quoted_quantity)*Number(x.unit_rate))+'</td></tr>').join('');
+ const quoteRows=quotes.map(q=>'<article class="project-card"><h4>عرض مقدم · '+esc(q.currency)+'</h4><p>التكلفة الواصلة: <strong>'+esc(Number(q.total_cost||0).toLocaleString('en-US'))+'</strong></p><div class="meta"><span class="pill">'+esc(q.status)+'</span><span class="pill">التوصيل: '+esc(q.delivery_days==null?'غير محدد':q.delivery_days+' يوم')+'</span></div><p>'+esc(q.warranty_terms||'لا توجد شروط ضمان')+'</p></article>').join('');
+ const comparisonTables=Array.from(new Set(quotes.filter(q=>q.status==='submitted').map(q=>q.currency))).map(currency=>{const qs=quotes.filter(q=>q.status==='submitted'&&q.currency===currency);const head='<tr><th>بند طلب العروض</th>'+qs.map(q=>'<th>مقدم الخدمة<br>'+esc(q.provider_user_id.slice(0,8))+'<br>'+esc(Number(q.total_cost||0).toLocaleString('en-US'))+' '+esc(currency)+'</th>').join('')+'</tr>';const rows=(moduleData.rfqItems||[]).map(item=>'<tr><td>'+esc(item.description)+'<small>'+esc(item.quantity)+' '+esc(item.unit)+'</small></td>'+qs.map(q=>{const line=(moduleData.quoteItems||[]).find(x=>x.quote_id===q.id&&x.rfq_item_id===item.id);return '<td>'+(line?esc(Number(line.unit_rate).toLocaleString('en-US'))+' '+esc(currency)+'<small>'+esc(line.quoted_quantity)+' '+esc(item.unit)+'</small>':'—')+'</td>';}).join('')+'</tr>').join('');return '<div class="table-wrap"><table><thead>'+head+'</thead><tbody>'+rows+'</tbody></table></div>';}).join('');
+ const awardRows=awards.map(a=>'<article class="project-card"><h4>'+esc(a.award_reference)+'</h4><div class="meta"><span class="pill">'+esc(a.status)+'</span></div><p>'+esc(a.terms||'لا توجد شروط إضافية')+'</p></article>').join('');
+ const deliveryRows=deliveries.map(d=>'<article class="project-card"><h4>'+esc(d.delivery_reference)+'</h4><div class="meta"><span class="pill">'+esc(d.status)+'</span><span class="pill">'+esc(d.scheduled_at||'موعد غير محدد')+'</span></div><p>'+esc(d.notes||'')+'</p></article>').join('');
+ const canManage=['owner','manager','supervisor','engineer'].includes(currentProjectRole());
+ const verifiedProviders=moduleData.verifiedProviders||[];
+ const verifiedProviderOptions=verifiedProviders.map(p=>'<option value=\"'+esc(p.owner_id)+'\" data-name=\"'+esc(p.business_name)+'\" data-kind=\"'+esc(p.provider_kind)+'\">'+esc(p.business_name)+' · '+esc([p.provider_kind,p.city,p.governorate].filter(Boolean).join(' / '))+'</option>').join('');
+ const myInvites=invites.filter(i=>i.provider_user_id===currentUser.id&&i.status==='invited');
+ const myAwards=awards.filter(a=>a.supplier_user_id===currentUser.id&&a.status==='issued');
+ const awardQuoteItemOptions=(moduleData.quoteItems||[]).filter(x=>quotes.some(q=>q.id===x.quote_id&&q.status==='submitted')).map(x=>{const q=quotes.find(y=>y.id===x.quote_id);const item=(moduleData.rfqItems||[]).find(y=>y.id===x.rfq_item_id);return '<option value="'+esc(x.id)+'" data-quote-id="'+esc(q.id)+'" data-rfq-item-id="'+esc(x.rfq_item_id)+'" data-unit-rate="'+esc(x.unit_rate)+'" data-currency="'+esc(q.currency)+'" data-available="'+esc(x.quoted_quantity)+'">'+esc(q.currency)+' · '+esc(q.provider_user_id)+' · '+esc(item?.description||'بند')+' · '+esc(x.unit_rate)+' / '+esc(x.quoted_quantity)+'</option>';}).join('');
+ const awardOptions=awards.map(a=>'<option value="'+esc(a.id)+'">'+esc(a.award_reference)+' · '+esc(a.status)+'</option>').join('');
+ const canProvider=(moduleData.rfqInvites||[]).some(i=>i.provider_user_id===currentUser.id&&['invited','accepted'].includes(i.status));
+ return (myInvites.length?'<section class="panel"><h3>دعوات طلبات العروض</h3>'+myInvites.map(i=>'<article class="project-card"><strong>'+esc(i.provider_name_snapshot)+'</strong><p>طلب '+esc(i.rfq_id)+'</p><button class="btn primary" type="button" data-execution-status="invite-accept" data-id="'+esc(i.id)+'">قبول الدعوة</button></article>').join('')+'</section>':'')+(myAwards.length?'<section class="panel"><h3>قرارات الترسية</h3>'+myAwards.map(a=>'<article class="project-card"><strong>'+esc(a.award_reference)+'</strong><p>'+esc(a.terms||'')+'</p><button class="btn primary" type="button" data-execution-status="award-accept" data-id="'+esc(a.id)+'">قبول الترسية</button><button class="btn quiet" type="button" data-execution-status="award-reject" data-id="'+esc(a.id)+'">رفض</button></article>').join('')+'</section>':'')+'<section class="panel"><div class="panel-head"><h3>نطاق العمل وجداول الكميات</h3><span class="muted">BOQ · إصدارات موثقة</span></div><div class="notice">أنشئ إصداراً لنطاق العمل، ثم أضف البنود بالكميات والمواصفات والوحدات. لا تُنشأ تقديرات تلقائية ولا أسعار افتراضية.</div>'+
+ (canManage?'<form class="module-form" data-execution-form="version"><label>عنوان الإصدار<input name="title" required placeholder="مثلاً: نطاق الأعمال — الإصدار الأول"></label><label>ملاحظات المراجعة<input name="revision_notes"></label><button class="btn primary" type="submit">إنشاء إصدار BOQ</button></form>':'')+
+ (versions.length?'<div class="notice">الإصدارات: '+versions.map(v=>'V'+esc(v.version_no)+' — '+esc(v.title)+' ('+esc(v.status)+')'+(canManage&&v.status==='draft'?' <button class="btn light" type="button" data-execution-status="boq-publish" data-id="'+esc(v.id)+'">نشر الإصدار وقفل نطاقه</button>':'')).join(' · ')+'</div>':'<div class="empty">لا توجد إصدارات BOQ لهذا المشروع بعد</div>')+
+ (activeVersion?'<div class="actions"><button class="btn light" type="button" data-execution-status="boq-export" data-id="'+esc(activeVersion.id)+'">تصدير الإصدار CSV</button><button class="btn quiet" type="button" data-execution-status="boq-template">تنزيل قالب CSV</button></div>':'')+
+ (activeVersion&&activeVersion.status==='draft'&&canManage?'<form class="module-form" data-execution-form="boqImport"><input type="hidden" name="boq_version_id" value="'+esc(activeVersion.id)+'"><label>استيراد بنود BOQ من ملف CSV<input name="boq_file" type="file" accept=".csv,text/csv" required></label><small class="muted">الأعمدة المطلوبة: description, unit, quantity — والاختيارية: item_code, category, specification, unit_rate, currency, notes</small><button class="btn primary" type="submit">استيراد البنود إلى الإصدار</button></form>':'')+
+ (activeVersion&&activeVersion.status==='draft'&&canManage?'<form class="module-form" data-execution-form="boqItem"><input type="hidden" name="boq_version_id" value="'+esc(activeVersion.id)+'"><div class="form-grid"><label>رمز البند<input name="item_code" placeholder="01.01"></label><label>التصنيف<input name="category" placeholder="أعمال خرسانية"></label><label class="span-2">وصف البند<input name="description" required></label><label class="span-2">المواصفات<input name="specification"></label><label>الوحدة<input name="unit" required placeholder="م² / م³ / عدد"></label><label>الكمية<input name="quantity" type="number" min="0.0001" step="any" required></label><label>سعر الوحدة (اختياري)<input name="unit_rate" type="number" min="0" step="any"></label><label>العملة<input name="currency" placeholder="SDG / USD"></label></div><button class="btn primary" type="submit">إضافة بند إلى الإصدار</button></form>':'')+
+ (items.length?'<div class="table-wrap"><table><thead><tr><th>الرمز</th><th>البند</th><th>المواصفات</th><th>الكمية</th><th>السعر التقديري</th></tr></thead><tbody>'+itemRows+'</tbody></table></div>':'<div class="empty">أضف بنوداً إلى جدول الكميات لتبدأ</div>')+'</section>'+
+ '<section class="panel"><div class="panel-head"><h3>طلبات عروض الأسعار RFQ</h3><span class="muted">منافسة منظمة بين مقدمي الخدمات</span></div>'+
+ (canManage?'<form class="module-form" data-execution-form="rfq"><label>عنوان الطلب<input name="title" required placeholder="تنفيذ أعمال الهيكل الخرساني"></label><label>نطاق العمل<textarea name="scope_description" rows="3"></textarea></label><div class="form-grid"><label>إصدار BOQ<select name="boq_version_id" required><option value="">اختر إصدار BOQ منشوراً</option>'+versionOptions+'</select></label><label>العملة<input name="currency" required value="SDG"></label><label>موقع التسليم/التنفيذ<input name="delivery_location" value="'+esc(activeProject.property_location||'')+'"></label><label>الموعد النهائي<input name="deadline_at" type="datetime-local"></label></div><button class="btn primary" type="submit">إنشاء طلب عروض</button></form>':'')+
+ (rfqs.length?'<div class="project-grid">'+rfqRows+'</div>':'<div class="empty">لم تنشأ طلبات عروض لهذا المشروع بعد</div>')+
+ (rfqs.length?'<h4>بنود طلبات العروض</h4><div class="table-wrap"><table><thead><tr><th>معرّف البند</th><th>الوصف</th><th>المواصفات</th><th>الكمية</th></tr></thead><tbody>'+rfqItemRows+'</tbody></table></div>':'')+
+ (canManage&&rfqs.length?'<form class="module-form" data-execution-form="invite"><label>طلب العروض<select name="rfq_id" required>'+rfqOptions+'</select></label><label>الجهة الموثقة من دليل عَمِّر<select name="provider_user_id" required><option value="">اختر مورداً أو مقدم خدمة موثقاً</option>'+verifiedProviderOptions+'</select></label><button class="btn primary" type="submit">إرسال الدعوة</button><small class="muted">تقبل قاعدة البيانات الدعوات لمقدمي الخدمات أو الموردين النشطين والموثقين فقط</small></form>':'')+'</section>'+
+ '<section class="panel"><div class="panel-head"><h3>العروض الواردة والمقارنة</h3><span class="muted">'+quotes.length+' عرض</span></div><div class="notice">تعرض التكلفة الواصلة المسجلة في العرض، ولا يتم ترتيب عروض بعملات مختلفة في مقارنة سعرية واحدة.</div>'+(comparisonTables||'')+(quoteRows||'<div class="empty">لم تصل عروض بعد. على مقدم الخدمة الموثق قبول الدعوة وإرسال عرضه من حسابه</div>')+'</section>'+
+ (canProvider&&rfqs.length?'<section class="panel"><h3>تقديم عرض بصفتك مقدم خدمة مدعو</h3><form class="module-form" data-execution-form="providerQuote"><label>طلب العروض<select name="rfq_id" required>'+rfqOptions+'</select></label><div class="form-grid"><label>العملة<input name="currency" required value="SDG"></label><label>النقل<input name="transport_cost" type="number" min="0" value="0"></label><label>التحميل<input name="loading_cost" type="number" min="0" value="0"></label><label>الضرائب<input name="taxes" type="number" min="0" value="0"></label><label>تكاليف أخرى<input name="other_costs" type="number" min="0" value="0"></label><label>مدة التوصيل بالأيام<input name="delivery_days" type="number" min="0"></label><label>صلاحية العرض<input name="valid_until" type="date"></label></div><label>شروط الضمان<textarea name="warranty_terms"></textarea></label><label>الاستثناءات<textarea name="exclusions"></textarea></label><label>بنود الأسعار بصيغة JSON<textarea name="line_items_json" rows="5" required placeholder="[{&quot;rfq_item_id&quot;:&quot;UUID&quot;,&quot;quoted_quantity&quot;:10,&quot;unit_rate&quot;:100,&quot;availability_status&quot;:&quot;confirmed&quot;,&quot;lead_time_days&quot;:3}]"></textarea></label><small class="muted">انسخ معرّف بند RFQ من الجدول أعلاه وأدخل سعرك لكل بند — لن تُقبل عروض بلا بنود سعرية</small><label>ملاحظات<textarea name="notes"></textarea></label><button class="btn primary" type="submit">حفظ وإرسال العرض</button></form></section>':'')+
+ '<section class="panel"><div class="panel-head"><h3>الترسية والتنفيذ والتسليم</h3></div>'+(awardRows||'<div class="empty">لا توجد ترسيات حتى الآن</div>')+(canManage&&awardQuoteItemOptions?'<form class="module-form" data-execution-form="award"><label>بند العرض المقدم<select name="quote_item_id" required><option value="">اختر بنداً من عرض موثق</option>'+awardQuoteItemOptions+'</select></label><div class="form-grid"><label>الكمية المرساة<input name="awarded_quantity" type="number" min="0.0001" step="0.001" required></label></div><label>شروط الترسية<textarea name="terms"></textarea></label><button class="btn primary" type="submit">ترسية هذا البند</button><small class="muted">يمكن إنشاء ترسيات منفصلة لبنود مختلفة ولمقدمين مختلفين، مع اشتراط توثيق مقدم الخدمة</small></form>':'')+(deliveryRows||'<div class="empty">لا توجد سجلات تسليم بعد</div>')+(deliveries.length?'<form class="module-form" data-execution-form="receipt"><label>سجل التسليم<select name="delivery_id" required>'+deliveries.map(d=>'<option value="'+esc(d.id)+'">'+esc(d.delivery_reference)+'</option>').join('')+'</select></label><label>تسوية الكميات بصيغة JSON<textarea name="items_json" rows="5" required placeholder="[{&quot;delivery_item_id&quot;:&quot;UUID&quot;,&quot;received_quantity&quot;:10,&quot;damaged_quantity&quot;:0,&quot;missing_quantity&quot;:0,&quot;condition_notes&quot;:&quot;سليم&quot;}]"></textarea></label><label>صورة/مستند إثبات الاستلام<input name="evidence_file" type="file" accept="image/jpeg,image/png,image/webp,application/pdf"></label><label>وصف الإثبات<input name="evidence_caption"></label><label>حالة التسليم<select name="status"><option value="received">تم الاستلام</option><option value="partially_received">استلام جزئي</option><option value="exception">يوجد اختلاف/تلف</option></select></label><button class="btn primary" type="submit">حفظ مطابقة الاستلام</button><small class="muted">أدخل كميات فعلية لكل بند — لا يتم اعتماد الاستلام دون مطابقة الكميات</small></form>':'')+(canManage&&awards.length?'<form class="module-form" data-execution-form="delivery"><label>الترسية<select name="award_id" required>'+awardOptions+'</select></label><label>مرجع التسليم<input name="delivery_reference" required placeholder="DEL-001"></label><label>موعد التسليم<input name="scheduled_at" type="date"></label><label>الناقل/المركبة<input name="vehicle_or_carrier"></label><label>ملاحظات<textarea name="notes"></textarea></label><button class="btn primary" type="submit">إنشاء سجل تسليم</button></form>':'')+'</section>';
+}
+async function submitExecutionForm(form){
+ const kind=form.dataset.executionForm,fd=new FormData(form),v=Object.fromEntries(fd.entries()),pid=activeProject.id;
+ if(kind==='version'){
+  const {data:existing,error:readError}=await client.from('ammir_project_boq_versions').select('version_no').eq('project_id',pid).order('version_no',{ascending:false}).limit(1);
+  if(readError)throw readError;
+  const r=await client.from('ammir_project_boq_versions').insert({project_id:pid,version_no:Number(existing?.[0]?.version_no||0)+1,title:v.title.trim(),revision_notes:v.revision_notes.trim()||null,created_by:currentUser.id}).select().single();if(r.error)throw r.error;
+  await logActivity('boq_version_created','إنشاء إصدار جدول كميات: '+v.title,'boq_version',r.data.id);
+ }else if(kind==='boqItem'){
+  const qty=Number(v.quantity),rate=v.unit_rate===''?null:Number(v.unit_rate);
+  const r=await client.from('ammir_project_boq_items').insert({project_id:pid,boq_version_id:v.boq_version_id,item_code:v.item_code.trim()||null,category:v.category.trim()||null,description:v.description.trim(),specification:v.specification.trim()||null,unit:v.unit.trim(),quantity:qty,unit_rate:rate,currency:v.currency.trim().toUpperCase()||null,created_by:currentUser.id});if(r.error)throw r.error;
+  await logActivity('boq_item_added','إضافة بند إلى جدول الكميات: '+v.description,'boq_item');
+ }else if(kind==='boqImport'){
+  const versionId=v.boq_version_id,file=fd.get('boq_file');
+  if(!file||!file.size)throw new Error('اختر ملف CSV أولاً');
+  const version=(moduleData.boqVersions||[]).find(x=>String(x.id)===String(versionId));
+  if(!version||version.status!=='draft')throw new Error('يمكن الاستيراد إلى إصدار BOQ مسودة فقط');
+  if(file.size>5*1024*1024)throw new Error('حجم ملف CSV يتجاوز الحد المسموح 5 ميغابايت');
+  const rows=parseAmmirCsv(await file.text());
+  if(rows.length>500)throw new Error('الحد الأقصى 500 بند في ملف واحد، قسّم الملف إلى عدة ملفات');
+  const payload=rows.map((x,i)=>({...x,project_id:pid,boq_version_id:versionId,created_by:currentUser.id,sort_order:(moduleData.boqItems||[]).length+i}));
+  const inserted=await client.from('ammir_project_boq_items').insert(payload);
+  if(inserted.error)throw inserted.error;
+  await logActivity('boq_items_imported','استيراد '+payload.length+' بند إلى BOQ','boq_version',versionId,{count:payload.length});
+}else if(kind==='rfq'){
+  if(!v.boq_version_id)throw new Error('اختر إصدار BOQ منشوراً حتى يحتوي طلب السعر على كميات ومواصفات ثابتة');
+  const {data:version,error:ve}=await client.from('ammir_project_boq_versions').select('id,status').eq('id',v.boq_version_id).eq('project_id',pid).single();if(ve)throw ve;
+  if(version.status!=='published')throw new Error('لا يمكن نشر طلب سعر من إصدار BOQ غير منشور');
+  const {data:bi,error:be}=await client.from('ammir_project_boq_items').select('*').eq('project_id',pid).eq('boq_version_id',v.boq_version_id);
+  if(be)throw be;if(!bi?.length)throw new Error('إصدار BOQ لا يحتوي بنوداً');
+  const ref='AMMIR-'+new Date().getFullYear()+'-'+Math.random().toString(36).slice(2,8).toUpperCase();
+  const r=await client.from('ammir_project_rfqs').insert({project_id:pid,boq_version_id:v.boq_version_id,reference_code:ref,title:v.title.trim(),scope_description:v.scope_description.trim()||null,delivery_location:v.delivery_location.trim()||null,deadline_at:v.deadline_at?new Date(v.deadline_at).toISOString():null,currency:v.currency.trim().toUpperCase(),status:'draft',created_by:currentUser.id}).select().single();if(r.error)throw r.error;
+  const rows=bi.map(x=>({rfq_id:r.data.id,project_id:pid,boq_item_id:x.id,item_code:x.item_code,description:x.description,specification:x.specification,unit:x.unit,quantity:x.quantity,notes:x.notes,sort_order:x.sort_order}));
+  const ir=await client.from('ammir_project_rfq_items').insert(rows);if(ir.error){await client.from('ammir_project_rfqs').delete().eq('id',r.data.id);throw ir.error;}
+  const publish=await client.from('ammir_project_rfqs').update({status:'open',published_at:new Date().toISOString()}).eq('id',r.data.id);if(publish.error)throw publish.error;
+  await logActivity('rfq_published','نشر طلب عروض '+ref,'rfq',r.data.id);
+}else if(kind==='invite'){
+  const option=form.elements.provider_user_id.selectedOptions[0];if(!option||!option.value)throw new Error('اختر جهة من الدليل الموثق');
+  const r=await client.from('ammir_project_rfq_invites').insert({rfq_id:v.rfq_id,project_id:pid,provider_user_id:option.value,provider_type:option.dataset.kind||v.provider_type,provider_name_snapshot:option.dataset.name||v.provider_name_snapshot.trim(),invited_by:currentUser.id,status:'invited'});if(r.error)throw r.error;
+ }else if(kind==='providerQuote'){
+  const {data:invite,error:ie}=await client.from('ammir_project_rfq_invites').select('id').eq('rfq_id',v.rfq_id).eq('provider_user_id',currentUser.id).in('status',['invited','accepted']).maybeSingle();if(ie)throw ie;if(!invite)throw new Error('لا توجد دعوة صالحة لهذا الطلب');
+  const lines=JSON.parse(v.line_items_json||'[]');if(!Array.isArray(lines)||!lines.length)throw new Error('أدخل بند سعر واحداً على الأقل');
+  const {data:rfqItems,error:ri}=await client.from('ammir_project_rfq_items').select('id,quantity').eq('rfq_id',v.rfq_id).eq('project_id',pid);if(ri)throw ri;
+  let subtotal=0;const lineRows=lines.map(x=>{const source=rfqItems.find(y=>y.id===x.rfq_item_id);if(!source)throw new Error('معرّف بند RFQ غير صحيح');const qty=Number(x.quoted_quantity),rate=Number(x.unit_rate);if(!(qty>0)||!(rate>=0))throw new Error('تحقق من الكميات والأسعار');const line=qty*rate;subtotal+=line;return{rfq_item_id:x.rfq_item_id,project_id:pid,quoted_quantity:qty,unit_rate:rate,availability_status:x.availability_status||'confirmed',lead_time_days:x.lead_time_days==null?null:Number(x.lead_time_days),notes:x.notes||null};});
+  const extras=['transport_cost','loading_cost','taxes','other_costs'].reduce((s,k)=>s+Number(v[k]||0),0);
+  const r=await client.from('ammir_project_rfq_quotes').insert({rfq_id:v.rfq_id,project_id:pid,provider_user_id:currentUser.id,currency:v.currency.trim().toUpperCase(),transport_cost:Number(v.transport_cost||0),loading_cost:Number(v.loading_cost||0),taxes:Number(v.taxes||0),other_costs:Number(v.other_costs||0),total_cost:subtotal+extras,delivery_days:v.delivery_days===''?null:Number(v.delivery_days),valid_until:v.valid_until||null,warranty_terms:v.warranty_terms.trim()||null,exclusions:v.exclusions.trim()||null,notes:v.notes.trim()||null,status:'draft'}).select().single();if(r.error)throw r.error;
+  const qi=await client.from('ammir_project_rfq_quote_items').insert(lineRows.map(x=>({...x,quote_id:r.data.id})));if(qi.error)throw qi.error;
+  const sent=await client.from('ammir_project_rfq_quotes').update({status:'submitted',submitted_at:new Date().toISOString()}).eq('id',r.data.id).eq('provider_user_id',currentUser.id);if(sent.error)throw sent.error;
+ }else if(kind==='award'){
+  const option=form.elements.quote_item_id.selectedOptions[0];if(!option||!option.value)throw new Error('اختر بنداً من عرض مقدم');
+  const quoteId=option.dataset.quoteId,rfqItemId=option.dataset.rfqItemId;
+  const unitRate=Number(option.dataset.unitRate),currency=String(option.dataset.currency||'').toUpperCase(),available=Number(option.dataset.available);
+  const {data:q,error:qe}=await client.from('ammir_project_rfq_quotes').select('id,rfq_id,provider_user_id,currency,status').eq('id',quoteId).eq('status','submitted').single();if(qe)throw qe;
+  const {data:qi,error:qie}=await client.from('ammir_project_rfq_quote_items').select('id').eq('id',option.value).eq('quote_id',q.id).eq('rfq_item_id',rfqItemId).single();if(qie)throw qie;
+  const quantity=Number(v.awarded_quantity);if(!Number.isFinite(quantity)||quantity<=0||quantity>available)throw new Error('كمية الترسية يجب أن تكون موجبة ولا تتجاوز كمية عرض المورد');
+  const ref='AWD-'+new Date().getFullYear()+'-'+Math.random().toString(36).slice(2,7).toUpperCase();
+  const a=await client.from('ammir_project_awards').insert({rfq_id:q.rfq_id,project_id:pid,supplier_user_id:q.provider_user_id,award_reference:ref,status:'draft',terms:v.terms.trim()||null,created_by:currentUser.id}).select().single();if(a.error)throw a.error;
+  const ai=await client.from('ammir_project_award_items').insert({award_id:a.data.id,project_id:pid,rfq_item_id:rfqItemId,quote_item_id:qi.id,awarded_quantity:quantity,unit_rate:unitRate,currency});if(ai.error){await client.from('ammir_project_awards').delete().eq('id',a.data.id);throw ai.error;}
+  const issued=await client.from('ammir_project_awards').update({status:'issued',issued_at:new Date().toISOString()}).eq('id',a.data.id);if(issued.error)throw issued.error;
+}else if(kind==='receipt'){
+  const lines=JSON.parse(v.items_json||'[]');if(!Array.isArray(lines)||!lines.length)throw new Error('أدخل كميات الاستلام');
+  for(const x of lines){const received=Number(x.received_quantity),damaged=Number(x.damaged_quantity||0),missing=Number(x.missing_quantity||0);if(received<0||damaged<0||missing<0)throw new Error('الكميات لا يمكن أن تكون سالبة');const upd=await client.from('ammir_project_delivery_items').update({received_quantity:received,damaged_quantity:damaged,missing_quantity:missing,condition_notes:x.condition_notes||null}).eq('id',x.delivery_item_id).eq('delivery_id',v.delivery_id).eq('project_id',pid);if(upd.error)throw upd.error;}
+  const evidenceFile=form.querySelector('[name="evidence_file"]')?.files?.[0];
+  if(evidenceFile){
+   const safeName=evidenceFile.name.replace(/[^a-zA-Z0-9._-]/g,'_'),objectPath=pid+'/'+v.delivery_id+'/'+crypto.randomUUID()+'-'+safeName;
+   const up=await client.storage.from('ammir-delivery-evidence').upload(objectPath,evidenceFile,{contentType:evidenceFile.type,upsert:false});if(up.error)throw up.error;
+   const meta=await client.from('ammir_project_delivery_evidence').insert({delivery_id:v.delivery_id,project_id:pid,object_path:objectPath,file_name:evidenceFile.name,mime_type:evidenceFile.type,caption:v.evidence_caption.trim()||null,uploaded_by:currentUser.id});if(meta.error)throw meta.error;
+  }
+  const status=await client.from('ammir_project_deliveries').update({status:v.status,received_at:new Date().toISOString(),received_by:currentUser.id}).eq('id',v.delivery_id).eq('project_id',pid);if(status.error)throw status.error;
+ }else if(kind==='delivery'){
+  const {data:a,error:ae}=await client.from('ammir_project_awards').select('id,supplier_user_id').eq('id',v.award_id).single();if(ae)throw ae;
+  const d=await client.from('ammir_project_deliveries').insert({award_id:a.id,project_id:pid,supplier_user_id:a.supplier_user_id,delivery_reference:v.delivery_reference.trim(),status:'planned',scheduled_at:v.scheduled_at||null,vehicle_or_carrier:v.vehicle_or_carrier.trim()||null,notes:v.notes.trim()||null,created_by:currentUser.id}).select().single();if(d.error)throw d.error;
+  const {data:ais,error:aisErr}=await client.from('ammir_project_award_items').select('*').eq('award_id',a.id);if(aisErr)throw aisErr;
+  if(ais.length){const di=await client.from('ammir_project_delivery_items').insert(ais.map(x=>({delivery_id:d.data.id,project_id:pid,award_item_id:x.id,expected_quantity:x.awarded_quantity,received_quantity:0,damaged_quantity:0,missing_quantity:0})));if(di.error)throw di.error;}
+ }
+ await loadProjectModules();renderWorkspace();
+}
+
+
+async function loadRfqInbox(){
+ if(!client||!currentUser)return;
+ const box=$('rfqInboxContent');if(!box)return;
+ box.innerHTML='<div class="empty">جارٍ تحميل الدعوات والعروض...</div>';
+ try{
+  const [inv,supplier,provider,awards,deliveries]=await Promise.all([
+   client.from('ammir_project_rfq_invites').select('*').eq('provider_user_id',currentUser.id).in('status',['invited','accepted','declined']).order('invited_at',{ascending:false}).limit(100),
+   client.from('ammar_market_suppliers').select('id').eq('owner_id',currentUser.id).eq('status','active').eq('is_verified',true).limit(1),
+   client.from('ammar_service_providers').select('id').eq('owner_id',currentUser.id).eq('status','active').eq('is_verified',true).limit(1),
+   client.from('ammir_project_awards').select('*').eq('supplier_user_id',currentUser.id).order('created_at',{ascending:false}).limit(100),
+   client.from('ammir_project_deliveries').select('*').eq('supplier_user_id',currentUser.id).order('created_at',{ascending:false}).limit(100)
+  ]);
+  for(const r of [inv,awards,deliveries])if(r.error)throw r.error;
+  const invites=inv.data||[],rfqIds=[...new Set(invites.map(x=>x.rfq_id))];
+  let rfqs=[],items=[],quotes=[];
+  if(rfqIds.length){
+   const [r,i,q]=await Promise.all([
+    client.from('ammir_project_rfqs').select('*').in('id',rfqIds),
+    client.from('ammir_project_rfq_items').select('*').in('rfq_id',rfqIds).order('sort_order'),
+    client.from('ammir_project_rfq_quotes').select('*').eq('provider_user_id',currentUser.id).in('rfq_id',rfqIds)
+   ]);
+   for(const x of [r,i,q])if(x.error)throw x.error;
+   rfqs=r.data||[];items=i.data||[];quotes=q.data||[];
+  }
+  const qids=quotes.map(x=>x.id);let quoteItems=[];
+  if(qids.length){const q=await client.from('ammir_project_rfq_quote_items').select('*').in('quote_id',qids);if(q.error)throw q.error;quoteItems=q.data||[];}
+  const awardIds=(awards.data||[]).map(x=>x.id);let awardItems=[];
+  if(awardIds.length){const a=await client.from('ammir_project_award_items').select('*').in('award_id',awardIds);if(a.error)throw a.error;awardItems=a.data||[];}
+  const verified=!!((supplier.data||[]).length||(provider.data||[]).length);
+  renderRfqInbox({invites,rfqs,items,quotes,quoteItems,awards:awards.data||[],awardItems,deliveries:deliveries.data||[],verified});
+ }catch(error){box.innerHTML='<div class="message error">تعذر تحميل الدعوات: '+esc(error.message||'خطأ في الاتصال')+' <button class="btn light" type="button" data-rfq-inbox-action="refresh">إعادة المحاولة</button></div>';}
+}
+function renderRfqInbox(data){
+ const box=$('rfqInboxContent');if(!box)return;
+ const cards=data.invites.map(inv=>{
+  const rfq=data.rfqs.find(x=>String(x.id)===String(inv.rfq_id));if(!rfq)return '';
+  const items=data.items.filter(x=>String(x.rfq_id)===String(rfq.id));
+  const quote=data.quotes.find(x=>String(x.rfq_id)===String(rfq.id));
+  const hasSubmitted=quote&&quote.status==='submitted';
+  const quoteNotice=quote?'<div class="notice">عرضك الحالي: '+esc(quote.status)+' · '+esc(Number(quote.total_cost||0).toLocaleString('en-US'))+' '+esc(quote.currency)+'</div>':'';
+  let form='';
+  if(inv.status==='accepted'&&data.verified&&!hasSubmitted){
+   form='<form class="module-form" data-rfq-provider-form="quote" data-rfq-id="'+esc(rfq.id)+'" data-project-id="'+esc(rfq.project_id)+'" data-quote-id="'+esc(quote?.id||'')+'"><h4>تقديم عرض السعر</h4><div class="form-grid"><label>العملة<input name="currency" value="'+esc(rfq.currency||'SDG')+'" required maxlength="12"></label><label>مدة التوريد بالأيام<input name="delivery_days" type="number" min="0" placeholder="غير محددة"></label><label>تكلفة النقل<input name="transport_cost" type="number" min="0" step="0.01" value="0"></label><label>تكلفة التحميل<input name="loading_cost" type="number" min="0" step="0.01" value="0"></label><label>الضرائب<input name="taxes" type="number" min="0" step="0.01" value="0"></label><label>تكاليف أخرى<input name="other_costs" type="number" min="0" step="0.01" value="0"></label><label>صلاحية العرض<input name="valid_until" type="date"></label><label>الضمان<input name="warranty_terms" placeholder="المدة والشروط"></label><label class="span-2">الاستثناءات<textarea name="exclusions"></textarea></label><label class="span-2">ملاحظات<textarea name="notes"></textarea></label></div><div class="table-wrap"><table><thead><tr><th>البند</th><th>المطلوب</th><th>الكمية المعروضة</th><th>سعر الوحدة</th><th>التوفر</th></tr></thead><tbody>'+items.map(i=>'<tr><td>'+esc(i.description)+'<small>'+esc(i.specification||'')+'</small></td><td>'+esc(i.quantity)+' '+esc(i.unit)+'</td><td><input type="number" name="qty_'+esc(i.id)+'" min="0" max="'+Number(i.quantity)+'" step="0.001" placeholder="0"></td><td><input type="number" name="rate_'+esc(i.id)+'" min="0" step="0.01" placeholder="السعر"></td><td><select name="availability_'+esc(i.id)+'"><option value="confirmed">متوفر</option><option value="partial">متوفر جزئياً</option><option value="subject_to_confirmation">يحتاج تأكيداً</option><option value="unavailable">غير متوفر</option></select></td></tr>').join('')+'</tbody></table></div><button class="btn primary" type="submit">إرسال العرض النهائي</button></form>';
+  }
+  return '<article class="module-record"><div class="panel-head"><div><h3>'+esc(rfq.reference_code)+' · '+esc(rfq.title)+'</h3><small class="muted">'+esc(rfq.delivery_location||'موقع غير محدد')+' · '+esc(rfq.deadline_at||'لا يوجد موعد نهائي')+'</small></div><span class="pill">'+esc(inv.status)+'</span></div><p>'+esc(rfq.scope_description||'')+'</p>'+items.map(i=>'<div class="timeline-item"><strong>'+esc(i.description)+'</strong><small>'+esc(i.specification||'')+' · '+esc(i.quantity)+' '+esc(i.unit)+'</small></div>').join('')+quoteNotice+(inv.status==='invited'?'<div class="actions"><button class="btn primary" type="button" data-rfq-inbox-action="invite-accept" data-id="'+esc(inv.id)+'">قبول الدعوة</button><button class="btn quiet" type="button" data-rfq-inbox-action="invite-decline" data-id="'+esc(inv.id)+'">اعتذار</button></div>':'')+form+'</article>';
+ }).join('');
+ const awardCards=data.awards.map(a=>'<article class="module-record"><div class="panel-head"><h3>'+esc(a.award_reference)+'</h3><span class="pill">'+esc(a.status)+'</span></div><p>'+esc(a.terms||'')+'</p>'+(a.status==='issued'?'<div class="actions"><button class="btn primary" type="button" data-rfq-inbox-action="award-accept" data-id="'+esc(a.id)+'">قبول الترسية</button><button class="btn quiet" type="button" data-rfq-inbox-action="award-reject" data-id="'+esc(a.id)+'">رفض الترسية</button></div>':'')+'</article>').join('');
+ const deliveryCards=data.deliveries.map(d=>'<article class="module-record"><div class="panel-head"><h3>'+esc(d.delivery_reference)+'</h3><span class="pill">'+esc(d.status)+'</span></div><p>'+esc(d.vehicle_or_carrier||'الناقل غير محدد')+' · '+esc(d.scheduled_at||'الموعد غير محدد')+'</p><p>'+esc(d.notes||'')+'</p></article>').join('');
+ box.innerHTML='<div class="panel"><div class="panel-head"><div><h3>دعوات المشاريع</h3><p class="muted">عروضك خاصة بحسابك ولا تعرض عَمِّر عروض المنافسين لك</p></div><button class="btn light" type="button" data-rfq-inbox-action="refresh">تحديث</button></div>'+
+ (!data.verified?'<div class="notice">لم يكتمل التحقق من حساب المورد أو مقدم الخدمة أو أنه غير نشط، لذلك لا يمكن إرسال عروض أسعار</div>':'')+
+ (cards||'<div class="empty">لا توجد دعوات موجهة إليك حالياً</div>')+'</div>'+
+ '<div class="panel"><h3>الترسيات الموجهة إليك</h3>'+(awardCards||'<div class="empty">لا توجد ترسيات جديدة</div>')+'</div>'+
+ '<div class="panel"><h3>الشحنات والتسليمات</h3>'+(deliveryCards||'<div class="empty">لا توجد شحنات مسجلة</div>')+'</div>';
+}
+async function submitRfqProviderQuote(form){
+ const fd=new FormData(form),v=Object.fromEntries(fd.entries()),rfqId=form.dataset.rfqId,projectId=form.dataset.projectId;
+ const itemsBox=form.querySelectorAll('tbody tr');
+ const lines=[];
+ for(const row of itemsBox){
+  const qtyInput=row.querySelector('input[name^="qty_"]'),rateInput=row.querySelector('input[name^="rate_"]');
+  const itemId=qtyInput?.name.slice(4),qty=Number(qtyInput?.value||0),rate=Number(rateInput?.value);
+  if(qty>0){
+   if(!Number.isFinite(rate)||rate<0||qty>Number(qtyInput.max))throw new Error('تحقق من الكمية وسعر الوحدة');
+   lines.push({rfq_item_id:itemId,project_id:projectId,quoted_quantity:qty,unit_rate:rate,availability_status:form.elements['availability_'+itemId]?.value||'confirmed'});
+  }
+ }
+ if(!lines.length)throw new Error('أدخل كمية وسعراً لبند واحد على الأقل');
+ const payload={rfq_id:rfqId,project_id:projectId,provider_user_id:currentUser.id,currency:String(v.currency||'SDG').trim().toUpperCase(),transport_cost:Number(v.transport_cost||0),loading_cost:Number(v.loading_cost||0),taxes:Number(v.taxes||0),other_costs:Number(v.other_costs||0),total_cost:0,delivery_days:v.delivery_days===''?null:Number(v.delivery_days),valid_until:v.valid_until||null,warranty_terms:String(v.warranty_terms||'').trim()||null,exclusions:String(v.exclusions||'').trim()||null,notes:String(v.notes||'').trim()||null,status:'draft'};
+ let quoteId=form.dataset.quoteId||'';
+ if(quoteId){
+  const u=await client.from('ammir_project_rfq_quotes').update(payload).eq('id',quoteId).eq('provider_user_id',currentUser.id);if(u.error)throw u.error;
+  const del=await client.from('ammir_project_rfq_quote_items').delete().eq('quote_id',quoteId);if(del.error)throw del.error;
+ }else{
+  const ins=await client.from('ammir_project_rfq_quotes').insert(payload).select('id').single();if(ins.error)throw ins.error;quoteId=ins.data.id;
+ }
+ const inserted=await client.from('ammir_project_rfq_quote_items').insert(lines.map(x=>({...x,quote_id:quoteId})));if(inserted.error)throw inserted.error;
+ const sent=await client.from('ammir_project_rfq_quotes').update({status:'submitted',submitted_at:new Date().toISOString()}).eq('id',quoteId).eq('provider_user_id',currentUser.id);if(sent.error)throw sent.error;
+ await loadRfqInbox();
+}
+async function handleRfqInboxClick(e){
+ const b=e.target.closest('[data-rfq-inbox-action]');if(!b)return;
+ const action=b.dataset.rfqInboxAction,id=b.dataset.id;
+ if(action==='refresh'){await loadRfqInbox();return;}
+ if(action==='invite-accept'||action==='invite-decline'){
+  const r=await client.from('ammir_project_rfq_invites').update({status:action==='invite-accept'?'accepted':'declined',responded_at:new Date().toISOString()}).eq('id',id).eq('provider_user_id',currentUser.id);if(r.error)throw r.error;await loadRfqInbox();return;
+ }
+ if(action==='award-accept'||action==='award-reject'){
+  const status=action==='award-accept'?'accepted':'rejected';
+  const r=await client.from('ammir_project_awards').update({status,accepted_at:status==='accepted'?new Date().toISOString():null}).eq('id',id).eq('supplier_user_id',currentUser.id);if(r.error)throw r.error;await loadRfqInbox();return;
+ }
+}
+
 function renderModulePanel(){
  const box=$('modulePanel');if(!box||!activeProject)return;const k=moduleTab;
+ if(moduleLoading){box.innerHTML='<div class="ammir-module-loading" role="status"><span class="ammir-loading-mark" aria-hidden="true"></span><div><strong>جارٍ تحميل بيانات المشروع...</strong><small>نحدّث الأقسام والمؤشرات من سجلات المشروع المحفوظة</small></div></div>';return;}
+ if(k==='execution'){box.innerHTML=renderExecutionPanel();return;}
  if(k==='team'){box.innerHTML=renderTeamPanel();return;}
  if(k==='activity'){box.innerHTML=renderActivityPanel();return;}
  if(k==='comments'){box.innerHTML=renderCommentsPanel();return;}
  if(k==='finance'){box.innerHTML=renderFinancePanel();return;}if(k==='paymentProtection'){box.innerHTML=renderPaymentProtectionPanel();return;}if(k==='quotes'){box.innerHTML=renderQuotesPanel();return;}if(k==='siteReports'){box.innerHTML=renderSiteReportsPanel();return;}if(k==='issues'){box.innerHTML=renderIssuesPanel();return;}if(k==='changeOrders'){box.innerHTML=renderChangeOrdersPanel();return;}if(k==='handover'){box.innerHTML=renderHandoverPanel();return;}
  if(k==='overview'){
-  const done=moduleData.tasks.filter(x=>x.status==='done').length,last=moduleData.updates[0];
-  box.innerHTML='<div class="panel">'+row('حالة المشروع',projectStatusLabels[activeProject.status]||'قيد التخطيط')+row('البداية',activeProject.start_date)+row('التسليم المستهدف',activeProject.target_end_date)+row('الميزانية الرقمية',activeProject.budget_amount==null?'غير محددة':activeProject.budget_amount+' '+(activeProject.budget_currency||''))+row('الموقع',activeProject.property_location)+row('نوع العقار',activeProject.property_type)+row('إجمالي المهام',moduleData.tasks.length)+row('المهام المكتملة',done)+row('إنجاز المهام',moduleData.tasks.length?Math.round(done/moduleData.tasks.length*100)+'%':'لا توجد مهام')+row('إجمالي المصروفات المسجلة',moduleData.expenses.reduce((s,x)=>s+Number(x.amount||0),0))+row('آخر نسبة إنجاز',last?last.progress+'%':'لم تسجل بعد')+row('أعضاء الفريق',moduleData.members.length+1)+'</div>';return;
- }
- const list=k==='progress'?'updates':k,label={tasks:'المهام',progress:'سجل التقدم',quotes:'عروض الأسعار',expenses:'المصروفات',documents:'الصور والمستندات'}[k];
+   const tasks=moduleData.tasks||[],done=tasks.filter(x=>x.status==='done').length;
+   const reports=moduleData.siteReports||[],issues=moduleData.issues||[],quotes=moduleData.quotes||[];
+   const openIssues=issues.filter(x=>['open','in_progress'].includes(x.status)).length;
+   const handover=moduleData.handover||[],handoverPending=handover.filter(x=>x.status==='pending').length;
+   const expenses=moduleData.expenses||[],spendByCurrency={};
+   expenses.forEach(x=>{const currency=String(x.currency||'غير محددة').trim().toUpperCase();spendByCurrency[currency]=(spendByCurrency[currency]||0)+Number(x.amount||0);});
+   const spendRows=Object.entries(spendByCurrency).map(([currency,amount])=>'<div class="ammir-currency-line"><span>إجمالي المصروفات · '+esc(currency)+'</span><strong>'+esc(amount.toLocaleString('en-US'))+'</strong></div>').join('');
+   const activity=(moduleData.activity||[]).slice(0,5);
+   box.innerHTML='<div class="ammir-overview-cards">'+
+    '<article class="ammir-overview-card"><small>المهام المكتملة</small><strong>'+done+' / '+tasks.length+'</strong></article>'+
+    '<article class="ammir-overview-card"><small>تقارير الموقع</small><strong>'+reports.length+'</strong></article>'+
+    '<article class="ammir-overview-card"><small>ملاحظات مفتوحة</small><strong>'+openIssues+'</strong></article>'+
+    '<article class="ammir-overview-card"><small>بنود استلام معلقة</small><strong>'+handoverPending+'</strong></article>'+
+   '</div><div class="ammir-overview-columns">'+
+    '<section class="ammir-overview-list"><h3>تعريف المشروع</h3>'+
+     row('حالة المشروع',projectStatusLabels[activeProject.status]||'قيد التخطيط')+
+     row('الموقع',activeProject.property_location)+row('نوع العقار',activeProject.property_type)+
+     row('تاريخ البداية',activeProject.start_date)+row('التسليم المستهدف',activeProject.target_end_date)+
+     row('الميزانية الرقمية',activeProject.budget_amount==null?'غير محددة':Number(activeProject.budget_amount).toLocaleString('en-US')+' '+(activeProject.budget_currency||''))+
+     '<p class="ammir-overview-description">'+esc(activeProject.description||'لم تتم إضافة وصف للمشروع بعد')+'</p></section>'+
+    '<section class="ammir-overview-list"><h3>المصروفات المسجلة حسب العملة</h3>'+
+     (spendRows||'<div class="module-empty">لا توجد مصروفات مسجلة بعد.</div>')+
+     '<div class="hint">لا تجمع عَمِّر أرصدة بعملات مختلفة في رقم واحد.</div>'+
+     '<div class="actions"><button class="btn light" type="button" data-module-tab="finance">فتح الملخص المالي</button><button class="btn quiet" type="button" data-module-tab="expenses">عرض المصروفات</button></div></section>'+
+   '</div><section class="panel" style="margin-top:14px"><div class="panel-head"><h3>آخر النشاطات المسجلة</h3><button class="btn quiet" type="button" data-module-tab="activity">سجل النشاط الكامل</button></div>'+
+    (activity.length?activity.map(x=>'<div class="timeline-item"><strong>'+esc(x.summary)+'</strong><small>'+esc(dateText(x.created_at))+' · '+esc(x.actor_id||'النظام')+'</small></div>').join(''):'<div class="module-empty">لا يوجد نشاط مسجل بعد. ستظهر هنا الإجراءات والقرارات التي تحفظها وحدات المشروع.</div>')+
+   '</section><section class="panel"><div class="panel-head"><h3>الوحدات المتاحة في هذا المشروع</h3><span class="muted">'+quotes.length+' عرض · '+expenses.length+' مصروف · '+handover.length+' بند استلام</span></div>'+
+    '<div class="actions"><button class="btn light" type="button" data-module-tab="tasks">المهام</button><button class="btn light" type="button" data-module-tab="quotes">عروض الأسعار</button><button class="btn light" type="button" data-module-tab="siteReports">تقارير الموقع</button><button class="btn light" type="button" data-module-tab="issues">العيوب والملاحظات</button><button class="btn light" type="button" data-module-tab="handover">الاستلام</button></div></section>';
+   return;
+  }
+  const list=k==='progress'?'updates':k,label={tasks:'المهام',progress:'سجل التقدم',quotes:'عروض الأسعار',expenses:'المصروفات',documents:'الصور والمستندات'}[k];
  box.innerHTML='<section class="panel"><div class="panel-head"><h3>'+label+'</h3><span class="muted">'+(moduleData[list]||[]).length+' سجل</span></div>'+(canWriteModule(k)?moduleForm(k):'<div class="notice">صلاحية مشاهدة فقط: لا يمكنك إضافة أو تعديل السجلات في هذا القسم.</div>')+'</section><section class="panel"><div class="panel-head"><h3>السجلات المسجلة</h3></div><div class="project-grid">'+moduleRows(moduleData[list]||[],list)+'</div></section>';
 }
 
 async function loadProjectModules(){
  if(!activeProject||!client)return;
- const map={tasks:'project_tasks',expenses:'project_expenses',quotes:'project_quotes',updates:'project_updates',documents:'project_documents',payments:'project_payments',activity:'project_activity',comments:'project_comments',members:'project_members',invitations:'project_invitations',siteReports:'project_site_reports',issues:'project_issues',changeOrders:'project_change_orders',handover:'project_handover_items',paymentMilestones:'project_payment_milestones',paymentEvents:'project_payment_events'};
+ const requestId=++moduleLoadRequest,projectId=String(activeProject.id);
+ moduleLoading=true;renderModulePanel();
+ const map={tasks:'project_tasks',expenses:'project_expenses',quotes:'project_quotes',updates:'project_updates',documents:'project_documents',payments:'project_payments',activity:'project_activity',comments:'project_comments',members:'project_members',invitations:'project_invitations',siteReports:'project_site_reports',issues:'project_issues',changeOrders:'project_change_orders',handover:'project_handover_items',boqVersions:'ammir_project_boq_versions',boqItems:'ammir_project_boq_items',rfqs:'ammir_project_rfqs',rfqItems:'ammir_project_rfq_items',rfqInvites:'ammir_project_rfq_invites',rfqQuotes:'ammir_project_rfq_quotes',quoteItems:'ammir_project_rfq_quote_items',awards:'ammir_project_awards',awardItems:'ammir_project_award_items',deliveries:'ammir_project_deliveries',deliveryItems:'ammir_project_delivery_items',deliveryEvidence:'ammir_project_delivery_evidence',paymentMilestones:'project_payment_milestones',paymentEvents:'project_payment_events'};
  const failures=[];
  const pairs=await Promise.all(Object.entries(map).map(async([k,t])=>{
   if(k==='invitations'&&String(activeProject.client_id)!==String(currentUser.id))return[k,[]];
   try{
-   let q=client.from(t).select(k==='invitations'?'id,project_id,email,member_role,status,expires_at,created_at':'*').eq('project_id',activeProject.id);
+   let q=client.from(t).select(k==='invitations'?'id,project_id,email,member_role,status,expires_at,created_at':'*').eq('project_id',projectId);
    if(!['members','invitations'].includes(k))q=q.order('created_at',{ascending:false}).limit(100);
    const r=await q;if(r.error)throw r.error;return[k,r.data||[]];
   }catch(error){failures.push({module:k,error});return[k,[]];}
  }));
+ if(requestId!==moduleLoadRequest||!activeProject||String(activeProject.id)!==projectId)return;
  pairs.forEach(([k,v])=>moduleData[k]=v);
+ try{
+  const [suppliers,providers]=await Promise.all([
+   client.from('ammar_market_suppliers').select('id,owner_id,business_name,governorate,city,is_verified,status').eq('status','active').eq('is_verified',true).limit(200),
+   client.from('ammar_service_providers').select('id,owner_id,business_name,provider_type,governorate,city,is_verified,status').eq('status','active').eq('is_verified',true).limit(200)
+  ]);
+  if(suppliers.error)throw suppliers.error;if(providers.error)throw providers.error;
+  moduleData.verifiedProviders=[...(suppliers.data||[]).map(x=>({...x,provider_kind:'supplier'})),...(providers.data||[]).map(x=>({...x,provider_kind:'service_provider'}))];
+ }catch(error){failures.push({module:'verified provider directory',error});moduleData.verifiedProviders=[];}
  moduleLoadWarnings=failures.map(x=>x.module);
+ moduleLoading=false;
  renderWorkspace();
 }
 
@@ -679,6 +1319,27 @@ function exportProjectReport(){
  a.href=url;a.download='AMMIR_'+safe+'_report.csv';document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);
 }
 async function handleModuleClick(e){
+ const execStatus=e.target.closest('[data-execution-status]');
+ if(execStatus){
+  const id=execStatus.dataset.id,action=execStatus.dataset.executionStatus;
+  if(action==='boq-template'){
+   downloadAmmirCsv('AMMIR_BOQ_TEMPLATE.csv',[
+    ['item_code','category','description','specification','unit','quantity','unit_rate','currency','notes'],
+    ['','','','','','','','','']
+   ]);return;
+  }
+  if(action==='boq-export'){
+   const version=(moduleData.boqVersions||[]).find(x=>String(x.id)===String(id));
+   const rows=[['item_code','category','description','specification','unit','quantity','unit_rate','currency','notes'],...(moduleData.boqItems||[]).filter(x=>String(x.boq_version_id)===String(id)).map(x=>[x.item_code,x.category,x.description,x.specification,x.unit,x.quantity,x.unit_rate,x.currency,x.notes])];
+   downloadAmmirCsv('AMMIR_BOQ_V'+(version?.version_no||'')+'.csv',rows);return;
+  }
+  if(action==='boq-publish'){const r=await client.from('ammir_project_boq_versions').update({status:'published',published_by:currentUser.id,published_at:new Date().toISOString()}).eq('id',id).eq('project_id',activeProject.id).eq('status','draft');if(r.error)throw r.error;await logActivity('boq_version_published','نشر إصدار جدول الكميات','boq_version',id);}
+  if(action==='invite-accept'){const r=await client.from('ammir_project_rfq_invites').update({status:'accepted',responded_at:new Date().toISOString()}).eq('id',id).eq('provider_user_id',currentUser.id);if(r.error)throw r.error;}
+  if(action==='award-accept'||action==='award-reject'){const r=await client.from('ammir_project_awards').update({status:action==='award-accept'?'accepted':'rejected',accepted_at:action==='award-accept'?new Date().toISOString():null}).eq('id',id).eq('supplier_user_id',currentUser.id);if(r.error)throw r.error;}
+  await loadProjectModules();return;
+ }
+ const closeWorkspace=e.target.closest('[data-workspace-close]');if(closeWorkspace){$('detailBackdrop').hidden=true;return;}
+ const editWorkspace=e.target.closest('[data-workspace-edit]');if(editWorkspace&&activeProject&&String(activeProject.client_id)===String(currentUser.id)){$('detailBackdrop').hidden=true;goForm(activeProject);return;}
  const exportButton=e.target.closest('[data-export-project]');if(exportButton){exportProjectReport();return;}
  const tab=e.target.closest('[data-module-tab]');if(tab){moduleTab=tab.dataset.moduleTab;renderWorkspace();return;}
  const cp=e.target.closest('[data-copy-invite]');if(cp&&lastInviteUrl){await navigator.clipboard.writeText(lastInviteUrl);message($('appMessage'),'تم نسخ رابط الدعوة.','success');return;}
@@ -742,20 +1403,41 @@ function card(p){
 }
 
 function sorted(){return projectsCache.slice().sort((a,b)=>(new Date(b.created_at||0).getTime()||0)-(new Date(a.created_at||0).getTime()||0));}
-function renderDashboard(){const s=sorted();$('statProjects').textContent=String(s.length);$('statLatest').textContent=s.length?(s[0].title||'مشروع بدون عنوان'):'لا يوجد';$('recentProjects').innerHTML=s.length?s.slice(0,4).map(card).join(''):'<div class="empty"><strong>لا توجد مشاريع حتى الآن</strong><p>ابدأ بإضافة أول مشروع لترميم أو صيانة عقار.</p><button class="btn primary" type="button" data-view="form">إنشاء أول مشروع</button></div>';}
+function renderDashboard(){
+ const s=sorted(),total=s.length;
+ const count=status=>s.filter(p=>(p.status||'planning')===status).length;
+ const owned=s.filter(p=>String(p.client_id)===String(currentUser.id)).length;
+ const shared=total-owned;
+ $('statProjects').textContent=String(total);
+ $('metricInProgress').textContent=String(count('in_progress'));
+ $('metricPlanning').textContent=String(count('planning')+count('approved'));
+ $('metricCompleted').textContent=String(count('completed'));
+ $('metricShared').textContent=String(shared);
+ const groups=[
+  ['قيد التنفيذ',count('in_progress')],
+  ['قيد التخطيط',count('planning')],
+  ['معتمد',count('approved')],
+  ['متوقف مؤقتاً',count('on_hold')],
+  ['مكتمل',count('completed')],
+  ['ملغي',count('cancelled')]
+ ];
+ const max=Math.max(1,...groups.map(x=>x[1]));
+ $('projectStatusBreakdown').innerHTML=groups.map(([label,n])=>'<div class="ammir-status-row"><span>'+label+'</span><div class="ammir-status-track" role="img" aria-label="'+label+': '+n+'"><div class="ammir-status-fill" style="width:'+((n/max)*100)+'%"></div></div><strong class="ammir-status-count">'+n+'</strong></div>').join('');
+ $('recentProjects').innerHTML=total?s.slice(0,4).map(card).join(''):'<div class="ammir-empty"><div class="ammir-empty-mark">＋</div><h4>مساحة العمل تبدأ بمشروعك الأول</h4><p>أنشئ سجل المشروع، ثم أضف فريقك ومهامه ومصروفاته وتقارير الموقع حتى تصبح كل التفاصيل في مكان واحد</p><button class="btn primary" type="button" data-view="form">إنشاء أول مشروع</button></div>';
+}
 function renderProjects(){const q=($('projectSearch').value||'').trim().toLowerCase();const found=sorted().filter(p=>[p.title,p.description,p.property_location,p.property_type,p.budget].join(' ').toLowerCase().includes(q));$('projectCount').textContent='عرض '+found.length+' من '+projectsCache.length+' مشروع';$('allProjects').innerHTML=found.length?found.map(card).join(''):(projectsCache.length?'<div class="empty">لا توجد نتائج مطابقة لبحثك.</div>':'<div class="empty"><strong>قائمة المشاريع فارغة</strong><p>أنشئ مشروعك الأول وستظهر بياناته هنا.</p><button class="btn primary" type="button" data-view="form">＋ إنشاء مشروع</button></div>');}
 async function loadProjects(){
  if(!client||!currentUser)return false;
- $('statConnection').textContent='جارٍ التحميل';$('recentProjects').innerHTML='<div class="empty">جارٍ تحميل المشاريع...</div>';$('allProjects').innerHTML='<div class="empty">جارٍ تحميل المشاريع...</div>';
+ $('statRequestion').textContent='جارٍ التحميل';$('recentProjects').innerHTML='<div class="empty">جارٍ تحميل المشاريع...</div>';$('allProjects').innerHTML='<div class="empty">جارٍ تحميل المشاريع...</div>';
  try{
   const own=await client.from('projects').select('*').eq('client_id',currentUser.id);if(own.error)throw own.error;
   const ms=await client.from('project_members').select('project_id').eq('user_id',currentUser.id);if(ms.error)throw ms.error;
   const ids=[...new Set((ms.data||[]).map(x=>String(x.project_id)).filter(Boolean))];let shared=[];
   if(ids.length){const sh=await client.from('projects').select('*').in('id',ids);if(sh.error)throw sh.error;shared=sh.data||[];}
   const seen=new Set();projectsCache=[...(own.data||[]),...shared].filter(p=>{const id=String(p.id);if(seen.has(id))return false;seen.add(id);return true;});
-  $('statConnection').textContent='متصل';message($('appMessage'),'');renderDashboard();renderProjects();return true;
+  $('statRequestion').textContent='متصل';message($('appMessage'),'');renderDashboard();renderProjects();return true;
  }catch(e){
-  $('statConnection').textContent='تعذر الاتصال';const msg='تعذر تحميل المشاريع. '+(e.message||'تحقق من الاتصال والصلاحيات.');
+  $('statRequestion').textContent='تعذر الاتصال';const msg='تعذر تحميل المشاريع. '+(e.message||'تحقق من الاتصال والصلاحيات.');
   $('recentProjects').innerHTML='<div class="empty">'+esc(msg)+'<br><button class="btn light" type="button" data-action="refresh">إعادة المحاولة</button></div>';$('allProjects').innerHTML='<div class="empty">'+esc(msg)+'<br><button class="btn light" type="button" data-action="refresh">إعادة المحاولة</button></div>';
   message($('appMessage'),'تعذر تحميل المشاريع. قد تحتاج إلى تطبيق ترحيل التعاون الجديد في Supabase.','error');return false;
  }}
@@ -804,6 +1486,7 @@ function init(){if(!window.supabase||typeof window.supabase.createClient!=='func
  $('detailEdit').addEventListener('click',()=>{const p=projectsCache.find(x=>String(x.id)===String(lastViewedProjectId));$('detailBackdrop').hidden=true;if(p)goForm(p);});
  $('detailContent').addEventListener('click',e=>{handleModuleClick(e).catch(err=>message($('appMessage'),'تعذر تنفيذ العملية: '+(err.message||'خطأ غير معروف'),'error'));});
  $('detailContent').addEventListener('submit',e=>{
+  const ef=e.target.closest('[data-execution-form]');if(ef){e.preventDefault();const b=ef.querySelector('button[type=submit]');busy(b,true,'جارٍ الحفظ...');submitExecutionForm(ef).then(()=>message($('appMessage'),'تم حفظ بيانات دورة التنفيذ','success')).catch(err=>message($('appMessage'),'تعذر الحفظ: '+(err.message||'خطأ'),'error')).finally(()=>busy(b,false));return;}
   const mf=e.target.closest('[data-module-form]'),pa=e.target.closest('[data-payment-action-form]'),inv=e.target.closest('#teamInviteForm'),com=e.target.closest('#projectCommentForm');
   if(!mf&&!pa&&!inv&&!com)return;e.preventDefault();const form=mf||pa||inv||com,btn=form.querySelector('button[type="submit"]');busy(btn,true,'جارٍ الحفظ...');
   const work=mf?submitModule(mf):pa?transitionPaymentMilestone(pa):inv?createTeamInvitation(inv):postComment(com);
@@ -831,6 +1514,12 @@ function init(){if(!window.supabase||typeof window.supabase.createClient!=='func
  });
 
  document.querySelectorAll('[data-auth-panel]').forEach(b=>b.addEventListener('click',()=>{const name=b.dataset.authPanel;if(name==='reset'){$('resetRequestForm').hidden=false;$('newPasswordForm').hidden=true;$('resetEmail').value=$('loginEmail').value.trim();}authPanel(name);if(b.closest('#publicLanding'))$('authShell').querySelector('.auth-card').scrollIntoView({behavior:'smooth',block:'start'});}));
+ $('rfqInboxView').addEventListener('click',e=>{handleRfqInboxClick(e).catch(err=>message($('rfqInboxContent'),'تعذر تنفيذ العملية: '+(err.message||'خطأ'),'error'));});
+ $('rfqInboxView').addEventListener('submit',e=>{
+  const form=e.target.closest('[data-rfq-provider-form="quote"]');if(!form)return;e.preventDefault();
+  const btn=form.querySelector('button[type="submit"]');busy(btn,true,'جارٍ إرسال العرض...');
+  submitRfqProviderQuote(form).then(()=>message($('rfqInboxContent'),'تم إرسال العرض بنجاح','success')).catch(err=>message($('rfqInboxContent'),'تعذر إرسال العرض: '+(err.message||'خطأ'),'error')).finally(()=>busy(btn,false));
+ });
  $('appShell').addEventListener('click',clickApp);
  $('marketingLang').addEventListener('click',()=>setAppLanguage(appLanguage==='en'?'ar':'en'));
  setAppLanguage(appLanguage);

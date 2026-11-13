@@ -90,5 +90,19 @@ jobs:
         env:
           PGPASSWORD: postgres
         run: psql -h 127.0.0.1 -U postgres -d ammar_test -v ON_ERROR_STOP=1 -f tests/ammar-storage-realtime.sql
+      - name: Apply AMMIR BOQ, RFQ, awards and delivery workflow migrations
+        env:
+          PGPASSWORD: postgres
+        run: |
+          psql -h 127.0.0.1 -U postgres -d ammar_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261113090000_ammir_boq_rfq_awards_delivery.sql
+          psql -h 127.0.0.1 -U postgres -d ammar_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261113091000_ammir_workflow_rls_and_indexes.sql
+          psql -h 127.0.0.1 -U postgres -d ammar_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261113092000_ammir_verified_provider_gates_and_quote_totals.sql
+          psql -h 127.0.0.1 -U postgres -d ammar_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261113093000_ammir_workflow_state_guards.sql
+          psql -h 127.0.0.1 -U postgres -d ammar_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261113094000_ammir_workflow_fk_indexes.sql
+          psql -h 127.0.0.1 -U postgres -d ammar_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261113100000_ammir_execution_state_guards.sql
+      - name: Run AMMIR project execution workflow integration tests
+        env:
+          PGPASSWORD: postgres
+        run: psql -h 127.0.0.1 -U postgres -d ammar_test -v ON_ERROR_STOP=1 -f tests/ammir-project-workflows.sql
       - name: Validate browser code and migration wiring
         run: node tests/check-ammar-app.mjs
