@@ -71,7 +71,7 @@ CREATE TABLE storage.buckets (
 );
 CREATE TABLE storage.objects (
  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
- bucket_id text NOT NULL REFERENCES storage.buckets(id),name text NOT NULL,
+ bucket_id text NOT NULL REFERENCES storage.buckets(id),name text NOT NULL,owner_id text,
  created_at timestamptz NOT NULL DEFAULT now(),UNIQUE(bucket_id,name)
 );
 CREATE OR REPLACE FUNCTION storage.foldername(name text)
