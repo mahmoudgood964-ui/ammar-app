@@ -7,7 +7,7 @@ CREATE OR REPLACE FUNCTION public.ammir_guard_rfq_state()
 RETURNS trigger
 LANGUAGE plpgsql
 SET search_path = public, pg_temp
-AS $
+AS $$
 BEGIN
   IF TG_OP='INSERT' THEN
     IF NEW.status <> 'draft' THEN
@@ -119,7 +119,7 @@ CREATE OR REPLACE FUNCTION public.ammir_guard_award_header_state()
 RETURNS trigger
 LANGUAGE plpgsql
 SET search_path = public, pg_temp
-AS $
+AS $$
 BEGIN
   IF TG_OP='INSERT' THEN
     IF NEW.status <> 'draft' THEN
@@ -226,14 +226,14 @@ CREATE OR REPLACE FUNCTION public.ammir_guard_boq_version_insert()
 RETURNS trigger
 LANGUAGE plpgsql
 SET search_path = public, pg_temp
-AS $
+AS $$
 BEGIN
   IF NEW.status <> 'draft' THEN
     RAISE EXCEPTION 'BOQ versions must be created as drafts before publication';
   END IF;
   RETURN NEW;
 END;
-$;
+$$;
 
 DROP TRIGGER IF EXISTS ammir_guard_boq_version_insert_trigger
   ON public.ammir_project_boq_versions;
