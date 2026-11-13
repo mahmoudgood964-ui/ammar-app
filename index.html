@@ -916,16 +916,16 @@ function renderQuotesPanel(){
 
 function parseAmmirCsv(text){
  const rows=[];let row=[],cell='',quoted=false;
- const source=String(text||'').replace(/^\\uFEFF/,'');
+ const source=String(text||'').replace(/^\uFEFF/,'');
  for(let i=0;i<source.length;i++){
   const ch=source[i],next=source[i+1];
   if(quoted){if(ch==='"'&&next==='"'){cell+='"';i++;}else if(ch==='"')quoted=false;else cell+=ch;}
   else if(ch==='"')quoted=true;
   else if(ch===','){row.push(cell);cell='';}
-  else if(ch==='\\n'){row.push(cell.replace(/\\r$/,''));if(row.some(x=>String(x).trim()))rows.push(row);row=[];cell='';}
+  else if(ch==='\n'){row.push(cell.replace(/\r$/,''));if(row.some(x=>String(x).trim()))rows.push(row);row=[];cell='';}
   else cell+=ch;
  }
- row.push(cell.replace(/\\r$/,''));if(row.some(x=>String(x).trim()))rows.push(row);
+ row.push(cell.replace(/\r$/,''));if(row.some(x=>String(x).trim()))rows.push(row);
  if(rows.length<2)throw new Error('ملف CSV فارغ أو لا يحتوي صفوف بنود');
  const aliases={
   item_code:['item_code','code','كود البند','الرمز'],
@@ -938,7 +938,7 @@ function parseAmmirCsv(text){
   currency:['currency','العملة'],
   notes:['notes','ملاحظات']
  };
- const header=rows[0].map(x=>String(x).trim().replace(/^\\uFEFF/,'').toLowerCase());
+ const header=rows[0].map(x=>String(x).trim().replace(/^\uFEFF/,'').toLowerCase());
  const positions={};
  for(const [key,names] of Object.entries(aliases)){const index=header.findIndex(h=>names.includes(h));if(index>=0)positions[key]=index;}
  if(!('description' in positions)||!('unit' in positions)||!('quantity' in positions))throw new Error('يجب أن يحتوي الملف على أعمدة description وunit وquantity على الأقل');
@@ -951,8 +951,8 @@ function parseAmmirCsv(text){
  });
 }
 function downloadAmmirCsv(filename,rows){
- const cell=value=>{const text=String(value==null?'':value);return /[",\\r\\n]/.test(text)?'"'+text.replace(/"/g,'""')+'"':text;};
- const csv='\\uFEFF'+rows.map(row=>row.map(cell).join(',')).join('\\r\\n');
+ const cell=value=>{const text=String(value==null?'':value);return /[",\r\n]/.test(text)?'"'+text.replace(/"/g,'""')+'"':text;};
+ const csv='\uFEFF'+rows.map(row=>row.map(cell).join(',')).join('\r\n');
  const blob=new Blob([csv],{type:'text/csv;charset=utf-8'}),url=URL.createObjectURL(blob),link=document.createElement('a');
  link.href=url;link.download=filename;document.body.appendChild(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
 }
