@@ -39,6 +39,7 @@ CREATE TABLE IF NOT EXISTS public.ammir_project_boq_items (
   created_by uuid NOT NULL REFERENCES auth.users(id) ON DELETE RESTRICT,
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now(),
+  UNIQUE(id, project_id),
   CONSTRAINT ammir_boq_item_version_project_fk
     FOREIGN KEY (boq_version_id, project_id)
     REFERENCES public.ammir_project_boq_versions(id, project_id) ON DELETE CASCADE
@@ -47,7 +48,7 @@ CREATE TABLE IF NOT EXISTS public.ammir_project_boq_items (
 CREATE TABLE IF NOT EXISTS public.ammir_project_rfqs (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   project_id uuid NOT NULL REFERENCES public.projects(id) ON DELETE CASCADE,
-  boq_version_id uuid REFERENCES public.ammir_project_boq_versions(id) ON DELETE SET NULL,
+  boq_version_id uuid,
   reference_code text NOT NULL,
   title text NOT NULL CHECK (char_length(btrim(title)) BETWEEN 3 AND 180),
   scope_description text,
@@ -60,14 +61,17 @@ CREATE TABLE IF NOT EXISTS public.ammir_project_rfqs (
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now(),
   UNIQUE(project_id, reference_code),
-  UNIQUE(id, project_id)
+  UNIQUE(id, project_id),
+  CONSTRAINT ammir_rfq_boq_version_project_fk
+    FOREIGN KEY (boq_version_id, project_id)
+    REFERENCES public.ammir_project_boq_versions(id, project_id) ON DELETE RESTRICT
 );
 
 CREATE TABLE IF NOT EXISTS public.ammir_project_rfq_items (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   rfq_id uuid NOT NULL,
   project_id uuid NOT NULL REFERENCES public.projects(id) ON DELETE CASCADE,
-  boq_item_id uuid REFERENCES public.ammir_project_boq_items(id) ON DELETE SET NULL,
+  boq_item_id uuid,
   item_code text,
   description text NOT NULL CHECK (char_length(btrim(description)) BETWEEN 2 AND 1000),
   specification text,
@@ -78,7 +82,10 @@ CREATE TABLE IF NOT EXISTS public.ammir_project_rfq_items (
   created_at timestamptz NOT NULL DEFAULT now(),
   CONSTRAINT ammir_rfq_item_project_fk
     FOREIGN KEY (rfq_id, project_id)
-    REFERENCES public.ammir_project_rfqs(id, project_id) ON DELETE CASCADE
+    REFERENCES public.ammir_project_rfqs(id, project_id) ON DELETE CASCADE,
+  CONSTRAINT ammir_rfq_item_boq_project_fk
+    FOREIGN KEY (boq_item_id, project_id)
+    REFERENCES public.ammir_project_boq_items(id, project_id) ON DELETE RESTRICT
 );
 
 CREATE TABLE IF NOT EXISTS public.ammir_project_rfq_invites (
@@ -263,6 +270,37 @@ CREATE TRIGGER ammir_boq_item_draft_guard_trigger
 BEFORE INSERT OR UPDATE OR DELETE ON public.ammir_project_boq_items
 FOR EACH ROW EXECUTE FUNCTION public.ammir_boq_item_draft_guard();
 
+CREATE OR REPLACE FUNCTION public.ammir_validate_quote_item()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = public, pg_temp
+AS $
+DECLARE v_requested numeric(18,3);
+DECLARE v_rfq uuid;
+BEGIN
+  SELECT i.quantity, i.rfq_id INTO v_requested, v_rfq
+  FROM public.ammir_project_rfq_items i
+  WHERE i.id = NEW.rfq_item_id AND i.project_id = NEW.project_id;
+  IF v_requested IS NULL THEN RAISE EXCEPTION 'Quote item must reference an RFQ item in the same project'; END IF;
+  IF NEW.quoted_quantity > v_requested + 0.0005 THEN
+    RAISE EXCEPTION 'Quoted quantity cannot exceed the requested quantity';
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM public.ammir_project_rfq_quotes q
+    WHERE q.id = NEW.quote_id AND q.project_id = NEW.project_id
+      AND q.rfq_id = v_rfq AND q.status = 'draft'
+  ) THEN
+    RAISE EXCEPTION 'Quote items can only be added to a draft quote for the same RFQ';
+  END IF;
+  RETURN NEW;
+END;
+$;
+
+DROP TRIGGER IF EXISTS ammir_validate_quote_item_trigger ON public.ammir_project_rfq_quote_items;
+CREATE TRIGGER ammir_validate_quote_item_trigger
+BEFORE INSERT OR UPDATE ON public.ammir_project_rfq_quote_items
+FOR EACH ROW EXECUTE FUNCTION public.ammir_validate_quote_item();
+
 CREATE OR REPLACE FUNCTION public.ammir_validate_award_item()
 RETURNS trigger
 LANGUAGE plpgsql
@@ -415,7 +453,7 @@ FOR SELECT TO authenticated USING (
   public.ammar_project_role(project_id::text) IS NOT NULL
   OR EXISTS (
     SELECT 1 FROM public.ammir_project_rfq_invites i
-    WHERE i.rfq_id = id AND i.provider_user_id = (SELECT auth.uid()) AND i.status IN ('invited','accepted')
+    WHERE i.rfq_id = public.ammir_project_rfqs.id AND i.provider_user_id = (SELECT auth.uid()) AND i.status IN ('invited','accepted')
   )
 );
 CREATE POLICY ammir_rfqs_write ON public.ammir_project_rfqs
@@ -428,7 +466,7 @@ FOR SELECT TO authenticated USING (
   public.ammar_project_role(project_id::text) IS NOT NULL
   OR EXISTS (
     SELECT 1 FROM public.ammir_project_rfq_invites i
-    WHERE i.rfq_id = rfq_id AND i.provider_user_id = (SELECT auth.uid()) AND i.status IN ('invited','accepted')
+    WHERE i.rfq_id = public.ammir_project_rfq_items.rfq_id AND i.provider_user_id = (SELECT auth.uid()) AND i.status IN ('invited','accepted')
   )
 );
 CREATE POLICY ammir_rfq_items_write ON public.ammir_project_rfq_items
@@ -445,6 +483,10 @@ CREATE POLICY ammir_rfq_invites_write ON public.ammir_project_rfq_invites
 FOR ALL TO authenticated
 USING (public.ammar_project_role(project_id::text) IN ('owner','manager','supervisor','engineer'))
 WITH CHECK (public.ammar_project_role(project_id::text) IN ('owner','manager','supervisor','engineer'));
+CREATE POLICY ammir_rfq_invites_provider_response ON public.ammir_project_rfq_invites
+FOR UPDATE TO authenticated
+USING (provider_user_id = (SELECT auth.uid()) AND status = 'invited')
+WITH CHECK (provider_user_id = (SELECT auth.uid()) AND status IN ('accepted','declined'));
 
 -- Suppliers can only read their own quotes. Project team can compare all quotes.
 CREATE POLICY ammir_rfq_quotes_select ON public.ammir_project_rfq_quotes
@@ -458,9 +500,11 @@ FOR INSERT TO authenticated WITH CHECK (
   AND status = 'draft'
   AND EXISTS (
     SELECT 1 FROM public.ammir_project_rfq_invites i
+    JOIN public.ammir_project_rfqs r ON r.id = i.rfq_id
     WHERE i.rfq_id = ammir_project_rfq_quotes.rfq_id
       AND i.provider_user_id = (SELECT auth.uid())
       AND i.status IN ('invited','accepted')
+      AND r.status = 'open'
   )
 );
 CREATE POLICY ammir_rfq_quotes_update_provider ON public.ammir_project_rfq_quotes
@@ -482,7 +526,7 @@ CREATE POLICY ammir_rfq_quote_items_insert ON public.ammir_project_rfq_quote_ite
 FOR INSERT TO authenticated WITH CHECK (
   EXISTS (
     SELECT 1 FROM public.ammir_project_rfq_quotes q
-    WHERE q.id = quote_id AND q.project_id = project_id
+    WHERE q.id = public.ammir_project_rfq_quote_items.quote_id AND q.project_id = public.ammir_project_rfq_quote_items.project_id
       AND q.provider_user_id = (SELECT auth.uid()) AND q.status = 'draft'
   )
 );
@@ -517,6 +561,10 @@ CREATE POLICY ammir_awards_write ON public.ammir_project_awards
 FOR ALL TO authenticated
 USING (public.ammar_project_role(project_id::text) IN ('owner','manager','supervisor','engineer'))
 WITH CHECK (public.ammar_project_role(project_id::text) IN ('owner','manager','supervisor','engineer'));
+CREATE POLICY ammir_awards_provider_response ON public.ammir_project_awards
+FOR UPDATE TO authenticated
+USING (supplier_user_id = (SELECT auth.uid()) AND status = 'issued')
+WITH CHECK (supplier_user_id = (SELECT auth.uid()) AND status IN ('accepted','rejected'));
 
 CREATE POLICY ammir_award_items_select ON public.ammir_project_award_items
 FOR SELECT TO authenticated USING (
@@ -576,8 +624,9 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON
   public.ammir_project_deliveries, public.ammir_project_delivery_items,
   public.ammir_project_delivery_evidence TO authenticated;
 
-GRANT EXECUTE ON FUNCTION public.ammir_boq_item_draft_guard() TO authenticated;
 REVOKE ALL ON FUNCTION public.ammir_boq_item_draft_guard() FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.ammir_boq_item_draft_guard() TO authenticated;
+REVOKE ALL ON FUNCTION public.ammir_validate_quote_item() FROM PUBLIC, anon;
 REVOKE ALL ON FUNCTION public.ammir_validate_award_item() FROM PUBLIC, anon;
 REVOKE ALL ON FUNCTION public.ammir_validate_delivery_item() FROM PUBLIC, anon;
 
