@@ -69,7 +69,7 @@ BEGIN
     project_id,boq_version_id,reference_code,title,scope_description,delivery_location,currency,status,created_by,published_at
   ) VALUES (
     v_project,v_boq,'AMMIR-RFQ-TEST-001','Concrete supply request','Supply 10 cubic metres of C30 concrete',
-    'Khartoum test location','SDG','open',v_owner,now()
+    'Khartoum test location','SDG','draft',v_owner,now()
   ) RETURNING id INTO v_rfq;
 
   INSERT INTO public.ammir_project_rfq_items(
@@ -77,6 +77,8 @@ BEGIN
   ) VALUES (
     v_rfq,v_project,v_boq_item,'01.01','Supply and place concrete','Grade C30','m3',10,1
   ) RETURNING id INTO v_rfq_item;
+
+  UPDATE public.ammir_project_rfqs SET status='open' WHERE id=v_rfq;
 
   v_failed := false;
   BEGIN
