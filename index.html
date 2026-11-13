@@ -732,6 +732,7 @@ function logActivity(eventType,summary,entityType,entityId,metadata){
 function workspaceTabs(){
  const groups=[
   {label:'إدارة المشروع',items:[['overview','الملخص','⌂'],['tasks','المهام','✓'],['progress','التقدم','↗']]},
+  {label:'إدارة التنفيذ',items:[['execution','نطاق العمل وطلبات العروض','▦']]},
   {label:'التوريد والمالية',items:[['quotes','العروض','▤'],['expenses','المصروفات','◉'],['finance','المالية','＄'],['paymentProtection','مراحل الدفع البنكي','⇄']]},
   {label:'الموقع والجودة',items:[['siteReports','تقارير الموقع','▧'],['issues','العيوب والملاحظات','!'],['changeOrders','طلبات التغيير','↔'],['handover','الاستلام','✓']]},
   {label:'الفريق والسجلات',items:[['team','الفريق','◎'],['documents','الملفات','▣'],['comments','التعليقات','…'],['activity','سجل النشاط','◷']]}
@@ -911,9 +912,66 @@ function renderQuotesPanel(){
  const compare=Object.entries(groups).map(([c,values])=>{const sorted=values.slice().sort((a,b)=>a-b);return '<div class="finance-metric"><span class="muted">أقل سعر مسجل · '+esc(c)+'</span><strong>'+esc(sorted[0].toLocaleString('en-US'))+'</strong><small class="muted">'+values.length+' عرض · أعلى '+esc(sorted[sorted.length-1].toLocaleString('en-US'))+'</small></div>';}).join('');
  return '<section class="panel"><div class="panel-head"><h3>مقارنة عروض المقاولين والموردين</h3><span class="muted">'+items.length+' عرض</span></div><div class="notice">المقارنة السعرية تتم داخل العملة نفسها فقط. السعر الأقل لا يعني العرض الأفضل؛ راجع نطاق العمل والمدة والضمان والاستثناءات قبل الاختيار.</div>'+(compare?'<div class="finance-grid">'+compare+'</div>':'<div class="notice">أدخل عروضاً بعملة واضحة للمقارنة. لا تتم مقارنة أسعار بعملات مختلفة.</div>')+(canWriteModule('quotes')?moduleForm('quotes'):'<div class="notice">صلاحية مشاهدة فقط.</div>')+'</section><section class="panel"><h3>العروض المسجلة</h3><div class="project-grid">'+moduleRows(items,'quotes')+'</div></section>';
 }
+
+function renderExecutionPanel(){
+ const versions=moduleData.boqVersions||[],items=moduleData.boqItems||[],rfqs=moduleData.rfqs||[],invites=moduleData.rfqInvites||[],quotes=moduleData.rfqQuotes||[],awards=moduleData.awards||[],deliveries=moduleData.deliveries||[];
+ const activeVersion=versions.slice().sort((a,b)=>Number(b.version_no)-Number(a.version_no))[0];
+ const versionOptions=versions.map(v=>'<option value="'+esc(v.id)+'">V'+esc(v.version_no)+' · '+esc(v.title)+'</option>').join('');
+ const rfqOptions=rfqs.map(r=>'<option value="'+esc(r.id)+'">'+esc(r.reference_code)+' · '+esc(r.title)+'</option>').join('');
+ const itemRows=items.map(x=>'<tr><td>'+esc(x.item_code||'—')+'</td><td>'+esc(x.description)+'</td><td>'+esc(x.specification||'—')+'</td><td>'+esc(x.quantity)+' '+esc(x.unit)+'</td><td>'+esc(x.unit_rate==null?'—':x.unit_rate)+' '+esc(x.currency||'')+'</td></tr>').join('');
+ const rfqRows=rfqs.map(r=>'<article class="project-card"><h4>'+esc(r.reference_code)+' · '+esc(r.title)+'</h4><p>'+esc(r.scope_description||'')+'</p><div class="meta"><span class="pill">'+esc(r.status)+'</span><span class="pill">'+esc(r.currency)+'</span><span class="pill">'+esc(r.delivery_location||'موقع غير محدد')+'</span></div><small class="muted">دعوات: '+invites.filter(i=>i.rfq_id===r.id).length+' · عروض: '+quotes.filter(q=>q.rfq_id===r.id).length+'</small></article>').join('');
+ const quoteRows=quotes.map(q=>'<article class="project-card"><h4>عرض مقدم · '+esc(q.currency)+'</h4><p>التكلفة الواصلة: <strong>'+esc(Number(q.total_cost||0).toLocaleString('en-US'))+'</strong></p><div class="meta"><span class="pill">'+esc(q.status)+'</span><span class="pill">التوصيل: '+esc(q.delivery_days==null?'غير محدد':q.delivery_days+' يوم')+'</span></div><p>'+esc(q.warranty_terms||'لا توجد شروط ضمان')+'</p></article>').join('');
+ const awardRows=awards.map(a=>'<article class="project-card"><h4>'+esc(a.award_reference)+'</h4><div class="meta"><span class="pill">'+esc(a.status)+'</span></div><p>'+esc(a.terms||'لا توجد شروط إضافية')+'</p></article>').join('');
+ const deliveryRows=deliveries.map(d=>'<article class="project-card"><h4>'+esc(d.delivery_reference)+'</h4><div class="meta"><span class="pill">'+esc(d.status)+'</span><span class="pill">'+esc(d.scheduled_at||'موعد غير محدد')+'</span></div><p>'+esc(d.notes||'')+'</p></article>').join('');
+ const canManage=['owner','manager','supervisor','engineer'].includes(currentProjectRole());
+ const canProvider=(moduleData.rfqInvites||[]).some(i=>i.provider_user_id===currentUser.id&&['invited','accepted'].includes(i.status));
+ return '<section class="panel"><div class="panel-head"><h3>نطاق العمل وجداول الكميات</h3><span class="muted">BOQ · إصدارات موثقة</span></div><div class="notice">أنشئ إصداراً لنطاق العمل، ثم أضف البنود بالكميات والمواصفات والوحدات. لا تُنشأ تقديرات تلقائية ولا أسعار افتراضية.</div>'+
+ (canManage?'<form class="module-form" data-execution-form="version"><label>عنوان الإصدار<input name="title" required placeholder="مثلاً: نطاق الأعمال — الإصدار الأول"></label><label>ملاحظات المراجعة<input name="revision_notes"></label><button class="btn primary" type="submit">إنشاء إصدار BOQ</button></form>':'')+
+ (versions.length?'<div class="notice">الإصدارات: '+versions.map(v=>'V'+esc(v.version_no)+' — '+esc(v.title)+' ('+esc(v.status)+')').join(' · ')+'</div>':'<div class="empty">لا توجد إصدارات BOQ لهذا المشروع بعد</div>')+
+ (activeVersion&&canManage?'<form class="module-form" data-execution-form="boqItem"><input type="hidden" name="boq_version_id" value="'+esc(activeVersion.id)+'"><div class="form-grid"><label>رمز البند<input name="item_code" placeholder="01.01"></label><label>التصنيف<input name="category" placeholder="أعمال خرسانية"></label><label class="span-2">وصف البند<input name="description" required></label><label class="span-2">المواصفات<input name="specification"></label><label>الوحدة<input name="unit" required placeholder="م² / م³ / عدد"></label><label>الكمية<input name="quantity" type="number" min="0.0001" step="any" required></label><label>سعر الوحدة (اختياري)<input name="unit_rate" type="number" min="0" step="any"></label><label>العملة<input name="currency" placeholder="SDG / USD"></label></div><button class="btn primary" type="submit">إضافة بند إلى الإصدار</button></form>':'')+
+ (items.length?'<div class="table-wrap"><table><thead><tr><th>الرمز</th><th>البند</th><th>المواصفات</th><th>الكمية</th><th>السعر التقديري</th></tr></thead><tbody>'+itemRows+'</tbody></table></div>':'<div class="empty">أضف بنوداً إلى جدول الكميات لتبدأ</div>')+'</section>'+
+ '<section class="panel"><div class="panel-head"><h3>طلبات عروض الأسعار RFQ</h3><span class="muted">منافسة منظمة بين مقدمي الخدمات</span></div>'+
+ (canManage?'<form class="module-form" data-execution-form="rfq"><label>عنوان الطلب<input name="title" required placeholder="تنفيذ أعمال الهيكل الخرساني"></label><label>نطاق العمل<textarea name="scope_description" rows="3"></textarea></label><div class="form-grid"><label>إصدار BOQ<select name="boq_version_id"><option value="">بدون ربط</option>'+versionOptions+'</select></label><label>العملة<input name="currency" required value="SDG"></label><label>موقع التسليم/التنفيذ<input name="delivery_location" value="'+esc(activeProject.property_location||'')+'"></label><label>الموعد النهائي<input name="deadline_at" type="datetime-local"></label></div><button class="btn primary" type="submit">إنشاء طلب عروض</button></form>':'')+
+ (rfqs.length?'<div class="project-grid">'+rfqRows+'</div>':'<div class="empty">لم تنشأ طلبات عروض لهذا المشروع بعد</div>')+
+ (canManage&&rfqs.length?'<form class="module-form" data-execution-form="invite"><label>طلب العروض<select name="rfq_id" required>'+rfqOptions+'</select></label><label>معرّف حساب مقدم الخدمة (UUID)<input name="provider_user_id" required placeholder="معرّف المستخدم المسجل والموثق"></label><label>اسم مقدم الخدمة<input name="provider_name_snapshot" required></label><label>نوع مقدم الخدمة<select name="provider_type"><option value="service_provider">مقدم خدمات</option><option value="supplier">مورد</option></select></label><button class="btn primary" type="submit">إرسال دعوة لمقدم خدمة موثق</button><small class="muted">تقبل قاعدة البيانات الدعوات لمقدمي الخدمات أو الموردين النشطين والموثقين فقط</small></form>':'')+'</section>'+
+ '<section class="panel"><div class="panel-head"><h3>العروض الواردة والمقارنة</h3><span class="muted">'+quotes.length+' عرض</span></div><div class="notice">تعرض التكلفة الواصلة المسجلة في العرض، ولا يتم ترتيب عروض بعملات مختلفة في مقارنة سعرية واحدة.</div>'+(quoteRows||'<div class="empty">لم تصل عروض بعد. على مقدم الخدمة الموثق قبول الدعوة وإرسال عرضه من حسابه</div>')+'</section>'+
+ (canProvider&&rfqs.length?'<section class="panel"><h3>تقديم عرض بصفتك مقدم خدمة مدعو</h3><form class="module-form" data-execution-form="providerQuote"><label>طلب العروض<select name="rfq_id" required>'+rfqOptions+'</select></label><div class="form-grid"><label>العملة<input name="currency" required value="SDG"></label><label>النقل<input name="transport_cost" type="number" min="0" value="0"></label><label>التحميل<input name="loading_cost" type="number" min="0" value="0"></label><label>الضرائب<input name="taxes" type="number" min="0" value="0"></label><label>تكاليف أخرى<input name="other_costs" type="number" min="0" value="0"></label><label>مدة التوصيل بالأيام<input name="delivery_days" type="number" min="0"></label><label>صلاحية العرض<input name="valid_until" type="date"></label></div><label>شروط الضمان<textarea name="warranty_terms"></textarea></label><label>الاستثناءات<textarea name="exclusions"></textarea></label><label>ملاحظات<textarea name="notes"></textarea></label><button class="btn primary" type="submit">حفظ وإرسال العرض</button></form></section>':'')+
+ '<section class="panel"><div class="panel-head"><h3>الترسية والتنفيذ والتسليم</h3></div>'+(awardRows||'<div class="empty">لا توجد ترسيات حتى الآن</div>')+(deliveryRows||'<div class="empty">لا توجد سجلات تسليم بعد</div>')+'</section>';
+}
+async function submitExecutionForm(form){
+ const kind=form.dataset.executionForm,fd=new FormData(form),v=Object.fromEntries(fd.entries()),pid=activeProject.id;
+ if(kind==='version'){
+  const {data:existing,error:readError}=await client.from('ammir_project_boq_versions').select('version_no').eq('project_id',pid).order('version_no',{ascending:false}).limit(1);
+  if(readError)throw readError;
+  const r=await client.from('ammir_project_boq_versions').insert({project_id:pid,version_no:Number(existing?.[0]?.version_no||0)+1,title:v.title.trim(),revision_notes:v.revision_notes.trim()||null,created_by:currentUser.id}).select().single();if(r.error)throw r.error;
+  await logActivity('boq_version_created','إنشاء إصدار جدول كميات: '+v.title,'boq_version',r.data.id);
+ }else if(kind==='boqItem'){
+  const qty=Number(v.quantity),rate=v.unit_rate===''?null:Number(v.unit_rate);
+  const r=await client.from('ammir_project_boq_items').insert({project_id:pid,boq_version_id:v.boq_version_id,item_code:v.item_code.trim()||null,category:v.category.trim()||null,description:v.description.trim(),specification:v.specification.trim()||null,unit:v.unit.trim(),quantity:qty,unit_rate:rate,currency:v.currency.trim().toUpperCase()||null,estimated_total:rate==null?null:qty*rate,created_by:currentUser.id});if(r.error)throw r.error;
+  await logActivity('boq_item_added','إضافة بند إلى جدول الكميات: '+v.description,'boq_item');
+ }else if(kind==='rfq'){
+  const ref='AMMIR-'+new Date().getFullYear()+'-'+Math.random().toString(36).slice(2,8).toUpperCase();
+  const r=await client.from('ammir_project_rfqs').insert({project_id:pid,boq_version_id:v.boq_version_id||null,reference_code:ref,title:v.title.trim(),scope_description:v.scope_description.trim()||null,delivery_location:v.delivery_location.trim()||null,deadline_at:v.deadline_at?new Date(v.deadline_at).toISOString():null,currency:v.currency.trim().toUpperCase(),status:'open',created_by:currentUser.id,published_at:new Date().toISOString()}).select().single();if(r.error)throw r.error;
+  if(v.boq_version_id){
+   const {data:bi,error:be}=await client.from('ammir_project_boq_items').select('*').eq('project_id',pid).eq('boq_version_id',v.boq_version_id);
+   if(be)throw be;
+   if(bi?.length){const rows=bi.map(x=>({rfq_id:r.data.id,project_id:pid,boq_item_id:x.id,item_code:x.item_code,description:x.description,specification:x.specification,unit:x.unit,quantity:x.quantity,notes:x.notes,sort_order:x.sort_order}));const ir=await client.from('ammir_project_rfq_items').insert(rows);if(ir.error)throw ir.error;}
+  }
+  await logActivity('rfq_published','نشر طلب عروض '+ref,'rfq',r.data.id);
+ }else if(kind==='invite'){
+  const r=await client.from('ammir_project_rfq_invites').insert({rfq_id:v.rfq_id,project_id:pid,provider_user_id:v.provider_user_id.trim(),provider_type:v.provider_type,provider_name_snapshot:v.provider_name_snapshot.trim(),invited_by:currentUser.id,status:'invited'});if(r.error)throw r.error;
+ }else if(kind==='providerQuote'){
+  const {data:invite,error:ie}=await client.from('ammir_project_rfq_invites').select('id').eq('rfq_id',v.rfq_id).eq('provider_user_id',currentUser.id).in('status',['invited','accepted']).maybeSingle();if(ie)throw ie;if(!invite)throw new Error('لا توجد دعوة صالحة لهذا الطلب');
+  const total=['transport_cost','loading_cost','taxes','other_costs'].reduce((s,k)=>s+Number(v[k]||0),0);
+  const r=await client.from('ammir_project_rfq_quotes').insert({rfq_id:v.rfq_id,project_id:pid,provider_user_id:currentUser.id,currency:v.currency.trim().toUpperCase(),transport_cost:Number(v.transport_cost||0),loading_cost:Number(v.loading_cost||0),taxes:Number(v.taxes||0),other_costs:Number(v.other_costs||0),total_cost:total,delivery_days:v.delivery_days===''?null:Number(v.delivery_days),valid_until:v.valid_until||null,warranty_terms:v.warranty_terms.trim()||null,exclusions:v.exclusions.trim()||null,notes:v.notes.trim()||null,status:'submitted',submitted_at:new Date().toISOString()});if(r.error)throw r.error;
+ }
+ await loadProjectModules();renderWorkspace();
+}
+
 function renderModulePanel(){
  const box=$('modulePanel');if(!box||!activeProject)return;const k=moduleTab;
  if(moduleLoading){box.innerHTML='<div class="ammir-module-loading" role="status"><span class="ammir-loading-mark" aria-hidden="true"></span><div><strong>جارٍ تحميل بيانات المشروع...</strong><small>نحدّث الأقسام والمؤشرات من سجلات المشروع المحفوظة</small></div></div>';return;}
+ if(k==='execution'){box.innerHTML=renderExecutionPanel();return;}
  if(k==='team'){box.innerHTML=renderTeamPanel();return;}
  if(k==='activity'){box.innerHTML=renderActivityPanel();return;}
  if(k==='comments'){box.innerHTML=renderCommentsPanel();return;}
@@ -957,7 +1015,7 @@ async function loadProjectModules(){
  if(!activeProject||!client)return;
  const requestId=++moduleLoadRequest,projectId=String(activeProject.id);
  moduleLoading=true;renderModulePanel();
- const map={tasks:'project_tasks',expenses:'project_expenses',quotes:'project_quotes',updates:'project_updates',documents:'project_documents',payments:'project_payments',activity:'project_activity',comments:'project_comments',members:'project_members',invitations:'project_invitations',siteReports:'project_site_reports',issues:'project_issues',changeOrders:'project_change_orders',handover:'project_handover_items',paymentMilestones:'project_payment_milestones',paymentEvents:'project_payment_events'};
+ const map={tasks:'project_tasks',expenses:'project_expenses',quotes:'project_quotes',updates:'project_updates',documents:'project_documents',payments:'project_payments',activity:'project_activity',comments:'project_comments',members:'project_members',invitations:'project_invitations',siteReports:'project_site_reports',issues:'project_issues',changeOrders:'project_change_orders',handover:'project_handover_items',boqVersions:'ammir_project_boq_versions',boqItems:'ammir_project_boq_items',rfqs:'ammir_project_rfqs',rfqItems:'ammir_project_rfq_items',rfqInvites:'ammir_project_rfq_invites',rfqQuotes:'ammir_project_rfq_quotes',quoteItems:'ammir_project_rfq_quote_items',awards:'ammir_project_awards',awardItems:'ammir_project_award_items',deliveries:'ammir_project_deliveries',deliveryItems:'ammir_project_delivery_items',deliveryEvidence:'ammir_project_delivery_evidence',paymentMilestones:'project_payment_milestones',paymentEvents:'project_payment_events'};
  const failures=[];
  const pairs=await Promise.all(Object.entries(map).map(async([k,t])=>{
   if(k==='invitations'&&String(activeProject.client_id)!==String(currentUser.id))return[k,[]];
@@ -1206,6 +1264,7 @@ function init(){if(!window.supabase||typeof window.supabase.createClient!=='func
  $('detailEdit').addEventListener('click',()=>{const p=projectsCache.find(x=>String(x.id)===String(lastViewedProjectId));$('detailBackdrop').hidden=true;if(p)goForm(p);});
  $('detailContent').addEventListener('click',e=>{handleModuleClick(e).catch(err=>message($('appMessage'),'تعذر تنفيذ العملية: '+(err.message||'خطأ غير معروف'),'error'));});
  $('detailContent').addEventListener('submit',e=>{
+  const ef=e.target.closest('[data-execution-form]');if(ef){e.preventDefault();const b=ef.querySelector('button[type=submit]');busy(b,true,'جارٍ الحفظ...');submitExecutionForm(ef).then(()=>message($('appMessage'),'تم حفظ بيانات دورة التنفيذ','success')).catch(err=>message($('appMessage'),'تعذر الحفظ: '+(err.message||'خطأ'),'error')).finally(()=>busy(b,false));return;}
   const mf=e.target.closest('[data-module-form]'),pa=e.target.closest('[data-payment-action-form]'),inv=e.target.closest('#teamInviteForm'),com=e.target.closest('#projectCommentForm');
   if(!mf&&!pa&&!inv&&!com)return;e.preventDefault();const form=mf||pa||inv||com,btn=form.querySelector('button[type="submit"]');busy(btn,true,'جارٍ الحفظ...');
   const work=mf?submitModule(mf):pa?transitionPaymentMilestone(pa):inv?createTeamInvitation(inv):postComment(com);
