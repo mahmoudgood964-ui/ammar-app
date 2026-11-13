@@ -78,6 +78,15 @@ BEGIN
     v_rfq,v_project,v_boq_item,'01.01','Supply and place concrete','Grade C30','m3',10,1
   ) RETURNING id INTO v_rfq_item;
 
+  v_failed := false;
+  BEGIN
+    UPDATE public.ammir_project_rfq_items SET description='Altered after publication'
+      WHERE id=v_rfq_item;
+  EXCEPTION WHEN OTHERS THEN
+    v_failed := true;
+  END;
+  IF NOT v_failed THEN RAISE EXCEPTION 'Published RFQ item was unexpectedly editable'; END IF;
+
   INSERT INTO public.ammir_project_rfq_invites(
     rfq_id,project_id,provider_user_id,provider_type,provider_name_snapshot,invited_by,status
   ) VALUES
@@ -126,36 +135,18 @@ BEGIN
 
   INSERT INTO public.ammir_project_awards(
     rfq_id,project_id,supplier_user_id,award_reference,status,terms,created_by,issued_at
-  ) VALUES(v_rfq,v_project,v_supplier_a,'AWD-TEST-A','issued','First partial award',v_owner,now())
+  ) VALUES(v_rfq,v_project,v_supplier_a,'AWD-TEST-A','draft','First partial award',v_owner,NULL)
   RETURNING id INTO v_award_a;
 
   INSERT INTO public.ammir_project_award_items(
     award_id,project_id,rfq_item_id,quote_item_id,awarded_quantity,unit_rate,currency
   ) VALUES(v_award_a,v_project,v_rfq_item,v_quote_item_a,4,110,'SDG');
+  UPDATE public.ammir_project_awards SET status='issued',issued_at=now() WHERE id=v_award_a;
 
   INSERT INTO public.ammir_project_awards(
-    rfq_id,project_id,supplier_user_id,award_reference,status,terms,created_by,issued_at
-  ) VALUES(v_rfq,v_project,v_supplier_b,'AWD-TEST-B','issued','Second split award',v_owner,now())
-  RETURNING id INTO v_award_b;
-
-  INSERT INTO public.ammir_project_award_items(
-    award_id,project_id,rfq_item_id,quote_item_id,awarded_quantity,unit_rate,currency
-  ) VALUES(v_award_b,v_project,v_rfq_item,v_quote_item_b,6,120,'SDG');
-
-  v_failed := false;
-  INSERT INTO public.ammir_project_awards(
-    rfq_id,project_id,supplier_user_id,award_reference,status,created_by,issued_at
-  ) VALUES(v_rfq,v_project,v_supplier_a,'AWD-TEST-C','issued',v_owner,now())
+    rfq_id,project_id,supplier_user_id,award_reference,status,terms,created_by
+  ) VALUES(v_rfq,v_project,v_supplier_a,'AWD-TEST-C','draft','Price mismatch guard test',v_owner)
   RETURNING id INTO v_award_c;
-
-  BEGIN
-    INSERT INTO public.ammir_project_award_items(
-      award_id,project_id,rfq_item_id,quote_item_id,awarded_quantity,unit_rate,currency
-    ) VALUES(v_award_c,v_project,v_rfq_item,v_quote_item_a,0.001,110,'SDG');
-  EXCEPTION WHEN OTHERS THEN
-    v_failed := true;
-  END;
-  IF NOT v_failed THEN RAISE EXCEPTION 'Split awards exceeding requested quantity were unexpectedly accepted'; END IF;
 
   v_failed := false;
   BEGIN
@@ -166,6 +157,45 @@ BEGIN
     v_failed := true;
   END;
   IF NOT v_failed THEN RAISE EXCEPTION 'Award price differing from submitted quote was unexpectedly accepted'; END IF;
+
+  INSERT INTO public.ammir_project_awards(
+    rfq_id,project_id,supplier_user_id,award_reference,status,terms,created_by,issued_at
+  ) VALUES(v_rfq,v_project,v_supplier_b,'AWD-TEST-B','draft','Second split award',v_owner,NULL)
+  RETURNING id INTO v_award_b;
+
+  INSERT INTO public.ammir_project_award_items(
+    award_id,project_id,rfq_item_id,quote_item_id,awarded_quantity,unit_rate,currency
+  ) VALUES(v_award_b,v_project,v_rfq_item,v_quote_item_b,6,120,'SDG');
+  UPDATE public.ammir_project_awards SET status='issued',issued_at=now() WHERE id=v_award_b;
+
+  v_failed := false;
+  BEGIN
+    DELETE FROM public.ammir_project_award_items WHERE award_id=v_award_a;
+  EXCEPTION WHEN OTHERS THEN
+    v_failed := true;
+  END;
+  IF NOT v_failed THEN RAISE EXCEPTION 'Issued award line items were unexpectedly deletable'; END IF;
+
+  v_failed := false;
+  BEGIN
+    INSERT INTO public.ammir_project_award_items(
+      award_id,project_id,rfq_item_id,quote_item_id,awarded_quantity,unit_rate,currency
+    ) VALUES(v_award_c,v_project,v_rfq_item,v_quote_item_a,0.001,110,'SDG');
+  EXCEPTION WHEN OTHERS THEN
+    v_failed := true;
+  END;
+  IF NOT v_failed THEN RAISE EXCEPTION 'Split awards exceeding requested quantity were unexpectedly accepted'; END IF;
+
+
+  v_failed := false;
+  BEGIN
+    INSERT INTO public.ammir_project_deliveries(
+      award_id,project_id,supplier_user_id,delivery_reference,status,created_by
+    ) VALUES(v_award_a,v_project,v_supplier_b,'DEL-TEST-WRONG-SUPPLIER','planned',v_owner);
+  EXCEPTION WHEN OTHERS THEN
+    v_failed := true;
+  END;
+  IF NOT v_failed THEN RAISE EXCEPTION 'Delivery with a supplier different from the award was accepted'; END IF;
 
   INSERT INTO public.ammir_project_deliveries(
     award_id,project_id,supplier_user_id,delivery_reference,status,created_by
@@ -217,6 +247,14 @@ BEGIN
     v_failed := true;
   END;
   IF NOT v_failed THEN RAISE EXCEPTION 'Cumulative dispatched quantity exceeding award was unexpectedly accepted'; END IF;
+
+  v_failed := false;
+  BEGIN
+    DELETE FROM public.ammir_project_deliveries WHERE id=v_delivery_b;
+  EXCEPTION WHEN OTHERS THEN
+    v_failed := true;
+  END;
+  IF NOT v_failed THEN RAISE EXCEPTION 'A fully received delivery was unexpectedly deletable'; END IF;
 
   INSERT INTO storage.objects(bucket_id,name,owner_id)
   VALUES('ammir-delivery-evidence',v_project::text||'/'||v_delivery_a::text||'/proof.png',v_owner::text);
