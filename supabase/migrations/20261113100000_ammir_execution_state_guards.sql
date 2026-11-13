@@ -47,6 +47,12 @@ BEGIN
     IF NEW.status <> 'invited' THEN
       RAISE EXCEPTION 'Provider invitations must be created in invited state';
     END IF;
+    IF NOT EXISTS (
+      SELECT 1 FROM public.ammir_project_rfqs r
+      WHERE r.id=NEW.rfq_id AND r.project_id=NEW.project_id AND r.status='open'
+    ) THEN
+      RAISE EXCEPTION 'Providers can only be invited to open RFQs';
+    END IF;
     RETURN NEW;
   END IF;
   IF OLD.status='invited' AND NEW.status IN ('accepted','declined','withdrawn') THEN
@@ -75,7 +81,20 @@ BEGIN
     IF NEW.status <> 'draft' THEN
       RAISE EXCEPTION 'RFQs must be created as drafts before they are published';
     END IF;
+    IF NEW.boq_version_id IS NOT NULL AND NOT EXISTS (
+      SELECT 1 FROM public.ammir_project_boq_versions b
+      WHERE b.id=NEW.boq_version_id AND b.project_id=NEW.project_id AND b.status='published'
+    ) THEN
+      RAISE EXCEPTION 'An RFQ can only reference a published BOQ version from the same project';
+    END IF;
     RETURN NEW;
+  END IF;
+
+  IF OLD.status='draft' AND NEW.status='open' AND NOT EXISTS (
+    SELECT 1 FROM public.ammir_project_rfq_items i
+    WHERE i.rfq_id=NEW.id AND i.project_id=NEW.project_id
+  ) THEN
+    RAISE EXCEPTION 'An RFQ cannot be published without at least one line item';
   END IF;
 
   IF OLD.status <> 'draft' AND (
@@ -195,6 +214,13 @@ BEGIN
       RAISE EXCEPTION 'An issued award cannot be deleted; cancel it and preserve the audit record';
     END IF;
     RETURN OLD;
+  END IF;
+
+  IF NEW.status='issued' AND OLD.status='draft' AND NOT EXISTS (
+    SELECT 1 FROM public.ammir_project_award_items i
+    WHERE i.award_id=NEW.id AND i.project_id=NEW.project_id
+  ) THEN
+    RAISE EXCEPTION 'An award cannot be issued without at least one awarded line item';
   END IF;
 
   IF NEW.status IS DISTINCT FROM OLD.status AND NOT (
