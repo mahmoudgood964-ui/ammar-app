@@ -145,8 +145,10 @@ for (const table of workflowTables) {
 }
 for (const migration of [workflowSchema,workflowRls,workflowProviderGates,workflowState,workflowIndexes,workflowGuards]) {
   assert.doesNotMatch(migration,/project_payment_(?:milestones|events)/,'Execution workflow migrations must not alter deferred bank milestone tables');
-  assert.doesNotMatch(migration,/(^|\\n)AS \\$(\\n|$)/,'Execution workflow migration contains malformed PL/pgSQL opening delimiter');
-  assert.doesNotMatch(migration,/(^|\\n)\\$(\\n|$)/,'Execution workflow migration contains malformed PL/pgSQL closing delimiter');
+  for (const line of migration.split(/\r?\n/)) {
+    assert.notEqual(line.trim(),'AS $','Execution workflow migration contains malformed PL/pgSQL opening delimiter');
+    assert.notEqual(line.trim(),'$;','Execution workflow migration contains malformed PL/pgSQL closing delimiter');
+  }
 }
 for (const feature of [
   'ammir_project_rfq_quotes_select','ammir_rfq_quotes_insert','ammir_rfq_invites_insert',
@@ -156,7 +158,7 @@ for (const guard of [
   'ammir_guard_rfq_state_trigger','ammir_guard_invite_state_trigger',
   'ammir_guard_award_header_state_trigger','ammir_guard_delivery_delete_trigger'
 ]) assert.ok(workflowGuards.includes(guard),'Missing commercial state guard ' + guard);
-assert.ok(workflowSchema.includes("VALUES (\\n  'ammir-delivery-evidence'"),'Private delivery evidence bucket is missing');
+assert.ok(workflowSchema.includes("'ammir-delivery-evidence','ammir-delivery-evidence',false"),'Private delivery evidence bucket is missing');
 assert.ok(workflowProviderGates.includes("NEW.total_cost :="),'Quote total must be derived from submitted line items and costs');
 assert.ok(workflowGuards.includes('Published RFQ scope is immutable'),'Published RFQ scope immutability guard is missing');
 assert.ok(workflowGuards.includes('Issued award terms and supplier are immutable'),'Issued award immutability guard is missing');
@@ -177,8 +179,17 @@ const csvStart=html.indexOf('function parseAmmirCsv');
 const csvEnd=html.indexOf('function renderExecutionPanel',csvStart);
 assert.ok(csvStart>=0&&csvEnd>csvStart,'BOQ CSV import/export helpers are missing');
 const csvSandbox={};
-vm.runInNewContext(html.slice(csvStart,csvEnd)+'\\nglobalThis.parseAmmirCsv=parseAmmirCsv;',csvSandbox);
-const importedRows=csvSandbox.parseAmmirCsv('\\uFEFFitem_code,description,specification,unit,quantity,unit_rate,currency\\n01,"Concrete, C30","Grade C30",m3,10,125,SDG\\n02,Steel bar,12mm,kg,50,,SDG');
+vm.runInNewContext(
+  html.slice(csvStart,csvEnd) + String.fromCharCode(10) + 'globalThis.parseAmmirCsv=parseAmmirCsv;',
+  csvSandbox
+);
+const newline=String.fromCharCode(10),bom=String.fromCharCode(0xfeff);
+const csvText=bom+[
+  'item_code,description,specification,unit,quantity,unit_rate,currency',
+  '01,"Concrete, C30","Grade C30",m3,10,125,SDG',
+  '02,Steel bar,12mm,kg,50,,SDG'
+].join(newline);
+const importedRows=csvSandbox.parseAmmirCsv(csvText);
 assert.equal(importedRows.length,2,'CSV parser should read both BOQ rows');
 assert.equal(importedRows[0].description,'Concrete, C30','CSV parser should preserve quoted commas');
 assert.equal(importedRows[0].quantity,10,'CSV parser should normalize numeric quantities');
