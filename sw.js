@@ -1,4 +1,4 @@
-const CACHE_NAME='ammar-shell-v4-command-center';
+const CACHE_NAME='ammir-shell-v5-project-workspace';
 const APP_SHELL=['/','/index.html','/manifest.webmanifest','/icon.svg','/ammar-marketplace.js'];
 self.addEventListener('install',event=>{
   event.waitUntil(caches.open(CACHE_NAME).then(cache=>cache.addAll(APP_SHELL)).then(()=>self.skipWaiting()));
