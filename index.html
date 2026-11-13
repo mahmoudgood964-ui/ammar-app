@@ -1006,6 +1006,99 @@ async function submitExecutionForm(form){
  await loadProjectModules();renderWorkspace();
 }
 
+
+async function loadRfqInbox(){
+ if(!client||!currentUser)return;
+ const box=$('rfqInboxContent');if(!box)return;
+ box.innerHTML='<div class="empty">جارٍ تحميل الدعوات والعروض...</div>';
+ try{
+  const [inv,supplier,provider,awards,deliveries]=await Promise.all([
+   client.from('ammir_project_rfq_invites').select('*').eq('provider_user_id',currentUser.id).in('status',['invited','accepted','declined']).order('invited_at',{ascending:false}).limit(100),
+   client.from('ammar_market_suppliers').select('id').eq('owner_id',currentUser.id).eq('status','active').eq('is_verified',true).limit(1),
+   client.from('ammar_service_providers').select('id').eq('owner_id',currentUser.id).eq('status','active').eq('is_verified',true).limit(1),
+   client.from('ammir_project_awards').select('*').eq('supplier_user_id',currentUser.id).order('created_at',{ascending:false}).limit(100),
+   client.from('ammir_project_deliveries').select('*').eq('supplier_user_id',currentUser.id).order('created_at',{ascending:false}).limit(100)
+  ]);
+  for(const r of [inv,awards,deliveries])if(r.error)throw r.error;
+  const invites=inv.data||[],rfqIds=[...new Set(invites.map(x=>x.rfq_id))];
+  let rfqs=[],items=[],quotes=[];
+  if(rfqIds.length){
+   const [r,i,q]=await Promise.all([
+    client.from('ammir_project_rfqs').select('*').in('id',rfqIds),
+    client.from('ammir_project_rfq_items').select('*').in('rfq_id',rfqIds).order('sort_order'),
+    client.from('ammir_project_rfq_quotes').select('*').eq('provider_user_id',currentUser.id).in('rfq_id',rfqIds)
+   ]);
+   for(const x of [r,i,q])if(x.error)throw x.error;
+   rfqs=r.data||[];items=i.data||[];quotes=q.data||[];
+  }
+  const qids=quotes.map(x=>x.id);let quoteItems=[];
+  if(qids.length){const q=await client.from('ammir_project_rfq_quote_items').select('*').in('quote_id',qids);if(q.error)throw q.error;quoteItems=q.data||[];}
+  const awardIds=(awards.data||[]).map(x=>x.id);let awardItems=[];
+  if(awardIds.length){const a=await client.from('ammir_project_award_items').select('*').in('award_id',awardIds);if(a.error)throw a.error;awardItems=a.data||[];}
+  const verified=!!((supplier.data||[]).length||(provider.data||[]).length);
+  renderRfqInbox({invites,rfqs,items,quotes,quoteItems,awards:awards.data||[],awardItems,deliveries:deliveries.data||[],verified});
+ }catch(error){box.innerHTML='<div class="message error">تعذر تحميل الدعوات: '+esc(error.message||'خطأ في الاتصال')+' <button class="btn light" type="button" data-rfq-inbox-action="refresh">إعادة المحاولة</button></div>';}
+}
+function renderRfqInbox(data){
+ const box=$('rfqInboxContent');if(!box)return;
+ const cards=data.invites.map(inv=>{
+  const rfq=data.rfqs.find(x=>String(x.id)===String(inv.rfq_id));if(!rfq)return '';
+  const items=data.items.filter(x=>String(x.rfq_id)===String(rfq.id));
+  const quote=data.quotes.find(x=>String(x.rfq_id)===String(rfq.id));
+  const hasSubmitted=quote&&quote.status==='submitted';
+  const quoteNotice=quote?'<div class="notice">عرضك الحالي: '+esc(quote.status)+' · '+esc(Number(quote.total_cost||0).toLocaleString('en-US'))+' '+esc(quote.currency)+'</div>':'';
+  let form='';
+  if(inv.status==='accepted'&&data.verified&&!hasSubmitted){
+   form='<form class="module-form" data-rfq-provider-form="quote" data-rfq-id="'+esc(rfq.id)+'" data-project-id="'+esc(rfq.project_id)+'" data-quote-id="'+esc(quote?.id||'')+'"><h4>تقديم عرض السعر</h4><div class="form-grid"><label>العملة<input name="currency" value="'+esc(rfq.currency||'SDG')+'" required maxlength="12"></label><label>مدة التوريد بالأيام<input name="delivery_days" type="number" min="0" placeholder="غير محددة"></label><label>تكلفة النقل<input name="transport_cost" type="number" min="0" step="0.01" value="0"></label><label>تكلفة التحميل<input name="loading_cost" type="number" min="0" step="0.01" value="0"></label><label>الضرائب<input name="taxes" type="number" min="0" step="0.01" value="0"></label><label>تكاليف أخرى<input name="other_costs" type="number" min="0" step="0.01" value="0"></label><label>صلاحية العرض<input name="valid_until" type="date"></label><label>الضمان<input name="warranty_terms" placeholder="المدة والشروط"></label><label class="span-2">الاستثناءات<textarea name="exclusions"></textarea></label><label class="span-2">ملاحظات<textarea name="notes"></textarea></label></div><div class="table-wrap"><table><thead><tr><th>البند</th><th>المطلوب</th><th>الكمية المعروضة</th><th>سعر الوحدة</th><th>التوفر</th></tr></thead><tbody>'+items.map(i=>'<tr><td>'+esc(i.description)+'<small>'+esc(i.specification||'')+'</small></td><td>'+esc(i.quantity)+' '+esc(i.unit)+'</td><td><input type="number" name="qty_'+esc(i.id)+'" min="0" max="'+Number(i.quantity)+'" step="0.001" placeholder="0"></td><td><input type="number" name="rate_'+esc(i.id)+'" min="0" step="0.01" placeholder="السعر"></td><td><select name="availability_'+esc(i.id)+'"><option value="confirmed">متوفر</option><option value="partial">متوفر جزئياً</option><option value="subject_to_confirmation">يحتاج تأكيداً</option><option value="unavailable">غير متوفر</option></select></td></tr>').join('')+'</tbody></table></div><button class="btn primary" type="submit">إرسال العرض النهائي</button></form>';
+  }
+  return '<article class="module-record"><div class="panel-head"><div><h3>'+esc(rfq.reference_code)+' · '+esc(rfq.title)+'</h3><small class="muted">'+esc(rfq.delivery_location||'موقع غير محدد')+' · '+esc(rfq.deadline_at||'لا يوجد موعد نهائي')+'</small></div><span class="pill">'+esc(inv.status)+'</span></div><p>'+esc(rfq.scope_description||'')+'</p>'+items.map(i=>'<div class="timeline-item"><strong>'+esc(i.description)+'</strong><small>'+esc(i.specification||'')+' · '+esc(i.quantity)+' '+esc(i.unit)+'</small></div>').join('')+quoteNotice+(inv.status==='invited'?'<div class="actions"><button class="btn primary" type="button" data-rfq-inbox-action="invite-accept" data-id="'+esc(inv.id)+'">قبول الدعوة</button><button class="btn quiet" type="button" data-rfq-inbox-action="invite-decline" data-id="'+esc(inv.id)+'">اعتذار</button></div>':'')+form+'</article>';
+ }).join('');
+ const awardCards=data.awards.map(a=>'<article class="module-record"><div class="panel-head"><h3>'+esc(a.award_reference)+'</h3><span class="pill">'+esc(a.status)+'</span></div><p>'+esc(a.terms||'')+'</p>'+(a.status==='issued'?'<div class="actions"><button class="btn primary" type="button" data-rfq-inbox-action="award-accept" data-id="'+esc(a.id)+'">قبول الترسية</button><button class="btn quiet" type="button" data-rfq-inbox-action="award-reject" data-id="'+esc(a.id)+'">رفض الترسية</button></div>':'')+'</article>').join('');
+ const deliveryCards=data.deliveries.map(d=>'<article class="module-record"><div class="panel-head"><h3>'+esc(d.delivery_reference)+'</h3><span class="pill">'+esc(d.status)+'</span></div><p>'+esc(d.vehicle_or_carrier||'الناقل غير محدد')+' · '+esc(d.scheduled_at||'الموعد غير محدد')+'</p><p>'+esc(d.notes||'')+'</p></article>').join('');
+ box.innerHTML='<div class="panel"><div class="panel-head"><div><h3>دعوات المشاريع</h3><p class="muted">عروضك خاصة بحسابك ولا تعرض عَمِّر عروض المنافسين لك</p></div><button class="btn light" type="button" data-rfq-inbox-action="refresh">تحديث</button></div>'+
+ (!data.verified?'<div class="notice">لم يكتمل التحقق من حساب المورد أو مقدم الخدمة أو أنه غير نشط، لذلك لا يمكن إرسال عروض أسعار</div>':'')+
+ (cards||'<div class="empty">لا توجد دعوات موجهة إليك حالياً</div>')+'</div>'+
+ '<div class="panel"><h3>الترسيات الموجهة إليك</h3>'+(awardCards||'<div class="empty">لا توجد ترسيات جديدة</div>')+'</div>'+
+ '<div class="panel"><h3>الشحنات والتسليمات</h3>'+(deliveryCards||'<div class="empty">لا توجد شحنات مسجلة</div>')+'</div>';
+}
+async function submitRfqProviderQuote(form){
+ const fd=new FormData(form),v=Object.fromEntries(fd.entries()),rfqId=form.dataset.rfqId,projectId=form.dataset.projectId;
+ const itemsBox=form.querySelectorAll('tbody tr');
+ const lines=[];
+ for(const row of itemsBox){
+  const qtyInput=row.querySelector('input[name^="qty_"]'),rateInput=row.querySelector('input[name^="rate_"]');
+  const itemId=qtyInput?.name.slice(4),qty=Number(qtyInput?.value||0),rate=Number(rateInput?.value);
+  if(qty>0){
+   if(!Number.isFinite(rate)||rate<0||qty>Number(qtyInput.max))throw new Error('تحقق من الكمية وسعر الوحدة');
+   lines.push({rfq_item_id:itemId,project_id:projectId,quoted_quantity:qty,unit_rate:rate,availability_status:form.elements['availability_'+itemId]?.value||'confirmed'});
+  }
+ }
+ if(!lines.length)throw new Error('أدخل كمية وسعراً لبند واحد على الأقل');
+ const payload={rfq_id:rfqId,project_id:projectId,provider_user_id:currentUser.id,currency:String(v.currency||'SDG').trim().toUpperCase(),transport_cost:Number(v.transport_cost||0),loading_cost:Number(v.loading_cost||0),taxes:Number(v.taxes||0),other_costs:Number(v.other_costs||0),total_cost:0,delivery_days:v.delivery_days===''?null:Number(v.delivery_days),valid_until:v.valid_until||null,warranty_terms:String(v.warranty_terms||'').trim()||null,exclusions:String(v.exclusions||'').trim()||null,notes:String(v.notes||'').trim()||null,status:'draft'};
+ let quoteId=form.dataset.quoteId||'';
+ if(quoteId){
+  const u=await client.from('ammir_project_rfq_quotes').update(payload).eq('id',quoteId).eq('provider_user_id',currentUser.id);if(u.error)throw u.error;
+  const del=await client.from('ammir_project_rfq_quote_items').delete().eq('quote_id',quoteId);if(del.error)throw del.error;
+ }else{
+  const ins=await client.from('ammir_project_rfq_quotes').insert(payload).select('id').single();if(ins.error)throw ins.error;quoteId=ins.data.id;
+ }
+ const inserted=await client.from('ammir_project_rfq_quote_items').insert(lines.map(x=>({...x,quote_id:quoteId})));if(inserted.error)throw inserted.error;
+ const sent=await client.from('ammir_project_rfq_quotes').update({status:'submitted',submitted_at:new Date().toISOString()}).eq('id',quoteId).eq('provider_user_id',currentUser.id);if(sent.error)throw sent.error;
+ await loadRfqInbox();
+}
+async function handleRfqInboxClick(e){
+ const b=e.target.closest('[data-rfq-inbox-action]');if(!b)return;
+ const action=b.dataset.rfqInboxAction,id=b.dataset.id;
+ if(action==='refresh'){await loadRfqInbox();return;}
+ if(action==='invite-accept'||action==='invite-decline'){
+  const r=await client.from('ammir_project_rfq_invites').update({status:action==='invite-accept'?'accepted':'declined',responded_at:new Date().toISOString()}).eq('id',id).eq('provider_user_id',currentUser.id);if(r.error)throw r.error;await loadRfqInbox();return;
+ }
+ if(action==='award-accept'||action==='award-reject'){
+  const status=action==='award-accept'?'accepted':'rejected';
+  const r=await client.from('ammir_project_awards').update({status,accepted_at:status==='accepted'?new Date().toISOString():null}).eq('id',id).eq('supplier_user_id',currentUser.id);if(r.error)throw r.error;await loadRfqInbox();return;
+ }
+}
+
 function renderModulePanel(){
  const box=$('modulePanel');if(!box||!activeProject)return;const k=moduleTab;
  if(moduleLoading){box.innerHTML='<div class="ammir-module-loading" role="status"><span class="ammir-loading-mark" aria-hidden="true"></span><div><strong>جارٍ تحميل بيانات المشروع...</strong><small>نحدّث الأقسام والمؤشرات من سجلات المشروع المحفوظة</small></div></div>';return;}
@@ -1346,6 +1439,12 @@ function init(){if(!window.supabase||typeof window.supabase.createClient!=='func
  });
 
  document.querySelectorAll('[data-auth-panel]').forEach(b=>b.addEventListener('click',()=>{const name=b.dataset.authPanel;if(name==='reset'){$('resetRequestForm').hidden=false;$('newPasswordForm').hidden=true;$('resetEmail').value=$('loginEmail').value.trim();}authPanel(name);if(b.closest('#publicLanding'))$('authShell').querySelector('.auth-card').scrollIntoView({behavior:'smooth',block:'start'});}));
+ $('rfqInboxView').addEventListener('click',e=>{handleRfqInboxClick(e).catch(err=>message($('rfqInboxContent'),'تعذر تنفيذ العملية: '+(err.message||'خطأ'),'error'));});
+ $('rfqInboxView').addEventListener('submit',e=>{
+  const form=e.target.closest('[data-rfq-provider-form="quote"]');if(!form)return;e.preventDefault();
+  const btn=form.querySelector('button[type="submit"]');busy(btn,true,'جارٍ إرسال العرض...');
+  submitRfqProviderQuote(form).then(()=>message($('rfqInboxContent'),'تم إرسال العرض بنجاح','success')).catch(err=>message($('rfqInboxContent'),'تعذر إرسال العرض: '+(err.message||'خطأ'),'error')).finally(()=>busy(btn,false));
+ });
  $('appShell').addEventListener('click',clickApp);
  $('marketingLang').addEventListener('click',()=>setAppLanguage(appLanguage==='en'?'ar':'en'));
  setAppLanguage(appLanguage);
