@@ -914,6 +914,48 @@ function renderQuotesPanel(){
  return '<section class="panel"><div class="panel-head"><h3>مقارنة عروض المقاولين والموردين</h3><span class="muted">'+items.length+' عرض</span></div><div class="notice">المقارنة السعرية تتم داخل العملة نفسها فقط. السعر الأقل لا يعني العرض الأفضل؛ راجع نطاق العمل والمدة والضمان والاستثناءات قبل الاختيار.</div>'+(compare?'<div class="finance-grid">'+compare+'</div>':'<div class="notice">أدخل عروضاً بعملة واضحة للمقارنة. لا تتم مقارنة أسعار بعملات مختلفة.</div>')+(canWriteModule('quotes')?moduleForm('quotes'):'<div class="notice">صلاحية مشاهدة فقط.</div>')+'</section><section class="panel"><h3>العروض المسجلة</h3><div class="project-grid">'+moduleRows(items,'quotes')+'</div></section>';
 }
 
+function parseAmmirCsv(text){
+ const rows=[];let row=[],cell='',quoted=false;
+ const source=String(text||'').replace(/^\\uFEFF/,'');
+ for(let i=0;i<source.length;i++){
+  const ch=source[i],next=source[i+1];
+  if(quoted){if(ch==='"'&&next==='"'){cell+='"';i++;}else if(ch==='"')quoted=false;else cell+=ch;}
+  else if(ch==='"')quoted=true;
+  else if(ch===','){row.push(cell);cell='';}
+  else if(ch==='\\n'){row.push(cell.replace(/\\r$/,''));if(row.some(x=>String(x).trim()))rows.push(row);row=[];cell='';}
+  else cell+=ch;
+ }
+ row.push(cell.replace(/\\r$/,''));if(row.some(x=>String(x).trim()))rows.push(row);
+ if(rows.length<2)throw new Error('ملف CSV فارغ أو لا يحتوي صفوف بنود');
+ const aliases={
+  item_code:['item_code','code','كود البند','الرمز'],
+  category:['category','التصنيف'],
+  description:['description','item','الوصف','البند'],
+  specification:['specification','spec','المواصفات'],
+  unit:['unit','الوحدة'],
+  quantity:['quantity','qty','الكمية'],
+  unit_rate:['unit_rate','rate','سعر الوحدة'],
+  currency:['currency','العملة'],
+  notes:['notes','ملاحظات']
+ };
+ const header=rows[0].map(x=>String(x).trim().replace(/^\\uFEFF/,'').toLowerCase());
+ const positions={};
+ for(const [key,names] of Object.entries(aliases)){const index=header.findIndex(h=>names.includes(h));if(index>=0)positions[key]=index;}
+ if(!('description' in positions)||!('unit' in positions)||!('quantity' in positions))throw new Error('يجب أن يحتوي الملف على أعمدة description وunit وquantity على الأقل');
+ return rows.slice(1).filter(r=>r.some(x=>String(x).trim())).map((r,index)=>{
+  const get=k=>positions[k]===undefined?'':String(r[positions[k]]??'').trim();
+  const quantity=Number(get('quantity')),rateText=get('unit_rate'),rate=rateText===''?null:Number(rateText);
+  if(!get('description')||!get('unit')||!Number.isFinite(quantity)||quantity<=0)throw new Error('بيانات البند رقم '+(index+2)+' غير مكتملة: الوصف والوحدة والكمية مطلوبة');
+  if(rate!==null&&(!Number.isFinite(rate)||rate<0))throw new Error('سعر الوحدة غير صالح في الصف '+(index+2));
+  return {item_code:get('item_code')||null,category:get('category')||null,description:get('description'),specification:get('specification')||null,unit:get('unit'),quantity,unit_rate:rate,currency:(get('currency')||'SDG').toUpperCase(),notes:get('notes')||null};
+ });
+}
+function downloadAmmirCsv(filename,rows){
+ const cell=value=>{const text=String(value==null?'':value);return /[",\\r\\n]/.test(text)?'"'+text.replace(/"/g,'""')+'"':text;};
+ const csv='\\uFEFF'+rows.map(row=>row.map(cell).join(',')).join('\\r\\n');
+ const blob=new Blob([csv],{type:'text/csv;charset=utf-8'}),url=URL.createObjectURL(blob),link=document.createElement('a');
+ link.href=url;link.download=filename;document.body.appendChild(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
 function renderExecutionPanel(){
  const versions=moduleData.boqVersions||[],items=moduleData.boqItems||[],rfqs=moduleData.rfqs||[],invites=moduleData.rfqInvites||[],quotes=moduleData.rfqQuotes||[],awards=moduleData.awards||[],deliveries=moduleData.deliveries||[];
  const activeVersion=versions.slice().sort((a,b)=>Number(b.version_no)-Number(a.version_no))[0];
@@ -938,6 +980,8 @@ function renderExecutionPanel(){
  return (myInvites.length?'<section class="panel"><h3>دعوات طلبات العروض</h3>'+myInvites.map(i=>'<article class="project-card"><strong>'+esc(i.provider_name_snapshot)+'</strong><p>طلب '+esc(i.rfq_id)+'</p><button class="btn primary" type="button" data-execution-status="invite-accept" data-id="'+esc(i.id)+'">قبول الدعوة</button></article>').join('')+'</section>':'')+(myAwards.length?'<section class="panel"><h3>قرارات الترسية</h3>'+myAwards.map(a=>'<article class="project-card"><strong>'+esc(a.award_reference)+'</strong><p>'+esc(a.terms||'')+'</p><button class="btn primary" type="button" data-execution-status="award-accept" data-id="'+esc(a.id)+'">قبول الترسية</button><button class="btn quiet" type="button" data-execution-status="award-reject" data-id="'+esc(a.id)+'">رفض</button></article>').join('')+'</section>':'')+'<section class="panel"><div class="panel-head"><h3>نطاق العمل وجداول الكميات</h3><span class="muted">BOQ · إصدارات موثقة</span></div><div class="notice">أنشئ إصداراً لنطاق العمل، ثم أضف البنود بالكميات والمواصفات والوحدات. لا تُنشأ تقديرات تلقائية ولا أسعار افتراضية.</div>'+
  (canManage?'<form class="module-form" data-execution-form="version"><label>عنوان الإصدار<input name="title" required placeholder="مثلاً: نطاق الأعمال — الإصدار الأول"></label><label>ملاحظات المراجعة<input name="revision_notes"></label><button class="btn primary" type="submit">إنشاء إصدار BOQ</button></form>':'')+
  (versions.length?'<div class="notice">الإصدارات: '+versions.map(v=>'V'+esc(v.version_no)+' — '+esc(v.title)+' ('+esc(v.status)+')'+(canManage&&v.status==='draft'?' <button class="btn light" type="button" data-execution-status="boq-publish" data-id="'+esc(v.id)+'">نشر الإصدار وقفل نطاقه</button>':'')).join(' · ')+'</div>':'<div class="empty">لا توجد إصدارات BOQ لهذا المشروع بعد</div>')+
+ (activeVersion?'<div class="actions"><button class="btn light" type="button" data-execution-status="boq-export" data-id="'+esc(activeVersion.id)+'">تصدير الإصدار CSV</button><button class="btn quiet" type="button" data-execution-status="boq-template">تنزيل قالب CSV</button></div>':'')+
+ (activeVersion&&activeVersion.status==='draft'&&canManage?'<form class="module-form" data-execution-form="boqImport"><input type="hidden" name="boq_version_id" value="'+esc(activeVersion.id)+'"><label>استيراد بنود BOQ من ملف CSV<input name="boq_file" type="file" accept=".csv,text/csv" required></label><small class="muted">الأعمدة المطلوبة: description, unit, quantity — والاختيارية: item_code, category, specification, unit_rate, currency, notes</small><button class="btn primary" type="submit">استيراد البنود إلى الإصدار</button></form>':'')+
  (activeVersion&&activeVersion.status==='draft'&&canManage?'<form class="module-form" data-execution-form="boqItem"><input type="hidden" name="boq_version_id" value="'+esc(activeVersion.id)+'"><div class="form-grid"><label>رمز البند<input name="item_code" placeholder="01.01"></label><label>التصنيف<input name="category" placeholder="أعمال خرسانية"></label><label class="span-2">وصف البند<input name="description" required></label><label class="span-2">المواصفات<input name="specification"></label><label>الوحدة<input name="unit" required placeholder="م² / م³ / عدد"></label><label>الكمية<input name="quantity" type="number" min="0.0001" step="any" required></label><label>سعر الوحدة (اختياري)<input name="unit_rate" type="number" min="0" step="any"></label><label>العملة<input name="currency" placeholder="SDG / USD"></label></div><button class="btn primary" type="submit">إضافة بند إلى الإصدار</button></form>':'')+
  (items.length?'<div class="table-wrap"><table><thead><tr><th>الرمز</th><th>البند</th><th>المواصفات</th><th>الكمية</th><th>السعر التقديري</th></tr></thead><tbody>'+itemRows+'</tbody></table></div>':'<div class="empty">أضف بنوداً إلى جدول الكميات لتبدأ</div>')+'</section>'+
  '<section class="panel"><div class="panel-head"><h3>طلبات عروض الأسعار RFQ</h3><span class="muted">منافسة منظمة بين مقدمي الخدمات</span></div>'+
@@ -960,7 +1004,20 @@ async function submitExecutionForm(form){
   const qty=Number(v.quantity),rate=v.unit_rate===''?null:Number(v.unit_rate);
   const r=await client.from('ammir_project_boq_items').insert({project_id:pid,boq_version_id:v.boq_version_id,item_code:v.item_code.trim()||null,category:v.category.trim()||null,description:v.description.trim(),specification:v.specification.trim()||null,unit:v.unit.trim(),quantity:qty,unit_rate:rate,currency:v.currency.trim().toUpperCase()||null,created_by:currentUser.id});if(r.error)throw r.error;
   await logActivity('boq_item_added','إضافة بند إلى جدول الكميات: '+v.description,'boq_item');
- }else if(kind==='rfq'){
+ }else if(kind==='boqImport'){
+  const versionId=v.boq_version_id,file=fd.get('boq_file');
+  if(!file||!file.size)throw new Error('اختر ملف CSV أولاً');
+  const version=(moduleData.boqVersions||[]).find(x=>String(x.id)===String(versionId));
+  if(!version||version.status!=='draft')throw new Error('يمكن الاستيراد إلى إصدار BOQ مسودة فقط');
+  if(file.size>5*1024*1024)throw new Error('حجم ملف CSV يتجاوز الحد المسموح 5 ميغابايت');
+  const rows=parseAmmirCsv(await file.text());
+  const payload=rows.map((x,i)=>({...x,project_id:pid,boq_version_id:versionId,created_by:currentUser.id,sort_order:(moduleData.boqItems||[]).length+i}));
+  for(let offset=0;offset<payload.length;offset+=100){
+   const inserted=await client.from('ammir_project_boq_items').insert(payload.slice(offset,offset+100));
+   if(inserted.error)throw inserted.error;
+  }
+  await logActivity('boq_items_imported','استيراد '+payload.length+' بند إلى BOQ','boq_version',versionId,{count:payload.length});
+}else if(kind==='rfq'){
   if(!v.boq_version_id)throw new Error('اختر إصدار BOQ منشوراً حتى يحتوي طلب السعر على كميات ومواصفات ثابتة');
   const {data:version,error:ve}=await client.from('ammir_project_boq_versions').select('id,status').eq('id',v.boq_version_id).eq('project_id',pid).single();if(ve)throw ve;
   if(version.status!=='published')throw new Error('لا يمكن نشر طلب سعر من إصدار BOQ غير منشور');
@@ -1266,6 +1323,17 @@ async function handleModuleClick(e){
  const execStatus=e.target.closest('[data-execution-status]');
  if(execStatus){
   const id=execStatus.dataset.id,action=execStatus.dataset.executionStatus;
+  if(action==='boq-template'){
+   downloadAmmirCsv('AMMIR_BOQ_TEMPLATE.csv',[
+    ['item_code','category','description','specification','unit','quantity','unit_rate','currency','notes'],
+    ['','','','','','','','','']
+   ]);return;
+  }
+  if(action==='boq-export'){
+   const version=(moduleData.boqVersions||[]).find(x=>String(x.id)===String(id));
+   const rows=[['item_code','category','description','specification','unit','quantity','unit_rate','currency','notes'],...(moduleData.boqItems||[]).filter(x=>String(x.boq_version_id)===String(id)).map(x=>[x.item_code,x.category,x.description,x.specification,x.unit,x.quantity,x.unit_rate,x.currency,x.notes])];
+   downloadAmmirCsv('AMMIR_BOQ_V'+(version?.version_no||'')+'.csv',rows);return;
+  }
   if(action==='boq-publish'){const r=await client.from('ammir_project_boq_versions').update({status:'published',published_by:currentUser.id,published_at:new Date().toISOString()}).eq('id',id).eq('project_id',activeProject.id).eq('status','draft');if(r.error)throw r.error;await logActivity('boq_version_published','نشر إصدار جدول الكميات','boq_version',id);}
   if(action==='invite-accept'){const r=await client.from('ammir_project_rfq_invites').update({status:'accepted',responded_at:new Date().toISOString()}).eq('id',id).eq('provider_user_id',currentUser.id);if(r.error)throw r.error;}
   if(action==='award-accept'||action==='award-reject'){const r=await client.from('ammir_project_awards').update({status:action==='award-accept'?'accepted':'rejected',accepted_at:action==='award-accept'?new Date().toISOString():null}).eq('id',id).eq('supplier_user_id',currentUser.id);if(r.error)throw r.error;}
