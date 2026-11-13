@@ -92,14 +92,15 @@ BEGIN
   INSERT INTO public.ammir_project_rfq_invites(
     rfq_id,project_id,provider_user_id,provider_type,provider_name_snapshot,invited_by,status
   ) VALUES
-    (v_rfq,v_project,v_supplier_a,'supplier','Verified Materials Supplier',v_owner,'accepted'),
-    (v_rfq,v_project,v_supplier_b,'service_provider','Verified Engineering Provider',v_owner,'accepted');
+    (v_rfq,v_project,v_supplier_a,'supplier','Verified Materials Supplier',v_owner,'invited'),
+    (v_rfq,v_project,v_supplier_b,'service_provider','Verified Engineering Provider',v_owner,'invited');
 
   SELECT id INTO v_invite_a FROM public.ammir_project_rfq_invites
    WHERE rfq_id=v_rfq AND provider_user_id=v_supplier_a;
   SELECT id INTO v_invite_b FROM public.ammir_project_rfq_invites
    WHERE rfq_id=v_rfq AND provider_user_id=v_supplier_b;
   IF v_invite_a IS NULL OR v_invite_b IS NULL THEN RAISE EXCEPTION 'Multi-provider invitations were not recorded'; END IF;
+  UPDATE public.ammir_project_rfq_invites SET status='accepted',responded_at=now() WHERE id IN (v_invite_a,v_invite_b);
 
   INSERT INTO public.ammir_project_rfq_quotes(
     rfq_id,project_id,provider_user_id,currency,transport_cost,loading_cost,taxes,other_costs,status
