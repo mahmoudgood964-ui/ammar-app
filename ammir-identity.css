@@ -112,3 +112,10 @@ button,.btn,input,select,textarea{font-family:inherit}
  .mobile-nav .nav-btn{min-width:0;flex:1;font-size:9px}
 }
 @media(prefers-reduced-motion:no-preference){.btn,.nav-btn,.landing-feature,.landing-role,.landing-step{transition:all .18s ease}}
+
+/* The full authentication canvas carries the dark architectural brand field */
+.auth-shell{background:linear-gradient(132deg,#102f29 0%,#174638 54%,#244f40 100%)}
+.auth-shell:before{inset:0;height:auto;background:radial-gradient(circle at 12% 15%,#d6ad7918 0 1px,transparent 2px),radial-gradient(circle at 86% 82%,#d6ad7918 0 1px,transparent 2px);background-size:38px 38px,54px 54px;clip-path:none}
+.landing-section-heading h3{color:#fff}
+.landing-record .landing-section-heading h3{color:var(--gd)}
+@media(max-width:900px){.auth-shell:before{inset:0;height:auto;clip-path:none}.landing-section-heading h3{color:var(--gd)}}
