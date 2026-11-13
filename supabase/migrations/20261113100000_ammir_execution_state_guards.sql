@@ -7,8 +7,15 @@ CREATE OR REPLACE FUNCTION public.ammir_guard_rfq_state()
 RETURNS trigger
 LANGUAGE plpgsql
 SET search_path = public, pg_temp
-AS $$
+AS $
 BEGIN
+  IF TG_OP='INSERT' THEN
+    IF NEW.status <> 'draft' THEN
+      RAISE EXCEPTION 'RFQs must be created as drafts before they are published';
+    END IF;
+    RETURN NEW;
+  END IF;
+
   IF OLD.status <> 'draft' AND (
     NEW.project_id IS DISTINCT FROM OLD.project_id OR
     NEW.boq_version_id IS DISTINCT FROM OLD.boq_version_id OR
@@ -37,7 +44,7 @@ $$;
 
 DROP TRIGGER IF EXISTS ammir_guard_rfq_state_trigger ON public.ammir_project_rfqs;
 CREATE TRIGGER ammir_guard_rfq_state_trigger
-BEFORE UPDATE ON public.ammir_project_rfqs
+BEFORE INSERT OR UPDATE ON public.ammir_project_rfqs
 FOR EACH ROW EXECUTE FUNCTION public.ammir_guard_rfq_state();
 
 CREATE OR REPLACE FUNCTION public.ammir_guard_rfq_item_draft_state()
@@ -112,8 +119,15 @@ CREATE OR REPLACE FUNCTION public.ammir_guard_award_header_state()
 RETURNS trigger
 LANGUAGE plpgsql
 SET search_path = public, pg_temp
-AS $$
+AS $
 BEGIN
+  IF TG_OP='INSERT' THEN
+    IF NEW.status <> 'draft' THEN
+      RAISE EXCEPTION 'Awards must be created as drafts before issuance';
+    END IF;
+    RETURN NEW;
+  END IF;
+
   IF TG_OP='DELETE' THEN
     IF OLD.status <> 'draft' THEN
       RAISE EXCEPTION 'An issued award cannot be deleted; cancel it and preserve the audit record';
@@ -146,7 +160,7 @@ $$;
 DROP TRIGGER IF EXISTS ammir_guard_award_header_state_trigger
   ON public.ammir_project_awards;
 CREATE TRIGGER ammir_guard_award_header_state_trigger
-BEFORE UPDATE OR DELETE ON public.ammir_project_awards
+BEFORE INSERT OR UPDATE OR DELETE ON public.ammir_project_awards
 FOR EACH ROW EXECUTE FUNCTION public.ammir_guard_award_header_state();
 
 CREATE OR REPLACE FUNCTION public.ammir_validate_delivery_supplier()
@@ -158,6 +172,10 @@ DECLARE
   v_award_supplier uuid;
   v_award_status text;
 BEGIN
+  IF TG_OP='INSERT' AND NEW.status <> 'planned' THEN
+    RAISE EXCEPTION 'Deliveries must be created in planned state';
+  END IF;
+
   SELECT supplier_user_id,status INTO v_award_supplier,v_award_status
   FROM public.ammir_project_awards
   WHERE id=NEW.award_id AND project_id=NEW.project_id;
@@ -203,6 +221,81 @@ CREATE TRIGGER ammir_guard_delivery_delete_trigger
 BEFORE DELETE ON public.ammir_project_deliveries
 FOR EACH ROW EXECUTE FUNCTION public.ammir_guard_delivery_delete();
 
+
+CREATE OR REPLACE FUNCTION public.ammir_guard_boq_version_insert()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = public, pg_temp
+AS $
+BEGIN
+  IF NEW.status <> 'draft' THEN
+    RAISE EXCEPTION 'BOQ versions must be created as drafts before publication';
+  END IF;
+  RETURN NEW;
+END;
+$;
+
+DROP TRIGGER IF EXISTS ammir_guard_boq_version_insert_trigger
+  ON public.ammir_project_boq_versions;
+CREATE TRIGGER ammir_guard_boq_version_insert_trigger
+BEFORE INSERT ON public.ammir_project_boq_versions
+FOR EACH ROW EXECUTE FUNCTION public.ammir_guard_boq_version_insert();
+
+-- Authenticated project roles may create only draft records. Publication and
+-- issuance must occur through the reviewed state transitions above.
+DROP POLICY IF EXISTS ammir_boq_versions_insert ON public.ammir_project_boq_versions;
+CREATE POLICY ammir_boq_versions_insert ON public.ammir_project_boq_versions
+FOR INSERT TO authenticated
+WITH CHECK (
+  status='draft'
+  AND public.ammar_project_role(project_id::text) IN ('owner','manager','supervisor','engineer')
+);
+
+DROP POLICY IF EXISTS ammir_rfqs_insert ON public.ammir_project_rfqs;
+CREATE POLICY ammir_rfqs_insert ON public.ammir_project_rfqs
+FOR INSERT TO authenticated
+WITH CHECK (
+  status='draft'
+  AND public.ammar_project_role(project_id::text) IN ('owner','manager','supervisor','engineer')
+);
+
+DROP POLICY IF EXISTS ammir_rfq_invites_insert ON public.ammir_project_rfq_invites;
+CREATE POLICY ammir_rfq_invites_insert ON public.ammir_project_rfq_invites
+FOR INSERT TO authenticated
+WITH CHECK (
+  status='invited'
+  AND public.ammar_project_role(project_id::text) IN ('owner','manager','supervisor','engineer')
+  AND (
+    EXISTS (SELECT 1 FROM public.ammar_market_suppliers s
+      WHERE s.owner_id=provider_user_id AND s.status='active' AND s.is_verified=true)
+    OR EXISTS (SELECT 1 FROM public.ammar_service_providers sp
+      WHERE sp.owner_id=provider_user_id AND sp.status='active' AND sp.is_verified=true)
+  )
+);
+
+DROP POLICY IF EXISTS ammir_awards_insert ON public.ammir_project_awards;
+CREATE POLICY ammir_awards_insert ON public.ammir_project_awards
+FOR INSERT TO authenticated
+WITH CHECK (
+  status='draft'
+  AND public.ammar_project_role(project_id::text) IN ('owner','manager','supervisor','engineer')
+  AND (
+    EXISTS (SELECT 1 FROM public.ammar_market_suppliers s
+      WHERE s.owner_id=supplier_user_id AND s.status='active' AND s.is_verified=true)
+    OR EXISTS (SELECT 1 FROM public.ammar_service_providers sp
+      WHERE sp.owner_id=supplier_user_id AND sp.status='active' AND sp.is_verified=true)
+  )
+);
+
+DROP POLICY IF EXISTS ammir_deliveries_insert ON public.ammir_project_deliveries;
+CREATE POLICY ammir_deliveries_insert ON public.ammir_project_deliveries
+FOR INSERT TO authenticated
+WITH CHECK (
+  status='planned'
+  AND public.ammar_project_role(project_id::text) IN ('owner','manager','supervisor','engineer')
+);
+
+REVOKE ALL ON FUNCTION public.ammir_guard_boq_version_insert() FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.ammir_guard_rfq_state() FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.ammir_guard_rfq_item_draft_state() FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.ammir_guard_award_item_draft_state() FROM PUBLIC, anon, authenticated;
