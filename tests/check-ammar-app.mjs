@@ -16,6 +16,14 @@ const messagingTests = fs.readFileSync('tests/ammar-messaging-plus.sql', 'utf8')
 const competitiveAudit = fs.readFileSync('docs/AMMAR_COMPETITIVE_POSITIONING_AND_NAME_REVIEW.md', 'utf8');
 const releaseAudit = fs.readFileSync('docs/AMMAR_MESSAGING_AND_RELEASE_GAP_AUDIT.md', 'utf8');
 const tests = fs.readFileSync('tests/ammar-marketplace-integration.sql', 'utf8');
+const workflowSchema = fs.readFileSync('supabase/migrations/20261113090000_ammir_boq_rfq_awards_delivery.sql', 'utf8');
+const workflowRls = fs.readFileSync('supabase/migrations/20261113091000_ammir_workflow_rls_and_indexes.sql', 'utf8');
+const workflowProviderGates = fs.readFileSync('supabase/migrations/20261113092000_ammir_verified_provider_gates_and_quote_totals.sql', 'utf8');
+const workflowState = fs.readFileSync('supabase/migrations/20261113093000_ammir_workflow_state_guards.sql', 'utf8');
+const workflowIndexes = fs.readFileSync('supabase/migrations/20261113094000_ammir_workflow_fk_indexes.sql', 'utf8');
+const workflowGuards = fs.readFileSync('supabase/migrations/20261113100000_ammir_execution_state_guards.sql', 'utf8');
+const workflowTests = fs.readFileSync('tests/ammir-project-workflows.sql', 'utf8');
+
 
 const inlineScripts = [...html.matchAll(/<script\b(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/gi)];
 assert.ok(inlineScripts.length > 0, 'The main app inline script must exist');
@@ -123,5 +131,57 @@ assert.ok(marketplaceIntegration.includes('Buyer unexpectedly accepted a quote f
 assert.ok(marketplaceIntegration.includes('Buyer unexpectedly accepted an offer from an unverified provider'), 'Service offer acceptance verification regression test is missing');
 assert.ok(moduleSource.includes('الشراء متاح بعد اعتماد المورد'), 'Unverified supplier purchase warning is missing from the UI');
 assert.ok(moduleSource.includes('تقديم العروض الرسمية يتاح بعد اعتماد حسابك'), 'Unverified service-provider offer warning is missing from the UI');
+
+
+const workflowTables = [
+  'ammir_project_boq_versions','ammir_project_boq_items','ammir_project_rfqs',
+  'ammir_project_rfq_items','ammir_project_rfq_invites','ammir_project_rfq_quotes',
+  'ammir_project_rfq_quote_items','ammir_project_awards','ammir_project_award_items',
+  'ammir_project_deliveries','ammir_project_delivery_items','ammir_project_delivery_evidence'
+];
+for (const table of workflowTables) {
+  assert.ok(workflowSchema.includes('CREATE TABLE IF NOT EXISTS public.' + table), 'Missing execution workflow table ' + table);
+  assert.ok(workflowSchema.includes("'" + table + "'"), 'Missing RLS enablement entry for ' + table);
+}
+for (const migration of [workflowSchema,workflowRls,workflowProviderGates,workflowState,workflowIndexes,workflowGuards]) {
+  assert.doesNotMatch(migration,/project_payment_(?:milestones|events)/,'Execution workflow migrations must not alter deferred bank milestone tables');
+  assert.doesNotMatch(migration,/(^|\\n)AS \\$(\\n|$)/,'Execution workflow migration contains malformed PL/pgSQL opening delimiter');
+  assert.doesNotMatch(migration,/(^|\\n)\\$(\\n|$)/,'Execution workflow migration contains malformed PL/pgSQL closing delimiter');
+}
+for (const feature of [
+  'ammir_project_rfq_quotes_select','ammir_rfq_quotes_insert','ammir_rfq_invites_insert',
+  'ammir_awards_insert','ammir_delivery_evidence_storage_select'
+]) assert.ok(workflowSchema.includes(feature)||workflowRls.includes(feature)||workflowProviderGates.includes(feature),'Missing workflow access policy ' + feature);
+for (const guard of [
+  'ammir_guard_rfq_state_trigger','ammir_guard_invite_state_trigger',
+  'ammir_guard_award_header_state_trigger','ammir_guard_delivery_delete_trigger'
+]) assert.ok(workflowGuards.includes(guard),'Missing commercial state guard ' + guard);
+assert.ok(workflowSchema.includes("VALUES (\\n  'ammir-delivery-evidence'"),'Private delivery evidence bucket is missing');
+assert.ok(workflowProviderGates.includes("NEW.total_cost :="),'Quote total must be derived from submitted line items and costs');
+assert.ok(workflowGuards.includes('Published RFQ scope is immutable'),'Published RFQ scope immutability guard is missing');
+assert.ok(workflowGuards.includes('Issued award terms and supplier are immutable'),'Issued award immutability guard is missing');
+assert.ok(workflowTests.includes('AMMIR PROJECT BOQ/RFQ/AWARD/DELIVERY TESTS PASSED'),'Execution workflow regression test completion marker is missing');
+assert.ok(workflowTests.includes('Split awards exceeding requested quantity'),'Split-award quantity regression test is missing');
+assert.ok(workflowTests.includes('Delivery with a supplier different from the award'),'Delivery supplier mismatch regression test is missing');
+
+for (const feature of [
+  'function parseAmmirCsv','function downloadAmmirCsv','data-execution-form="boqImport"',
+  'data-execution-status="boq-template"','data-execution-status="boq-export"',
+  'async function loadRfqInbox','async function submitRfqProviderQuote',
+  'data-execution-form="rfq"','data-execution-form="invite"',
+  'data-execution-form="award"','data-execution-form="delivery"','data-execution-form="receipt"',
+  'data-rfq-provider-form="quote"','ammir-delivery-evidence'
+]) assert.ok(html.includes(feature),'Missing project execution UI feature ' + feature);
+
+const csvStart=html.indexOf('function parseAmmirCsv');
+const csvEnd=html.indexOf('function renderExecutionPanel',csvStart);
+assert.ok(csvStart>=0&&csvEnd>csvStart,'BOQ CSV import/export helpers are missing');
+const csvSandbox={};
+vm.runInNewContext(html.slice(csvStart,csvEnd)+'\\nglobalThis.parseAmmirCsv=parseAmmirCsv;',csvSandbox);
+const importedRows=csvSandbox.parseAmmirCsv('\\uFEFFitem_code,description,specification,unit,quantity,unit_rate,currency\\n01,"Concrete, C30","Grade C30",m3,10,125,SDG\\n02,Steel bar,12mm,kg,50,,SDG');
+assert.equal(importedRows.length,2,'CSV parser should read both BOQ rows');
+assert.equal(importedRows[0].description,'Concrete, C30','CSV parser should preserve quoted commas');
+assert.equal(importedRows[0].quantity,10,'CSV parser should normalize numeric quantities');
+assert.equal(importedRows[1].unit_rate,null,'CSV parser should accept a blank optional unit rate');
 
 console.log('AMMIR static application and migration checks passed.');
