@@ -1,5 +1,5 @@
-const CACHE_NAME='ammir-shell-v7-ancient-geometry';
-const APP_SHELL=['/','/index.html','/manifest.webmanifest','/icon.svg','/ammir-identity.css','/ammar-marketplace.js'];
+const CACHE_NAME='ammir-shell-v8-ancient-geometry';
+const APP_SHELL=['/','/index.html','/manifest.webmanifest','/icon.svg','/icon-192.png','/ammir-identity.css','/ammar-marketplace.js'];
 self.addEventListener('install',event=>{
  event.waitUntil(caches.open(CACHE_NAME).then(cache=>cache.addAll(APP_SHELL)).then(()=>self.skipWaiting()));
 });
@@ -15,8 +15,9 @@ self.addEventListener('fetch',event=>{
   event.respondWith(fetch(request).then(async response=>{
    if(!response.ok)return response;
    const html=await response.text();
-   const injected=html.replace('</head>','<link rel="stylesheet" href="/ammir-identity.css"><link rel="apple-touch-icon" sizes="any" href="/icon.svg"><meta name="mobile-web-app-capable" content="yes"></head>');
-   const enhanced=new Response(injected,{status:response.status,statusText:response.statusText,headers:new Headers(response.headers)});
+   const injected=html.replace('</head>','<link rel="stylesheet" href="/ammir-identity.css"><link rel="apple-touch-icon" sizes="192x192" href="/icon-192.png"><meta name="mobile-web-app-capable" content="yes"></head>');
+   const headers=new Headers(response.headers);headers.delete('content-length');headers.delete('content-encoding');
+   const enhanced=new Response(injected,{status:response.status,statusText:response.statusText,headers});
    const copy=enhanced.clone();caches.open(CACHE_NAME).then(cache=>cache.put('/index.html',copy));
    return enhanced;
   }).catch(()=>caches.match('/index.html')));
