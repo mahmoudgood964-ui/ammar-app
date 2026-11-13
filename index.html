@@ -226,6 +226,11 @@ body{background:var(--bg);font-family:"Noto Sans Arabic",Tahoma,Arial,sans-serif
 .ammir-project-tab{display:inline-flex;align-items:center;gap:6px;border:1px solid transparent;border-radius:10px;background:transparent;color:#607068;padding:9px 11px;font-size:11px;font-weight:700;white-space:nowrap}
 .ammir-project-tab:hover{background:#eaf1ed;color:#173e33}
 .ammir-project-tab.active{background:#173f34;color:#fff;box-shadow:0 5px 12px rgba(23,63,52,.16)}
+.ammir-module-loading{min-height:190px;display:flex;align-items:center;justify-content:center;gap:13px;padding:30px;border:1px solid #e4ebe6;border-radius:16px;background:#fff;color:#173f34;text-align:right}
+.ammir-module-loading strong{display:block;font-size:13px}
+.ammir-module-loading small{display:block;margin-top:5px;color:#829087;font-size:11px}
+.ammir-loading-mark{width:26px;height:26px;flex:0 0 26px;border:3px solid #e5eee8;border-top-color:#1a5746;border-radius:50%;animation:ammir-spin .8s linear infinite}
+@keyframes ammir-spin{to{transform:rotate(360deg)}}
 .ammir-project-section{padding:18px clamp(16px,3vw,38px) 34px;min-width:0}
 .ammir-project-section #modulePanel{max-width:1280px;margin:0 auto}
 .ammir-project-section #modulePanel>.panel{border-radius:16px;border-color:#e4ebe6;box-shadow:0 4px 18px rgba(20,50,38,.025)}
@@ -408,19 +413,19 @@ const SUPABASE_URL='https://uutwijowzewmvvrzsaww.supabase.co';
 const SUPABASE_KEY='sb_publishable_o-zC0NdMggZbPPY2l1REhA_w8Sbvjw_';
 const APP_URL='https://ammar-app.vercel.app/';
 const $=id=>document.getElementById(id);
-let client=null,currentUser=null,deferredInstallPrompt=null,projectsCache=[],editingProjectId=null,recoveryMode=false,lastViewedProjectId=null,activeProject=null,moduleTab='tasks',pendingInviteToken=new URLSearchParams(location.search).get('invite')||localStorage.getItem('ammar_pending_invite')||null,inviteAccepting=false,notificationTimer=null,lastInviteUrl='',moduleData={tasks:[],expenses:[],quotes:[],updates:[],documents:[],payments:[],activity:[],comments:[],members:[],invitations:[],siteReports:[],issues:[],changeOrders:[],handover:[],paymentMilestones:[],paymentEvents:[]},moduleLoadWarnings=[];
+let client=null,currentUser=null,deferredInstallPrompt=null,projectsCache=[],editingProjectId=null,recoveryMode=false,lastViewedProjectId=null,activeProject=null,moduleTab='tasks',pendingInviteToken=new URLSearchParams(location.search).get('invite')||localStorage.getItem('ammar_pending_invite')||null,inviteAccepting=false,notificationTimer=null,lastInviteUrl='',moduleData={tasks:[],expenses:[],quotes:[],updates:[],documents:[],payments:[],activity:[],comments:[],members:[],invitations:[],siteReports:[],issues:[],changeOrders:[],handover:[],paymentMilestones:[],paymentEvents:[]},moduleLoadWarnings=[],moduleLoading=false;
 if(pendingInviteToken)localStorage.setItem('ammar_pending_invite',pendingInviteToken);
 const projectStatusLabels={planning:'قيد التخطيط',approved:'معتمد',in_progress:'قيد التنفيذ',on_hold:'متوقف مؤقتاً',completed:'مكتمل',cancelled:'ملغي'};
 const memberRoleLabels={manager:'مدير مشروع',supervisor:'مشرف',engineer:'مهندس',accountant:'محاسب',worker:'منفذ',viewer:'مشاهدة فقط'};
 
 const translations={
-'إدارة مشاريع ترميم وصيانة العقارات':'Renovation & Property Maintenance Management',
-'مكان واحد لتنظيم مشاريع العقارات ومتابعة تفاصيلها.':'One place to organize property projects and track every detail.',
+'إدارة مشاريع البناء والترميم والمقاولات':'Construction, Renovation & Contracting Project Management',
+'منصة واحدة لإدارة مشاريع البناء والمقاولات والتوريد ومتابعة التنفيذ':'One workspace for construction, contracting, procurement and project delivery.',
 'تسجيل الدخول':'Sign in','البريد الإلكتروني':'Email','كلمة المرور':'Password','دخول إلى عَمِّر':'Sign in to AMMIR',
 'نسيت كلمة المرور؟':'Forgot password?','إنشاء حساب جديد':'Create account','العودة إلى تسجيل الدخول':'Back to sign in',
 'استعادة كلمة المرور':'Reset password','إرسال رابط الاستعادة':'Send reset link','كلمة المرور الجديدة':'New password',
 'تأكيد كلمة المرور':'Confirm password','حفظ كلمة المرور':'Save password','8 أحرف على الأقل':'At least 8 characters',
-'الرئيسية':'Dashboard','نظرة عامة على مشاريعك العقارية.':'An overview of your property projects.',
+'الرئيسية':'Dashboard','نظرة عامة على مشاريع البناء والمقاولات الخاصة بك.':'An overview of your construction and contracting projects.',
 'مشاريعي':'My projects','إنشاء مشروع':'Create project','مشروع جديد':'New project','حالة الاتصال':'Connection status',
 'متصل':'Connected','أحدث المشاريع':'Recent projects','عرض الكل':'View all','قائمة المشاريع':'Project list',
 'تحديث ↻':'Refresh ↻','عنوان المشروع':'Project title','وصف المشروع':'Project description','موقع العقار':'Property location',
@@ -432,7 +437,7 @@ const translations={
 'ابحث بالعنوان أو الموقع أو الوصف...':'Search by title, location or description...','التفاصيل':'Details',
 'تعديل':'Edit','الميزانية:':'Budget:','أُنشئ:':'Created:','الموقع غير محدد':'Location not specified',
 'نوع العقار غير محدد':'Property type not specified','مشروع مشترك':'Shared project','لا يوجد وصف مضاف.':'No description added.',
-'لا توجد مشاريع حتى الآن':'No projects yet','ابدأ بإضافة أول مشروع لترميم أو صيانة عقار.':'Create your first renovation or maintenance project.',
+'لا توجد مشاريع حتى الآن':'No projects yet','ابدأ بإنشاء أول مشروع بناء أو ترميم.':'Create your first construction or renovation project.',
 'تثبيت التطبيق':'Install app','الإشعارات':'Notifications','مساحة العمل':'Workspace','الحساب':'Account',
 'تسجيل الخروج':'Sign out','المهام':'Tasks','التقدم':'Progress','العروض':'Quotations','المصروفات':'Expenses',
 'المالية':'Finance','الملفات':'Files','الفريق':'Team','تقارير الموقع':'Site reports','العيوب والملاحظات':'Issues & defects',
@@ -561,11 +566,27 @@ Object.assign(translations,{
  'سجل النشاط الكامل':'Full activity log','الوحدات المتاحة في هذا المشروع':'Available project modules',
  'بنود استلام معلقة':'Pending handover items','لا توجد مصروفات مسجلة بعد.':'No expenses recorded yet.',
  'لم تُسجل مهام بعد':'No tasks recorded yet','من إجمالي المهام المسجلة':'of all recorded tasks',
- 'لا يوجد نشاط مسجل بعد. ستظهر هنا الإجراءات والقرارات التي تحفظها وحدات المشروع.':'No activity has been recorded yet. Actions and decisions saved in project modules will appear here.'
+ 'لا يوجد نشاط مسجل بعد. ستظهر هنا الإجراءات والقرارات التي تحفظها وحدات المشروع.':'No activity has been recorded yet. Actions and decisions saved in project modules will appear here.',
+ 'جارٍ تحميل بيانات المشروع...':'Loading project data...',
+ 'جارٍ التحميل...':'Loading...',
+ 'تاريخ الإنشاء:':'Created:',
+ 'البداية:':'Start:',
+ 'التسليم المستهدف:':'Target handover:',
+ 'تعريف المشروع':'Project details',
+ 'ملاحظات مسجلة إجمالاً':'observations recorded in total',
+ 'إجمالي المصروفات':'Total expenses',
+ 'لا يوجد وصف تفصيلي للمشروع حتى الآن. أضف وصفاً واضحاً لنطاق العمل لتوحيد فهم المالك والفريق.':'No project description yet. Add a clear scope so the owner and team share the same understanding.',
+ 'تحديث المبنى ومعالجة الواجهات':'Building upgrades and facade repairs'
 });
 function translated(value){
  const trimmed=value.trim();
  if(translations[trimmed])return value.replace(trimmed,translations[trimmed]);
+ const budgetMatch=trimmed.match(/^(◉ )?الميزانية:\\s*(.+)$/);if(budgetMatch)return value.replace(trimmed,(budgetMatch[1]||'')+'Budget: '+budgetMatch[2]);
+ const createdMatch=trimmed.match(/^تاريخ الإنشاء:\\s*(.+)$/);if(createdMatch)return value.replace(trimmed,'Created: '+createdMatch[1]);
+ const startMatch=trimmed.match(/^البداية:\\s*(.+)$/);if(startMatch)return value.replace(trimmed,'Start: '+startMatch[1]);
+ const targetMatch=trimmed.match(/^التسليم المستهدف:\\s*(.+)$/);if(targetMatch)return value.replace(trimmed,'Target handover: '+targetMatch[1]);
+ const expenseMatch=trimmed.match(/^إجمالي المصروفات · (.+)$/);if(expenseMatch)return value.replace(trimmed,'Total expenses · '+expenseMatch[1]);
+ const observationMatch=trimmed.match(/^(\\d+) ملاحظة مسجلة إجمالاً$/);if(observationMatch)return value.replace(trimmed,observationMatch[1]+' observations recorded in total');
  const m=trimmed.match(/^عرض (\d+) من (\d+) مشروع$/);
  if(m)return value.replace(trimmed,'Showing '+m[1]+' of '+m[2]+' projects');
  const durationMatch=trimmed.match(/^التنفيذ: (\d+) يوم$/);if(durationMatch)return value.replace(trimmed,'Duration: '+durationMatch[1]+' days');
@@ -635,7 +656,7 @@ function details(project){
   lastInviteUrl='';moduleLoadWarnings=[];
   moduleData={tasks:[],expenses:[],quotes:[],updates:[],documents:[],payments:[],activity:[],comments:[],members:[],invitations:[],siteReports:[],issues:[],changeOrders:[],handover:[],paymentMilestones:[],paymentEvents:[]};
  }
- activeProject=project;lastViewedProjectId=String(project.id);moduleTab='overview';
+ activeProject=project;lastViewedProjectId=String(project.id);moduleLoading=true;moduleTab='overview';
  $('detailTitle').textContent=project.title||'تفاصيل المشروع';
  $('detailEdit').hidden=String(project.client_id)!==String(currentUser.id);
  $('detailBackdrop').hidden=false;renderWorkspace();loadProjectModules();
@@ -710,10 +731,10 @@ function renderWorkspace(){
    '<div class="ammir-project-meta">'+meta+'<span>تاريخ الإنشاء: '+esc(dateText(p.created_at))+'</span><span>البداية: '+esc(dateText(p.start_date))+'</span><span>التسليم المستهدف: '+esc(dateText(p.target_end_date))+'</span></div>'+
   '</div></section>'+
   '<section class="ammir-project-pulse" aria-label="مؤشرات المشروع">'+
-   '<article class="ammir-pulse-card"><div class="ammir-pulse-label"><span>المهام المكتملة</span><span class="ammir-pulse-icon">✓</span></div><strong class="ammir-pulse-value">'+doneTasks+'/'+(moduleData.tasks||[]).length+'</strong><small class="ammir-pulse-foot">'+((moduleData.tasks||[]).length?'من إجمالي المهام المسجلة':'لم تُسجل مهام بعد')+'</small></article>'+
-   '<article class="ammir-pulse-card"><div class="ammir-pulse-label"><span>ملاحظات مفتوحة</span><span class="ammir-pulse-icon">!</span></div><strong class="ammir-pulse-value">'+openIssues+'</strong><small class="ammir-pulse-foot">'+(moduleData.issues||[]).length+' ملاحظة مسجلة إجمالاً</small></article>'+
-   '<article class="ammir-pulse-card"><div class="ammir-pulse-label"><span>عروض الأسعار</span><span class="ammir-pulse-icon">▤</span></div><strong class="ammir-pulse-value">'+quoteCount+'</strong><small class="ammir-pulse-foot">العروض المسجلة لهذا المشروع</small></article>'+
-   '<article class="ammir-pulse-card"><div class="ammir-pulse-label"><span>فريق المشروع</span><span class="ammir-pulse-icon">◎</span></div><strong class="ammir-pulse-value">'+memberCount+'</strong><small class="ammir-pulse-foot">المالك والأعضاء المسجلون</small></article>'+
+   '<article class="ammir-pulse-card"><div class="ammir-pulse-label"><span>المهام المكتملة</span><span class="ammir-pulse-icon">✓</span></div><strong class="ammir-pulse-value">'+(moduleLoading?'—':doneTasks+'/'+(moduleData.tasks||[]).length)+'</strong><small class="ammir-pulse-foot">'+(moduleLoading?'جارٍ التحميل...':((moduleData.tasks||[]).length?'من إجمالي المهام المسجلة':'لم تُسجل مهام بعد'))+'</small></article>'+
+   '<article class="ammir-pulse-card"><div class="ammir-pulse-label"><span>ملاحظات مفتوحة</span><span class="ammir-pulse-icon">!</span></div><strong class="ammir-pulse-value">'+(moduleLoading?'—':openIssues)+'</strong><small class="ammir-pulse-foot">'+(moduleData.issues||[]).length+' ملاحظة مسجلة إجمالاً</small></article>'+
+   '<article class="ammir-pulse-card"><div class="ammir-pulse-label"><span>عروض الأسعار</span><span class="ammir-pulse-icon">▤</span></div><strong class="ammir-pulse-value">'+(moduleLoading?'—':quoteCount)+'</strong><small class="ammir-pulse-foot">العروض المسجلة لهذا المشروع</small></article>'+
+   '<article class="ammir-pulse-card"><div class="ammir-pulse-label"><span>فريق المشروع</span><span class="ammir-pulse-icon">◎</span></div><strong class="ammir-pulse-value">'+(moduleLoading?'—':memberCount)+'</strong><small class="ammir-pulse-foot">المالك والأعضاء المسجلون</small></article>'+
   '</section>'+
   (moduleLoadWarnings.length?'<div class="message error ammir-workspace-warning">تعذر تحميل بعض الأقسام: '+esc(moduleLoadWarnings.join('، '))+'. الأقسام الأخرى متاحة. لا تعتبر هذه السجلات فارغة حتى ينجح الاتصال بها.</div>':'')+
   workspaceTabs()+
@@ -855,6 +876,7 @@ function renderQuotesPanel(){
 }
 function renderModulePanel(){
  const box=$('modulePanel');if(!box||!activeProject)return;const k=moduleTab;
+ if(moduleLoading){box.innerHTML='<div class="ammir-module-loading" role="status"><span class="ammir-loading-mark" aria-hidden="true"></span><div><strong>جارٍ تحميل بيانات المشروع...</strong><small>نحدّث الأقسام والمؤشرات من سجلات المشروع المحفوظة</small></div></div>';return;}
  if(k==='team'){box.innerHTML=renderTeamPanel();return;}
  if(k==='activity'){box.innerHTML=renderActivityPanel();return;}
  if(k==='comments'){box.innerHTML=renderCommentsPanel();return;}
@@ -896,6 +918,7 @@ function renderModulePanel(){
 
 async function loadProjectModules(){
  if(!activeProject||!client)return;
+ moduleLoading=true;renderModulePanel();
  const map={tasks:'project_tasks',expenses:'project_expenses',quotes:'project_quotes',updates:'project_updates',documents:'project_documents',payments:'project_payments',activity:'project_activity',comments:'project_comments',members:'project_members',invitations:'project_invitations',siteReports:'project_site_reports',issues:'project_issues',changeOrders:'project_change_orders',handover:'project_handover_items',paymentMilestones:'project_payment_milestones',paymentEvents:'project_payment_events'};
  const failures=[];
  const pairs=await Promise.all(Object.entries(map).map(async([k,t])=>{
@@ -908,6 +931,7 @@ async function loadProjectModules(){
  }));
  pairs.forEach(([k,v])=>moduleData[k]=v);
  moduleLoadWarnings=failures.map(x=>x.module);
+ moduleLoading=false;
  renderWorkspace();
 }
 
