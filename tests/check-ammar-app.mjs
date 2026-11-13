@@ -151,7 +151,7 @@ for (const migration of [workflowSchema,workflowRls,workflowProviderGates,workfl
   }
 }
 for (const feature of [
-  'ammir_project_rfq_quotes_select','ammir_rfq_quotes_insert','ammir_rfq_invites_insert',
+  'ammir_rfq_quotes_select','ammir_rfq_quotes_insert','ammir_rfq_invites_insert',
   'ammir_awards_insert','ammir_delivery_evidence_storage_select'
 ]) assert.ok(workflowSchema.includes(feature)||workflowRls.includes(feature)||workflowProviderGates.includes(feature),'Missing workflow access policy ' + feature);
 for (const guard of [
