@@ -548,7 +548,17 @@ const translations={
 const originalTextNodes=new WeakMap(),originalAttributes=new WeakMap();
 let appLanguage=localStorage.getItem('ammar_language')||'ar';
 Object.assign(translations,{
- 'مساحة المشروع':'Project workspace','مشاريعي':'My projects','إغلاق مساحة المشروع':'Close project workspace',
+ 'مساحة المشروع':'Project workspace',
+ '◷ مالك المشروع':'◷ Project owner',
+ '◷ مدير المشروع':'◷ Project manager',
+ '◷ مشرف':'◷ Supervisor',
+ '◷ مهندس':'◷ Engineer',
+ '◷ محاسب':'◷ Accountant',
+ '◷ عضو فريق':'◷ Team member',
+ '◷ مشاهدة فقط':'◷ Read only',
+ 'تجاري':'Commercial','سكني':'Residential','إداري':'Administrative',
+ 'وصف المشروع':'Project description',
+'مشاريعي':'My projects','إغلاق مساحة المشروع':'Close project workspace',
  'تعديل المشروع':'Edit project','تصدير التقرير':'Export report','إدارة المشروع':'Project management',
  'التوريد والمالية':'Procurement & finance','الموقع والجودة':'Site & quality','الفريق والسجلات':'Team & records',
  'الملخص':'Overview','المهام':'Tasks','التقدم':'Progress','العروض':'Quotations','المصروفات':'Expenses',
@@ -581,10 +591,10 @@ Object.assign(translations,{
 function translated(value){
  const trimmed=value.trim();
  if(translations[trimmed])return value.replace(trimmed,translations[trimmed]);
- const budgetMatch=trimmed.match(/^(◉ )?الميزانية:\\s*(.+)$/);if(budgetMatch)return value.replace(trimmed,(budgetMatch[1]||'')+'Budget: '+budgetMatch[2]);
- const createdMatch=trimmed.match(/^تاريخ الإنشاء:\\s*(.+)$/);if(createdMatch)return value.replace(trimmed,'Created: '+createdMatch[1]);
- const startMatch=trimmed.match(/^البداية:\\s*(.+)$/);if(startMatch)return value.replace(trimmed,'Start: '+startMatch[1]);
- const targetMatch=trimmed.match(/^التسليم المستهدف:\\s*(.+)$/);if(targetMatch)return value.replace(trimmed,'Target handover: '+targetMatch[1]);
+ const budgetMatch=trimmed.match(/^(◉ )?الميزانية:\s*(.+)$/);if(budgetMatch)return value.replace(trimmed,(budgetMatch[1]||'')+'Budget: '+budgetMatch[2]);
+ const createdMatch=trimmed.match(/^تاريخ الإنشاء:\s*(.+)$/);if(createdMatch)return value.replace(trimmed,'Created: '+createdMatch[1]);
+ const startMatch=trimmed.match(/^البداية:\s*(.+)$/);if(startMatch)return value.replace(trimmed,'Start: '+startMatch[1]);
+ const targetMatch=trimmed.match(/^التسليم المستهدف:\s*(.+)$/);if(targetMatch)return value.replace(trimmed,'Target handover: '+targetMatch[1]);
  const expenseMatch=trimmed.match(/^إجمالي المصروفات · (.+)$/);if(expenseMatch)return value.replace(trimmed,'Total expenses · '+expenseMatch[1]);
  const observationMatch=trimmed.match(/^(\d+) ملاحظة مسجلة إجمالاً$/);if(observationMatch)return value.replace(trimmed,observationMatch[1]+' observations recorded in total');
  const m=trimmed.match(/^عرض (\d+) من (\d+) مشروع$/);
