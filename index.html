@@ -961,15 +961,18 @@ async function submitExecutionForm(form){
   const r=await client.from('ammir_project_boq_items').insert({project_id:pid,boq_version_id:v.boq_version_id,item_code:v.item_code.trim()||null,category:v.category.trim()||null,description:v.description.trim(),specification:v.specification.trim()||null,unit:v.unit.trim(),quantity:qty,unit_rate:rate,currency:v.currency.trim().toUpperCase()||null,created_by:currentUser.id});if(r.error)throw r.error;
   await logActivity('boq_item_added','إضافة بند إلى جدول الكميات: '+v.description,'boq_item');
  }else if(kind==='rfq'){
+  if(!v.boq_version_id)throw new Error('اختر إصدار BOQ منشوراً حتى يحتوي طلب السعر على كميات ومواصفات ثابتة');
+  const {data:version,error:ve}=await client.from('ammir_project_boq_versions').select('id,status').eq('id',v.boq_version_id).eq('project_id',pid).single();if(ve)throw ve;
+  if(version.status!=='published')throw new Error('لا يمكن نشر طلب سعر من إصدار BOQ غير منشور');
+  const {data:bi,error:be}=await client.from('ammir_project_boq_items').select('*').eq('project_id',pid).eq('boq_version_id',v.boq_version_id);
+  if(be)throw be;if(!bi?.length)throw new Error('إصدار BOQ لا يحتوي بنوداً');
   const ref='AMMIR-'+new Date().getFullYear()+'-'+Math.random().toString(36).slice(2,8).toUpperCase();
-  const r=await client.from('ammir_project_rfqs').insert({project_id:pid,boq_version_id:v.boq_version_id||null,reference_code:ref,title:v.title.trim(),scope_description:v.scope_description.trim()||null,delivery_location:v.delivery_location.trim()||null,deadline_at:v.deadline_at?new Date(v.deadline_at).toISOString():null,currency:v.currency.trim().toUpperCase(),status:'open',created_by:currentUser.id,published_at:new Date().toISOString()}).select().single();if(r.error)throw r.error;
-  if(v.boq_version_id){
-   const {data:bi,error:be}=await client.from('ammir_project_boq_items').select('*').eq('project_id',pid).eq('boq_version_id',v.boq_version_id);
-   if(be)throw be;
-   if(bi?.length){const rows=bi.map(x=>({rfq_id:r.data.id,project_id:pid,boq_item_id:x.id,item_code:x.item_code,description:x.description,specification:x.specification,unit:x.unit,quantity:x.quantity,notes:x.notes,sort_order:x.sort_order}));const ir=await client.from('ammir_project_rfq_items').insert(rows);if(ir.error)throw ir.error;}
-  }
+  const r=await client.from('ammir_project_rfqs').insert({project_id:pid,boq_version_id:v.boq_version_id,reference_code:ref,title:v.title.trim(),scope_description:v.scope_description.trim()||null,delivery_location:v.delivery_location.trim()||null,deadline_at:v.deadline_at?new Date(v.deadline_at).toISOString():null,currency:v.currency.trim().toUpperCase(),status:'draft',created_by:currentUser.id}).select().single();if(r.error)throw r.error;
+  const rows=bi.map(x=>({rfq_id:r.data.id,project_id:pid,boq_item_id:x.id,item_code:x.item_code,description:x.description,specification:x.specification,unit:x.unit,quantity:x.quantity,notes:x.notes,sort_order:x.sort_order}));
+  const ir=await client.from('ammir_project_rfq_items').insert(rows);if(ir.error){await client.from('ammir_project_rfqs').delete().eq('id',r.data.id);throw ir.error;}
+  const publish=await client.from('ammir_project_rfqs').update({status:'open',published_at:new Date().toISOString()}).eq('id',r.data.id);if(publish.error)throw publish.error;
   await logActivity('rfq_published','نشر طلب عروض '+ref,'rfq',r.data.id);
- }else if(kind==='invite'){
+}else if(kind==='invite'){
   const option=form.elements.provider_user_id.selectedOptions[0];if(!option||!option.value)throw new Error('اختر جهة من الدليل الموثق');
   const r=await client.from('ammir_project_rfq_invites').insert({rfq_id:v.rfq_id,project_id:pid,provider_user_id:option.value,provider_type:option.dataset.kind||v.provider_type,provider_name_snapshot:option.dataset.name||v.provider_name_snapshot.trim(),invited_by:currentUser.id,status:'invited'});if(r.error)throw r.error;
  }else if(kind==='providerQuote'){
