@@ -274,7 +274,7 @@ CREATE OR REPLACE FUNCTION public.ammir_validate_quote_item()
 RETURNS trigger
 LANGUAGE plpgsql
 SET search_path = public, pg_temp
-AS $
+AS $$
 DECLARE v_requested numeric(18,3);
 DECLARE v_rfq uuid;
 BEGIN
@@ -294,7 +294,7 @@ BEGIN
   END IF;
   RETURN NEW;
 END;
-$;
+$$;
 
 DROP TRIGGER IF EXISTS ammir_validate_quote_item_trigger ON public.ammir_project_rfq_quote_items;
 CREATE TRIGGER ammir_validate_quote_item_trigger
