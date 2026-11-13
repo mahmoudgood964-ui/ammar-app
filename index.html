@@ -342,7 +342,7 @@ body{background:var(--bg);font-family:"Noto Sans Arabic",Tahoma,Arial,sans-serif
 </main></div>
 
 <div id="appShell" hidden>
-<header class="topbar"><div class="brand"><div class="brand-mark">ع</div><div><h1>عَمِّر | AMMIR</h1><small>تشغيل المشاريع والمشتريات والتوريد</small></div></div><div class="top-user"><button class="btn light" id="installButton" type="button" data-action="install" hidden>تثبيت التطبيق</button><button class="btn light" type="button" id="appLangToggle" data-action="language">English</button><button class="btn light notification-toggle" type="button" data-action="notifications">الإشعارات <span id="notificationCount" class="notification-badge" hidden>0</span></button><span class="email-label" id="headerEmail"></span><span class="avatar" id="userAvatar">ع</span></div></header>
+<header class="topbar"><div class="brand"><div class="brand-mark">ع</div><div><h1>عَمِّر | AMMIR</h1><small>تشغيل المشاريع والمشتريات والتوريد</small></div></div><div class="top-user"><button class="btn light" id="installButton" type="button" data-action="install" hidden>تثبيت التطبيق</button><button class="btn light" type="button" id="appLangToggle" data-action="language" data-language-switch>English</button><button class="btn light notification-toggle" type="button" data-action="notifications">الإشعارات <span id="notificationCount" class="notification-badge" hidden>0</span></button><span class="email-label" id="headerEmail"></span><span class="avatar" id="userAvatar">ع</span></div></header>
 <div class="layout">
 <aside class="sidebar"><div class="side-label">مساحة العمل</div><button class="nav-btn active" type="button" data-view="dashboard"><span class="nav-icon">⌂</span>الرئيسية</button><button class="nav-btn" type="button" data-view="projects"><span class="nav-icon">▤</span>مشاريعي</button><button class="nav-btn" type="button" data-view="form"><span class="nav-icon">＋</span>إنشاء مشروع</button><div class="sidebar-bottom"><div class="side-label">الحساب</div><button class="nav-btn" type="button" data-action="logout"><span class="nav-icon">↪</span>تسجيل الخروج</button></div></aside>
 <main class="content"><div id="appMessage" class="message" role="status" aria-live="polite"></div>
@@ -615,7 +615,7 @@ function applyLanguage(){
   if(!attrs){attrs={};['placeholder','aria-label','title'].forEach(k=>{if(el.hasAttribute(k))attrs[k]=el.getAttribute(k);});originalAttributes.set(el,attrs);}
   ['placeholder','aria-label','title'].forEach(k=>{if(attrs[k]!==undefined)el.setAttribute(k,en?translated(attrs[k]):attrs[k]);});
  });
- const toggle=$('appLangToggle');if(toggle){const label=en?'العربية':'English';if(toggle.textContent!==label)toggle.textContent=label;}
+ document.querySelectorAll('[data-language-switch]').forEach(toggle=>{const label=en?'العربية':'English';if(toggle.textContent!==label)toggle.textContent=label;});
  const landing=$('publicLanding');
  if(landing){landing.querySelectorAll('[data-ar][data-en]').forEach(el=>{const value=en?el.dataset.en:el.dataset.ar;if(el.textContent!==value)el.textContent=value;});landing.dir=en?'ltr':'rtl';landing.style.textAlign=en?'left':'right';}
  const marketing=$('marketingLang');if(marketing){const label=en?'العربية':'EN';if(marketing.textContent!==label)marketing.textContent=label;}
@@ -722,7 +722,7 @@ function renderWorkspace(){
  ].join('');
  $('detailContent').innerHTML='<div class="ammir-project-workspace">'+
   '<header class="ammir-project-toolbar"><div class="ammir-project-breadcrumb"><span>عَمِّر</span><span aria-hidden="true">/</span><span>مشاريعي</span><span aria-hidden="true">/</span><strong>'+esc(p.title||'تفاصيل المشروع')+'</strong></div>'+
-  '<div class="ammir-project-toolbar-actions"><button class="btn light" type="button" data-export-project>تصدير التقرير</button>'+
+  '<div class="ammir-project-toolbar-actions"><button class="btn light" type="button" data-workspace-language data-language-switch aria-label="تغيير اللغة">English</button><button class="btn light" type="button" data-export-project>تصدير التقرير</button>'+
    (owner?'<button class="btn primary" type="button" data-workspace-edit>تعديل المشروع</button>':'')+
    '<button class="ammir-project-close" type="button" data-workspace-close aria-label="إغلاق مساحة المشروع">×</button></div></header>'+
   '<section class="ammir-project-hero"><div class="ammir-project-hero-main"><div class="ammir-project-eyebrow">AMMIR · PROJECT WORKSPACE</div>'+
@@ -740,6 +740,8 @@ function renderWorkspace(){
   workspaceTabs()+
   '</div>';
  renderModulePanel();
+ const languageSwitch=$('detailContent').querySelector('[data-workspace-language]');
+ if(languageSwitch)languageSwitch.addEventListener('click',()=>setAppLanguage(appLanguage==='en'?'ar':'en'));
 }
 
 function moduleRows(items,kind){
