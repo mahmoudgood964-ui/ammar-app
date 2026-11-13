@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#123f35">
-<meta name="description" content="عَمِّر | AMMIR — منصة تشغيل المشاريع والمشتريات، من إدارة المشروع وطلبات الشراء إلى عروض الموردين ومتابعة التنفيذ والاستلام."><meta name="application-name" content="AMMIR"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="AMMIR"><link rel="manifest" href="/manifest.webmanifest"><link rel="icon" type="image/svg+xml" href="/icon.svg">
+<meta name="description" content="عَمِّر | AMMIR — نظام تشغيل رحلة البناء، من إدارة المشروع وطلبات الشراء إلى عروض الموردين ومتابعة التنفيذ والاستلام."><meta name="application-name" content="AMMIR"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="AMMIR"><link rel="manifest" href="/manifest.webmanifest"><link rel="icon" type="image/svg+xml" href="/icon.svg">
 <title>عَمِّر | AMMIR</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
@@ -280,20 +280,35 @@ body{background:var(--bg);font-family:"Noto Sans Arabic",Tahoma,Arial,sans-serif
  .ammir-overview-list{padding:13px}
  .ammir-workspace-warning{margin:10px 12px 0;font-size:11px}
 }
+
+/* AMMIR — project journey positioning */
+.public-landing{max-width:1180px;padding:18px clamp(12px,2vw,28px) 34px}
+.public-landing .eyebrow{background:#e8efe9;border-color:#d6e2d9;letter-spacing:.02em}
+.public-landing h2{max-width:820px;font-size:clamp(32px,4.8vw,56px);line-height:1.28;letter-spacing:-1px}
+.public-landing .lead{max-width:790px;font-size:16px;line-height:2}
+.landing-actions .btn{min-height:46px;padding-inline:20px}
+.landing-feature,.landing-role,.landing-step{box-shadow:0 8px 24px rgba(16,47,41,.035);transition:transform .18s,border-color .18s,box-shadow .18s}
+.landing-feature:hover,.landing-role:hover,.landing-step:hover{transform:translateY(-2px);border-color:#b9cec1;box-shadow:0 12px 28px rgba(16,47,41,.07)}
+.landing-record{background:#fff;border:1px solid var(--line);border-radius:18px;padding:20px;margin-top:22px;box-shadow:0 8px 28px rgba(16,47,41,.035)}
+.landing-record-flow{display:flex;align-items:center;justify-content:space-between;gap:7px;flex-wrap:wrap;margin:15px 0}
+.landing-record-flow span{background:#edf4ef;color:var(--gd);border:1px solid #dce8df;border-radius:10px;padding:9px 12px;font-size:12px;font-weight:800}
+.landing-record-flow i{color:#91a79a;font-style:normal;font-weight:800}
+.landing-record>p{font-size:12px;line-height:1.9;color:var(--muted);margin:8px 0 0;max-width:900px}
+@media(max-width:680px){.public-landing{padding:8px 4px 22px}.public-landing h2{font-size:29px;letter-spacing:-.4px}.landing-record{padding:14px}.landing-record-flow{justify-content:flex-start}.landing-record-flow i{display:none}.landing-record-flow span{font-size:11px}}
 </style>
 </head>
 <body>
 <div id="authShell" class="auth-shell">
 <section class="public-landing" id="publicLanding" aria-labelledby="landingTitle">
- <span class="eyebrow" data-ar="منصة تشغيل المشاريع والمشتريات" data-en="Project operations & procurement network">منصة تشغيل المشاريع والمشتريات</span>
- <h2 id="landingTitle" data-ar="كل تفاصيل المشروع… من أول مواصفة إلى آخر استلام." data-en="Every project detail — from the first specification to final handover.">كل تفاصيل المشروع… من أول مواصفة إلى آخر استلام.</h2>
- <p class="lead" data-ar="عَمِّر يجمع إدارة المشاريع، الموردين، المقاولين، طلبات الشراء، عروض الأسعار، فرق التنفيذ، تقارير الموقع والاتفاقات في مساحة عمل واحدة مترابطة." data-en="AMMIR connects project management, suppliers, contractors, purchase requests, quotations, field teams, site reports and agreements in one coordinated workspace.">عَمِّر يجمع إدارة المشاريع، الموردين، المقاولين، طلبات الشراء، عروض الأسعار، فرق التنفيذ، تقارير الموقع والاتفاقات في مساحة عمل واحدة مترابطة.</p>
- <p class="landing-proof" data-ar="لأصحاب العقارات والمشروعات، شركات إدارة المشاريع، المقاولين، موردي مواد البناء وفرق الموقع." data-en="For property owners, project firms, contractors, building-material suppliers and field teams.">لأصحاب العقارات والمشروعات، شركات إدارة المشاريع، المقاولين، موردي مواد البناء وفرق الموقع.</p>
+ <span class="eyebrow" data-ar="نظام تشغيل رحلة البناء" data-en="The operating system for the building journey">نظام تشغيل رحلة البناء</span>
+ <h2 id="landingTitle" data-ar="من أول فكرة إلى مشروع منظم، تنفيذ موثّق، واستلام واضح" data-en="From the first idea to a managed project, documented execution and clear handover">من أول فكرة إلى مشروع منظم، تنفيذ موثّق، واستلام واضح</h2>
+ <p class="lead" data-ar="عَمِّر يساعد صاحب المشروع على تنظيم رحلة البناء والترميم: تحديد الاحتياج، الوصول إلى المهندسين والمقاولين والمتخصصين، مقيّمة العروض، متابعة التنفيذ، ضبط التكاليف، وتوثيق الاستلام في مساحة عمل واحدة." data-en="AMMIR helps project owners organize the full construction journey: define needs, reach engineers and contractors, compare proposals, track execution, control costs and document handover in one workspace.">عَمِّر يساعد صاحب المشروع على تنظيم رحلة البناء والترميم: تحديد الاحتياج، الوصول إلى المهندسين والمقاولين والمتخصصين، مقيّمة العروض، متابعة التنفيذ، ضبط التكاليف، وتوثيق الاستلام في مساحة عمل واحدة.</p>
+ <p class="landing-proof" data-ar="لأصحاب المنازل والعقارات والمشروعات، والمكاتب الهندسية، والمقاولين، ومديري المشاريع وفرق التنفيذ." data-en="For homeowners, property and project owners, engineering firms, contractors, project managers and delivery teams.">لأصحاب المنازل والعقارات والمشروعات، والمكاتب الهندسية، والمقاولين، ومديري المشاريع وفرق التنفيذ.</p>
  <div class="landing-actions"><button class="btn primary" type="button" data-auth-panel="signup" data-ar="أنشئ مساحة عملك" data-en="Create your workspace">أنشئ مساحة عملك</button><button class="btn light" type="button" data-auth-panel="login" data-ar="تسجيل الدخول" data-en="Sign in">تسجيل الدخول</button><button id="marketingLang" class="landing-lang" type="button" aria-label="Switch language">EN</button></div>
 
  <div class="landing-grid">
-  <article class="landing-feature"><strong data-ar="شغّل المشروع" data-en="Run the project">شغّل المشروع</strong><p data-ar="المهام، الفريق، الميزانية، القرارات، التقارير ومتابعة التنفيذ." data-en="Tasks, teams, budgets, decisions, reports and execution tracking.">المهام، الفريق، الميزانية، القرارات، التقارير ومتابعة التنفيذ.</p></article>
-  <article class="landing-feature"><strong data-ar="نظّم المشتريات" data-en="Coordinate procurement">نظّم المشتريات</strong><p data-ar="منتجات الموردين، طلبات الشراء، عروض الأسعار والاتفاقات." data-en="Supplier products, purchase requests, quotations and agreements.">منتجات الموردين، طلبات الشراء، عروض الأسعار والاتفاقات.</p></article>
+  <article class="landing-feature"><strong data-ar="أدر رحلة المشروع" data-en="Manage the project journey">أدر رحلة المشروع</strong><p data-ar="خطط العمل، الفريق، الميزانية، القرارات، التقارير ومتابعة التنفيذ حتى الاستلام." data-en="Plans, teams, budgets, decisions and field reporting through handover.">خطط العمل، الفريق، الميزانية، القرارات، التقارير ومتابعة التنفيذ حتى الاستلام.</p></article>
+  <article class="landing-feature"><strong data-ar="نظّم المشتريات" data-en="Coordinate procurement">نظّم المشتريات</strong><p data-ar="المشتريات والعروض والاتفاقات كجزء من احتياجات المشروع، لا كغاية مستقلة." data-en="Procurement, proposals and agreements as part of the project — not the product itself.">المشتريات والعروض والاتفاقات كجزء من احتياجات المشروع، لا كغاية مستقلة.</p></article>
   <article class="landing-feature"><strong data-ar="تابع الموقع" data-en="See field progress">تابع الموقع</strong><p data-ar="تقارير ميدانية، صور، عيوب، ملاحظات وقائمة استلام." data-en="Field reports, photos, defects, notes and handover checks.">تقارير ميدانية، صور، عيوب، ملاحظات وقائمة استلام.</p></article>
  </div>
 
@@ -303,9 +318,9 @@ body{background:var(--bg);font-family:"Noto Sans Arabic",Tahoma,Arial,sans-serif
    <h3 id="landingRolesTitle" data-ar="كل طرف يعرف دوره، وما عليه، وما ينتظره." data-en="Every stakeholder knows their role, responsibilities and next step.">كل طرف يعرف دوره، وما عليه، وما ينتظره.</h3>
   </div>
   <div class="landing-roles">
-   <article class="landing-role"><span>01</span><strong data-ar="مالك المشروع" data-en="Project owner">مالك المشروع</strong><p data-ar="أنشئ مشروعك، راقب التكلفة، اطلب العروض، واعتمد القرارات والاستلام." data-en="Create your project, monitor costs, request offers and approve decisions and handover.">أنشئ مشروعك، راقب التكلفة، اطلب العروض، واعتمد القرارات والاستلام.</p></article>
+   <article class="landing-role"><span>01</span><strong data-ar="مالك المشروع" data-en="Project owner">مالك المشروع</strong><p data-ar="أنشئ مشروعك، راقب التكلفة، تواصل العروض، واعتمد القرارات والاستلام." data-en="Create your project, monitor costs, request offers and approve decisions and handover.">أنشئ مشروعك، راقب التكلفة، تواصل العروض، واعتمد القرارات والاستلام.</p></article>
    <article class="landing-role"><span>02</span><strong data-ar="المقاول ومقدم الخدمة" data-en="Contractor & service provider">المقاول ومقدم الخدمة</strong><p data-ar="اعرض خدماتك، استقبل الطلبات، قدّم عرضك، ووثّق نطاق العمل والاتفاق." data-en="Present your services, receive requests, submit offers and document scope and agreements.">اعرض خدماتك، استقبل الطلبات، قدّم عرضك، ووثّق نطاق العمل والاتفاق.</p></article>
-   <article class="landing-role"><span>03</span><strong data-ar="مورد مواد البناء" data-en="Building-material supplier">مورد مواد البناء</strong><p data-ar="أنشئ كتالوجك، حدّث الأسعار والتوفر، واستقبل طلبات الشراء." data-en="Create your catalogue, update prices and availability, and receive purchase requests.">أنشئ كتالوجك، حدّث الأسعار والتوفر، واستقبل طلبات الشراء.</p></article>
+   <article class="landing-role"><span>03</span><strong data-ar="المورد ومقدم الحلول" data-en="Supplier & solution provider">المورد ومقدم الحلول</strong><p data-ar="قدّم المواد أو المعدات أو الحلول المرتبطة باحتياجات مشروع محدد." data-en="Offer materials, equipment or solutions in response to a project need.">قدّم المواد أو المعدات أو الحلول المرتبطة باحتياجات مشروع محدد.</p></article>
    <article class="landing-role"><span>04</span><strong data-ar="مدير المشروع وفريق الموقع" data-en="Project manager & field team">مدير المشروع وفريق الموقع</strong><p data-ar="وزّع المهام، أرسل التقارير، عالج الملاحظات، وتابع التقدم." data-en="Assign tasks, submit reports, resolve issues and track progress.">وزّع المهام، أرسل التقارير، عالج الملاحظات، وتابع التقدم.</p></article>
   </div>
  </section>
@@ -313,36 +328,46 @@ body{background:var(--bg);font-family:"Noto Sans Arabic",Tahoma,Arial,sans-serif
  <section class="landing-deck" aria-labelledby="landingFlowTitle">
   <div class="landing-section-heading">
    <span class="landing-kicker" data-ar="سير عمل مترابط" data-en="A connected workflow">سير عمل مترابط</span>
-   <h3 id="landingFlowTitle" data-ar="من الطلب إلى التنفيذ والتسليم" data-en="From request to execution and handover">من الطلب إلى التنفيذ والتسليم</h3>
+   <h3 id="landingFlowTitle" data-ar="من الفكرة إلى إدارة المشروع والاستلام" data-en="From idea to project management and handover">من الفكرة إلى إدارة المشروع والاستلام</h3>
   </div>
   <div class="landing-steps">
    <div class="landing-step"><span>01</span><strong data-ar="حدّد" data-en="Define">حدّد</strong><p data-ar="المشروع والاحتياج" data-en="The project and need">المشروع والاحتياج</p></div>
-   <div class="landing-step"><span>02</span><strong data-ar="اطلب" data-en="Request">اطلب</strong><p data-ar="الخدمة أو مواد البناء" data-en="Service or materials">الخدمة أو مواد البناء</p></div>
-   <div class="landing-step"><span>03</span><strong data-ar="قارن" data-en="Compare">قارن</strong><p data-ar="العروض والشروط" data-en="Offers and terms">العروض والشروط</p></div>
+   <div class="landing-step"><span>02</span><strong data-ar="تواصل" data-en="Connect">تواصل</strong><p data-ar="مع المتخصص المناسب" data-en="The right specialist">مع المتخصص المناسب</p></div>
+   <div class="landing-step"><span>03</span><strong data-ar="قيّم" data-en="Evaluate">قيّم</strong><p data-ar="النطاق والتكلفة والمدة والضمان" data-en="Scope, cost, timeline and warranty">النطاق والتكلفة والمدة والضمان</p></div>
    <div class="landing-step"><span>04</span><strong data-ar="نفّذ" data-en="Execute">نفّذ</strong><p data-ar="تابع الفريق والتوريد" data-en="Track teams and supply">تابع الفريق والتوريد</p></div>
    <div class="landing-step"><span>05</span><strong data-ar="استلم" data-en="Handover">استلم</strong><p data-ar="وثّق النتيجة والتكلفة" data-en="Record outcome and cost">وثّق النتيجة والتكلفة</p></div>
   </div>
  </section>
 
+ <section class="landing-deck landing-record" aria-labelledby="landingRecordTitle">
+  <div class="landing-section-heading">
+   <span class="landing-kicker" data-ar="الميزة التي تتراكم مع كل مشروع" data-en="An advantage that compounds with every project">الميزة التي تتراكم مع كل مشروع</span>
+   <h3 id="landingRecordTitle" data-ar="سجل تنفيذ موثّق، لا مجرد دليل أسماء." data-en="A verified execution record — not just a directory.">سجل تنفيذ موثّق، لا مجرد دليل أسماء.</h3>
+  </div>
+  <div class="landing-record-flow">
+   <span>المشروع</span><i>←</i><span>نطاق العمل</span><i>←</i><span>العروض والاتفاق</span><i>←</i><span>التنفيذ والتكلفة</span><i>←</i><span>المشكلات والاستلام</span>
+  </div>
+  <p data-ar="مع توثيق المشاريع الفعلية، يستطيع عَمِّر بناء سجل أداء يعتمد على معاملات ومراحل تنفيذ حقيقية. لا نعرض تقديرات تكلفة أو درجات أداء قبل توافر بيانات كافية ومتحقق منها." data-en="As real projects are documented, AMMIR can build performance records from actual transactions and delivery stages. Cost estimates and performance scores remain unavailable until sufficient verified data exists.">مع توثيق المشاريع الفعلية، يستطيع عَمِّر بناء سجل أداء يعتمد على معاملات ومراحل تنفيذ حقيقية. لا نعرض تقديرات تكلفة أو درجات أداء قبل توافر بيانات كافية ومتحقق منها.</p>
+ </section>
  <div class="landing-trust">
   <strong data-ar="الوضوح قبل الوعود" data-en="Clarity before promises">الوضوح قبل الوعود</strong>
   <p data-ar="عَمِّر ينظم الطلبات والعروض والقرارات وسجل المشروع. بيانات الموردين والأسعار والتوفر تأتي من أصحابها، ولا تُعرض الجهة كشريك معتمد أو موثّق قبل استكمال التحقق." data-en="AMMIR organizes requests, offers, decisions and project records. Supplier details, prices and availability come from their owners; no business is labelled verified before its checks are completed.">عَمِّر ينظم الطلبات والعروض والقرارات وسجل المشروع. بيانات الموردين والأسعار والتوفر تأتي من أصحابها، ولا تُعرض الجهة كشريك معتمد أو موثّق قبل استكمال التحقق.</p>
  </div>
 </section>
 <main class="auth-card">
- <div class="brand"><div class="brand-mark">ع</div><div><h1>عَمِّر | AMMIR</h1><small>تشغيل المشاريع والمشتريات والتوريد</small></div></div>
- <p class="auth-intro">مساحة واحدة تربط المشروع والمشتريات والتنفيذ.</p>
+ <div class="brand"><div class="brand-mark">ع</div><div><h1>عَمِّر | AMMIR</h1><small>نظام تشغيل رحلة البناء</small></div></div>
+ <p class="auth-intro">من التخطيط إلى التنفيذ والاستلام، في سجل مشروع واحد.</p>
  <section id="loginPanel"><h2 class="panel-title">تسجيل الدخول</h2>
   <form id="loginForm"><div class="field"><label for="loginEmail">البريد الإلكتروني</label><input id="loginEmail" type="email" autocomplete="email" required placeholder="name@example.com"></div><div class="field"><label for="loginPassword">كلمة المرور</label><input id="loginPassword" type="password" autocomplete="current-password" required placeholder="كلمة المرور"></div><button id="loginButton" class="btn primary block" type="submit">دخول إلى عَمِّر</button></form>
   <button class="text-link" type="button" data-auth-panel="reset">نسيت كلمة المرور؟</button><button class="text-link" type="button" data-auth-panel="signup">إنشاء حساب جديد</button>
  </section>
  <section id="signupPanel" hidden><h2 class="panel-title">إنشاء حساب جديد</h2><form id="signupForm"><div class="field"><label for="signupEmail">البريد الإلكتروني</label><input id="signupEmail" type="email" autocomplete="email" required placeholder="name@example.com"></div><div class="field"><label for="signupPassword">كلمة المرور</label><input id="signupPassword" type="password" autocomplete="new-password" minlength="8" required placeholder="8 أحرف على الأقل"></div><div class="field"><label for="signupConfirm">تأكيد كلمة المرور</label><input id="signupConfirm" type="password" autocomplete="new-password" minlength="8" required placeholder="أعد كتابة كلمة المرور"></div><button id="signupButton" class="btn primary block" type="submit">إنشاء الحساب</button></form><button class="text-link" type="button" data-auth-panel="login">العودة إلى تسجيل الدخول</button></section>
- <section id="resetPanel" hidden><h2 class="panel-title">استعادة كلمة المرور</h2><form id="resetRequestForm"><div class="field"><label for="resetEmail">البريد الإلكتروني</label><input id="resetEmail" type="email" autocomplete="email" required placeholder="name@example.com"></div><button id="resetRequestButton" class="btn primary block" type="submit">إرسال رابط الاستعادة</button></form><form id="newPasswordForm" hidden><div class="field"><label for="newPassword">كلمة المرور الجديدة</label><input id="newPassword" type="password" autocomplete="new-password" minlength="8" required></div><div class="field"><label for="newPasswordConfirm">تأكيد كلمة المرور</label><input id="newPasswordConfirm" type="password" autocomplete="new-password" minlength="8" required></div><button id="savePasswordButton" class="btn primary block" type="submit">حفظ كلمة المرور</button></form><button class="text-link" type="button" data-auth-panel="login">العودة إلى تسجيل الدخول</button></section>
+ <section id="resetPanel" hidden><h2 class="panel-title">استعادة كلمة المرور</h2><form id="resetConnectForm"><div class="field"><label for="resetEmail">البريد الإلكتروني</label><input id="resetEmail" type="email" autocomplete="email" required placeholder="name@example.com"></div><button id="resetConnectButton" class="btn primary block" type="submit">إرسال رابط الاستعادة</button></form><form id="newPasswordForm" hidden><div class="field"><label for="newPassword">كلمة المرور الجديدة</label><input id="newPassword" type="password" autocomplete="new-password" minlength="8" required></div><div class="field"><label for="newPasswordConfirm">تأكيد كلمة المرور</label><input id="newPasswordConfirm" type="password" autocomplete="new-password" minlength="8" required></div><button id="savePasswordButton" class="btn primary block" type="submit">حفظ كلمة المرور</button></form><button class="text-link" type="button" data-auth-panel="login">العودة إلى تسجيل الدخول</button></section>
  <div id="authMessage" class="message" role="status" aria-live="polite"></div><div class="footnote">عَمِّر — تنظيم أفضل لكل مشروع.</div>
 </main></div>
 
 <div id="appShell" hidden>
-<header class="topbar"><div class="brand"><div class="brand-mark">ع</div><div><h1>عَمِّر | AMMIR</h1><small>تشغيل المشاريع والمشتريات والتوريد</small></div></div><div class="top-user"><button class="btn light" id="installButton" type="button" data-action="install" hidden>تثبيت التطبيق</button><button class="btn light" type="button" id="appLangToggle" data-action="language" data-language-switch>English</button><button class="btn light notification-toggle" type="button" data-action="notifications">الإشعارات <span id="notificationCount" class="notification-badge" hidden>0</span></button><span class="email-label" id="headerEmail"></span><span class="avatar" id="userAvatar">ع</span></div></header>
+<header class="topbar"><div class="brand"><div class="brand-mark">ع</div><div><h1>عَمِّر | AMMIR</h1><small>نظام تشغيل رحلة البناء</small></div></div><div class="top-user"><button class="btn light" id="installButton" type="button" data-action="install" hidden>تثبيت التطبيق</button><button class="btn light" type="button" id="appLangToggle" data-action="language" data-language-switch>English</button><button class="btn light notification-toggle" type="button" data-action="notifications">الإشعارات <span id="notificationCount" class="notification-badge" hidden>0</span></button><span class="email-label" id="headerEmail"></span><span class="avatar" id="userAvatar">ع</span></div></header>
 <div class="layout">
 <aside class="sidebar"><div class="side-label">مساحة العمل</div><button class="nav-btn active" type="button" data-view="dashboard"><span class="nav-icon">⌂</span>الرئيسية</button><button class="nav-btn" type="button" data-view="projects"><span class="nav-icon">▤</span>مشاريعي</button><button class="nav-btn" type="button" data-view="form"><span class="nav-icon">＋</span>إنشاء مشروع</button><div class="sidebar-bottom"><div class="side-label">الحساب</div><button class="nav-btn" type="button" data-action="logout"><span class="nav-icon">↪</span>تسجيل الخروج</button></div></aside>
 <main class="content"><div id="appMessage" class="message" role="status" aria-live="polite"></div>
@@ -380,7 +405,7 @@ body{background:var(--bg);font-family:"Noto Sans Arabic",Tahoma,Arial,sans-serif
  </div>
  <div class="ammir-section-head"><div><h3>آخر المشاريع</h3><p>أحدث السجلات التي لديك صلاحية الوصول إليها</p></div><button class="btn light" type="button" data-view="projects">عرض السجل الكامل ←</button></div>
  <div id="recentProjects" class="project-grid"><div class="empty">جارٍ تحميل المشاريع...</div></div>
- <div class="notice">البيانات المعروضة مرتبطة بسجلات حسابك وصلاحياته، ولا تُنشأ مؤشرات تقدم أو أسعار أو توفر موردين دون بيانات موثقة</div>
+ <div class="notice">البيانات المعروضة مرتبطة بسجلات حسابك وصلاحياته، ولا تُنشأ مؤشرات تقدم أو أسعار أو تقييمات دون بيانات موثقة</div>
 </section>
 <section id="projectsView" class="view"><div class="heading"><div><h2>مشاريعي</h2><p>استعرض المشاريع وابحث فيها وعدّل بياناتها.</p></div><button class="btn primary" type="button" data-view="form">＋ مشروع جديد</button></div>
  <section class="panel"><div class="panel-head"><h3>قائمة المشاريع</h3><button class="btn quiet" type="button" data-action="refresh">تحديث ↻</button></div><div class="toolbar"><input id="projectSearch" class="search-input" type="search" placeholder="ابحث بالعنوان أو الموقع أو الوصف..." aria-label="ابحث في المشاريع"></div><p id="projectCount" class="muted"></p><div id="allProjects" class="project-grid"><div class="empty">جارٍ تحميل المشاريع...</div></div></section>
@@ -413,7 +438,7 @@ const SUPABASE_URL='https://uutwijowzewmvvrzsaww.supabase.co';
 const SUPABASE_KEY='sb_publishable_o-zC0NdMggZbPPY2l1REhA_w8Sbvjw_';
 const APP_URL='https://ammar-app.vercel.app/';
 const $=id=>document.getElementById(id);
-let client=null,currentUser=null,deferredInstallPrompt=null,projectsCache=[],editingProjectId=null,recoveryMode=false,lastViewedProjectId=null,activeProject=null,moduleTab='tasks',pendingInviteToken=new URLSearchParams(location.search).get('invite')||localStorage.getItem('ammar_pending_invite')||null,inviteAccepting=false,notificationTimer=null,lastInviteUrl='',moduleData={tasks:[],expenses:[],quotes:[],updates:[],documents:[],payments:[],activity:[],comments:[],members:[],invitations:[],siteReports:[],issues:[],changeOrders:[],handover:[],paymentMilestones:[],paymentEvents:[]},moduleLoadWarnings=[],moduleLoading=false,moduleLoadRequest=0;
+let client=null,currentUser=null,deferredInstallPrompt=null,projectsCache=[],editingProjectId=null,recoveryMode=false,lastViewedProjectId=null,activeProject=null,moduleTab='tasks',pendingInviteToken=new URLSearchParams(location.search).get('invite')||localStorage.getItem('ammar_pending_invite')||null,inviteAccepting=false,notificationTimer=null,lastInviteUrl='',moduleData={tasks:[],expenses:[],quotes:[],updates:[],documents:[],payments:[],activity:[],comments:[],members:[],invitations:[],siteReports:[],issues:[],changeOrders:[],handover:[],paymentMilestones:[],paymentEvents:[]},moduleLoadWarnings=[],moduleLoading=false,moduleLoadConnect=0;
 if(pendingInviteToken)localStorage.setItem('ammar_pending_invite',pendingInviteToken);
 const projectStatusLabels={planning:'قيد التخطيط',approved:'معتمد',in_progress:'قيد التنفيذ',on_hold:'متوقف مؤقتاً',completed:'مكتمل',cancelled:'ملغي'};
 const memberRoleLabels={manager:'مدير مشروع',supervisor:'مشرف',engineer:'مهندس',accountant:'محاسب',worker:'منفذ',viewer:'مشاهدة فقط'};
@@ -486,7 +511,7 @@ const translations={
 'الأثر المالي:':'Cost impact:','المدة:':'Duration:','الحالة:':'Status:','ملاحظة القرار:':'Decision note:',
 'التصنيف:':'Category:','معتمد':'Approved','قيد التخطيط':'Planning','متوقف مؤقتاً':'On hold',
 'لا توجد نتائج مطابقة لبحثك.':'No matching results.','قائمة المشاريع فارغة':'Your project list is empty',
-'إعادة المحاولة':'Try again','مقارنة عروض المقاولين والموردين':'Contractor and supplier quotation comparison','أقل سعر مسجل':'Lowest submitted quotation','العروض المسجلة':'Submitted quotations','المقارنة السعرية تتم داخل العملة نفسها فقط. السعر الأقل لا يعني العرض الأفضل؛ راجع نطاق العمل والمدة والضمان والاستثناءات قبل الاختيار.':'Price comparisons are made only within the same currency. The lowest price is not necessarily the best offer; review scope, duration, warranty and exclusions.','إدخال عروضاً بعملة واضحة للمقارنة. لا تتم مقارنة أسعار بعملات مختلفة.':'Enter quotations with clear currencies. Different currencies are not compared.','إضافة قائمة فحص قياسية':'Add standard handover checklist','القائمة القياسية موجودة بالفعل.':'The standard checklist is already present.','جارٍ حفظ البيانات في قاعدة البيانات...':'Saving to the database...',
+'إعادة المحاولة':'Try again','مقيّمة عروض المقاولين والموردين':'Contractor and supplier quotation comparison','أقل سعر مسجل':'Lowest submitted quotation','العروض المسجلة':'Submitted quotations','المقيّمة السعرية تتم داخل العملة نفسها فقط. السعر الأقل لا يعني العرض الأفضل؛ راجع نطاق العمل والمدة والضمان والاستثناءات قبل الاختيار.':'Price comparisons are made only within the same currency. The lowest price is not necessarily the best offer; review scope, duration, warranty and exclusions.','إدخال عروضاً بعملة واضحة للمقيّمة. لا تتم مقيّمة أسعار بعملات مختلفة.':'Enter quotations with clear currencies. Different currencies are not compared.','إضافة قائمة فحص قياسية':'Add standard handover checklist','القائمة القياسية موجودة بالفعل.':'The standard checklist is already present.','جارٍ حفظ البيانات في قاعدة البيانات...':'Saving to the database...',
 'تم حفظ البيانات بنجاح.':'Saved successfully.','تم تحديث حالة الدفعة.':'Payment status updated.',
 'تم تحديث حالة المهمة.':'Task status updated.','تم تحديث حالة عرض السعر.':'Quotation status updated.',
 
@@ -639,7 +664,7 @@ function busy(button,on,label){if(!button)return;if(on){button.dataset.old=butto
 function esc(value){return String(value==null?'':value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 function authPanel(name){['login','signup','reset'].forEach(p=>$(p+'Panel').hidden=p!==name);message($('authMessage'),'');}
 function showAuth(text,type){currentUser=null;window.ammarCurrentUser=null;if(notificationTimer){clearInterval(notificationTimer);notificationTimer=null;}$('appShell').hidden=true;$('authShell').hidden=false;authPanel('login');if(text)message($('authMessage'),text,type||'info');}
-function showRecovery(){recoveryMode=true;authPanel('reset');$('resetRequestForm').hidden=true;$('newPasswordForm').hidden=false;message($('authMessage'),'أدخل كلمة المرور الجديدة.','info');}
+function showRecovery(){recoveryMode=true;authPanel('reset');$('resetConnectForm').hidden=true;$('newPasswordForm').hidden=false;message($('authMessage'),'أدخل كلمة المرور الجديدة.','info');}
 function activeView(name){['dashboard','projects','form'].forEach(v=>$(v+'View').classList.toggle('active',v===name));document.querySelectorAll('[data-view]').forEach(b=>b.classList.toggle('active',b.dataset.view===name));if(name==='projects')renderProjects();if(name==='dashboard')renderDashboard();}
 function showApp(user){if(recoveryMode)return;currentUser=user||currentUser;if(!currentUser)return;window.ammarSupabase=client;window.ammarCurrentUser=currentUser;$('authShell').hidden=true;$('appShell').hidden=false;$('headerEmail').textContent=currentUser.email||'';$('userAvatar').textContent=(currentUser.email||'ع').trim().charAt(0).toUpperCase();activeView('dashboard');loadProjects();loadNotifications();if(!notificationTimer)notificationTimer=setInterval(()=>{if(currentUser&&!document.hidden)loadNotifications();},60000);if(pendingInviteToken)acceptPendingInvitation();}
 function goForm(project){
@@ -871,9 +896,9 @@ function renderIssuesPanel(){
  return '<section class="panel"><div class="panel-head"><h3>تسجيل عيب أو ملاحظة</h3><span class="muted">'+items.length+' سجل</span></div>'+(canWriteModule('tasks')?moduleForm('issues'):'<div class="notice">صلاحية مشاهدة فقط.</div>')+'</section><section class="panel"><h3>سجل العيوب والملاحظات</h3><div class="module-list">'+cards+'</div></section>';
 }
 function renderChangeOrdersPanel(){
- const items=moduleData.changeOrders||[],canDecide=['owner','manager'].includes(currentProjectRole()),canRequest=['owner','manager','supervisor','engineer'].includes(currentProjectRole());
+ const items=moduleData.changeOrders||[],canDecide=['owner','manager'].includes(currentProjectRole()),canConnect=['owner','manager','supervisor','engineer'].includes(currentProjectRole());
  const cards=items.length?items.map(x=>'<article class="module-record"><h4>'+esc(x.title)+'</h4><p>'+esc(x.reason)+'</p><div class="record-meta"><span class="pill">الأثر المالي: '+esc(Number(x.cost_impact||0).toLocaleString('en-US'))+' '+esc(x.currency||'')+'</span><span class="pill">المدة: '+esc(x.days_impact||0)+' يوم</span><span class="pill">الحالة: '+esc(({submitted:'بانتظار الاعتماد',under_review:'قيد المراجعة',approved:'معتمد',rejected:'مرفوض'})[x.status]||x.status)+'</span></div>'+(x.decision_note?'<p><strong>ملاحظة القرار:</strong> '+esc(x.decision_note)+'</p>':'')+(canDecide?'<div class="record-actions"><input type="text" data-change-note="'+esc(x.id)+'" placeholder="ملاحظة القرار (اختياري)" value="'+esc(x.decision_note||'')+'"><select data-change-status="'+esc(x.id)+'"><option value="submitted" '+(x.status==='submitted'?'selected':'')+'>بانتظار الاعتماد</option><option value="under_review" '+(x.status==='under_review'?'selected':'')+'>قيد المراجعة</option><option value="approved" '+(x.status==='approved'?'selected':'')+'>اعتماد</option><option value="rejected" '+(x.status==='rejected'?'selected':'')+'>رفض</option></select></div>':'')+'</article>').join(''):'<div class="module-empty">لا توجد طلبات تغيير. سجّل أي تغيير في النطاق أو التكلفة أو المدة قبل تنفيذه.</div>';
- return '<section class="panel"><div class="panel-head"><h3>طلبات تغيير نطاق العمل</h3><span class="muted">لا تعتمد التغيير قبل مراجعة أثره</span></div>'+(canRequest?moduleForm('changeOrders'):'<div class="notice">صلاحية مشاهدة فقط.</div>')+'</section><section class="panel"><h3>الطلبات والقرارات</h3><div class="module-list">'+cards+'</div></section>';
+ return '<section class="panel"><div class="panel-head"><h3>طلبات تغيير نطاق العمل</h3><span class="muted">لا تعتمد التغيير قبل مراجعة أثره</span></div>'+(canConnect?moduleForm('changeOrders'):'<div class="notice">صلاحية مشاهدة فقط.</div>')+'</section><section class="panel"><h3>الطلبات والقرارات</h3><div class="module-list">'+cards+'</div></section>';
 }
 function renderHandoverPanel(){
  const items=moduleData.handover||[],canCheck=['owner','manager','supervisor','engineer'].includes(currentProjectRole()),passed=items.filter(x=>x.status==='passed').length,failed=items.filter(x=>x.status==='failed').length;
@@ -884,7 +909,7 @@ function renderQuotesPanel(){
  const items=moduleData.quotes||[],groups={};
  items.filter(x=>x.amount!=null&&x.currency).forEach(x=>{const c=String(x.currency).toUpperCase();(groups[c]||(groups[c]=[])).push(Number(x.amount));});
  const compare=Object.entries(groups).map(([c,values])=>{const sorted=values.slice().sort((a,b)=>a-b);return '<div class="finance-metric"><span class="muted">أقل سعر مسجل · '+esc(c)+'</span><strong>'+esc(sorted[0].toLocaleString('en-US'))+'</strong><small class="muted">'+values.length+' عرض · أعلى '+esc(sorted[sorted.length-1].toLocaleString('en-US'))+'</small></div>';}).join('');
- return '<section class="panel"><div class="panel-head"><h3>مقارنة عروض المقاولين والموردين</h3><span class="muted">'+items.length+' عرض</span></div><div class="notice">المقارنة السعرية تتم داخل العملة نفسها فقط. السعر الأقل لا يعني العرض الأفضل؛ راجع نطاق العمل والمدة والضمان والاستثناءات قبل الاختيار.</div>'+(compare?'<div class="finance-grid">'+compare+'</div>':'<div class="notice">أدخل عروضاً بعملة واضحة للمقارنة. لا تتم مقارنة أسعار بعملات مختلفة.</div>')+(canWriteModule('quotes')?moduleForm('quotes'):'<div class="notice">صلاحية مشاهدة فقط.</div>')+'</section><section class="panel"><h3>العروض المسجلة</h3><div class="project-grid">'+moduleRows(items,'quotes')+'</div></section>';
+ return '<section class="panel"><div class="panel-head"><h3>مقيّمة عروض المقاولين والموردين</h3><span class="muted">'+items.length+' عرض</span></div><div class="notice">المقيّمة السعرية تتم داخل العملة نفسها فقط. السعر الأقل لا يعني العرض الأفضل؛ راجع نطاق العمل والمدة والضمان والاستثناءات قبل الاختيار.</div>'+(compare?'<div class="finance-grid">'+compare+'</div>':'<div class="notice">أدخل عروضاً بعملة واضحة للمقيّمة. لا تتم مقيّمة أسعار بعملات مختلفة.</div>')+(canWriteModule('quotes')?moduleForm('quotes'):'<div class="notice">صلاحية مشاهدة فقط.</div>')+'</section><section class="panel"><h3>العروض المسجلة</h3><div class="project-grid">'+moduleRows(items,'quotes')+'</div></section>';
 }
 function renderModulePanel(){
  const box=$('modulePanel');if(!box||!activeProject)return;const k=moduleTab;
@@ -930,7 +955,7 @@ function renderModulePanel(){
 
 async function loadProjectModules(){
  if(!activeProject||!client)return;
- const requestId=++moduleLoadRequest,projectId=String(activeProject.id);
+ const requestId=++moduleLoadConnect,projectId=String(activeProject.id);
  moduleLoading=true;renderModulePanel();
  const map={tasks:'project_tasks',expenses:'project_expenses',quotes:'project_quotes',updates:'project_updates',documents:'project_documents',payments:'project_payments',activity:'project_activity',comments:'project_comments',members:'project_members',invitations:'project_invitations',siteReports:'project_site_reports',issues:'project_issues',changeOrders:'project_change_orders',handover:'project_handover_items',paymentMilestones:'project_payment_milestones',paymentEvents:'project_payment_events'};
  const failures=[];
@@ -942,7 +967,7 @@ async function loadProjectModules(){
    const r=await q;if(r.error)throw r.error;return[k,r.data||[]];
   }catch(error){failures.push({module:k,error});return[k,[]];}
  }));
- if(requestId!==moduleLoadRequest||!activeProject||String(activeProject.id)!==projectId)return;
+ if(requestId!==moduleLoadConnect||!activeProject||String(activeProject.id)!==projectId)return;
  pairs.forEach(([k,v])=>moduleData[k]=v);
  moduleLoadWarnings=failures.map(x=>x.module);
  moduleLoading=false;
@@ -1139,8 +1164,8 @@ async function loadProjects(){
 
 async function login(e){e.preventDefault();const b=$('loginButton'),email=$('loginEmail').value.trim(),password=$('loginPassword').value;if(!email||!password){message($('authMessage'),'أدخل البريد الإلكتروني وكلمة المرور.','error');return;}busy(b,true,'جارٍ تسجيل الدخول...');message($('authMessage'),'يتم التحقق من بيانات الحساب...');try{const r=await client.auth.signInWithPassword({email,password});if(r.error)throw r.error;recoveryMode=false;showApp(r.data.user);message($('authMessage'),'');}catch(err){message($('authMessage'),'تعذر تسجيل الدخول: '+(err.message||'حدث خطأ غير متوقع.'),'error');}finally{busy(b,false);}}
 async function signup(e){e.preventDefault();const b=$('signupButton'),email=$('signupEmail').value.trim(),password=$('signupPassword').value,confirm=$('signupConfirm').value;if(password.length<8){message($('authMessage'),'كلمة المرور يجب أن تتكون من 8 أحرف على الأقل.','error');return;}if(password!==confirm){message($('authMessage'),'كلمتا المرور غير متطابقتين.','error');return;}busy(b,true,'جارٍ إنشاء الحساب...');message($('authMessage'),'يتم إنشاء الحساب...');try{const r=await client.auth.signUp({email,password,options:{emailRedirectTo:APP_URL}});if(r.error)throw r.error;if(r.data&&r.data.session){showApp(r.data.user);message($('authMessage'),'');}else{$('loginEmail').value=email;authPanel('login');message($('authMessage'),'تم إنشاء طلب الحساب. أكّد بريدك من الرسالة التي تصلك، ثم سجّل الدخول. افحص الرسائل غير المرغوب فيها إذا لم تجدها.','success');}}catch(err){message($('authMessage'),'تعذر إنشاء الحساب: '+(err.message||'حدث خطأ غير متوقع.'),'error');}finally{busy(b,false);}}
-async function resetRequest(e){e.preventDefault();const b=$('resetRequestButton'),email=$('resetEmail').value.trim();if(!email){message($('authMessage'),'أدخل بريدك الإلكتروني.','error');return;}busy(b,true,'جارٍ الإرسال...');try{const r=await client.auth.resetPasswordForEmail(email,{redirectTo:APP_URL});if(r.error)throw r.error;message($('authMessage'),'إذا كان البريد مرتبطاً بحساب، فستصلك رسالة لاستعادة كلمة المرور. افحص الوارد والرسائل غير المرغوب فيها.','success');}catch(err){message($('authMessage'),'تعذر طلب الاستعادة: '+(err.message||'حدث خطأ غير متوقع.'),'error');}finally{busy(b,false);}}
-async function saveNewPassword(e){e.preventDefault();const b=$('savePasswordButton'),password=$('newPassword').value,confirm=$('newPasswordConfirm').value;if(password.length<8){message($('authMessage'),'كلمة المرور يجب أن تتكون من 8 أحرف على الأقل.','error');return;}if(password!==confirm){message($('authMessage'),'كلمتا المرور غير متطابقتين.','error');return;}busy(b,true,'جارٍ حفظ كلمة المرور...');try{const s=await client.auth.getSession();if(s.error||!s.data.session)throw new Error('رابط الاستعادة غير صالح أو انتهت صلاحيته. اطلب رابطاً جديداً.');const r=await client.auth.updateUser({password});if(r.error)throw r.error;await client.auth.signOut();recoveryMode=false;$('newPasswordForm').reset();$('resetRequestForm').hidden=false;$('newPasswordForm').hidden=true;showAuth('تم تغيير كلمة المرور. سجّل الدخول باستخدام الكلمة الجديدة.','success');}catch(err){message($('authMessage'),'تعذر تغيير كلمة المرور: '+(err.message||'حدث خطأ غير متوقع.'),'error');}finally{busy(b,false);}}
+async function resetConnect(e){e.preventDefault();const b=$('resetConnectButton'),email=$('resetEmail').value.trim();if(!email){message($('authMessage'),'أدخل بريدك الإلكتروني.','error');return;}busy(b,true,'جارٍ الإرسال...');try{const r=await client.auth.resetPasswordForEmail(email,{redirectTo:APP_URL});if(r.error)throw r.error;message($('authMessage'),'إذا كان البريد مرتبطاً بحساب، فستصلك رسالة لاستعادة كلمة المرور. افحص الوارد والرسائل غير المرغوب فيها.','success');}catch(err){message($('authMessage'),'تعذر طلب الاستعادة: '+(err.message||'حدث خطأ غير متوقع.'),'error');}finally{busy(b,false);}}
+async function saveNewPassword(e){e.preventDefault();const b=$('savePasswordButton'),password=$('newPassword').value,confirm=$('newPasswordConfirm').value;if(password.length<8){message($('authMessage'),'كلمة المرور يجب أن تتكون من 8 أحرف على الأقل.','error');return;}if(password!==confirm){message($('authMessage'),'كلمتا المرور غير متطابقتين.','error');return;}busy(b,true,'جارٍ حفظ كلمة المرور...');try{const s=await client.auth.getSession();if(s.error||!s.data.session)throw new Error('رابط الاستعادة غير صالح أو انتهت صلاحيته. تواصل رابطاً جديداً.');const r=await client.auth.updateUser({password});if(r.error)throw r.error;await client.auth.signOut();recoveryMode=false;$('newPasswordForm').reset();$('resetConnectForm').hidden=false;$('newPasswordForm').hidden=true;showAuth('تم تغيير كلمة المرور. سجّل الدخول باستخدام الكلمة الجديدة.','success');}catch(err){message($('authMessage'),'تعذر تغيير كلمة المرور: '+(err.message||'حدث خطأ غير متوقع.'),'error');}finally{busy(b,false);}}
 async function saveProject(e){
  e.preventDefault();if(!currentUser){showAuth('انتهت الجلسة. سجّل الدخول من جديد.','error');return;}
  const b=$('saveProjectButton'),title=$('projectTitle').value.trim(),amount=$('projectBudgetAmount').value.trim(),startDate=$('projectStartDate').value,targetDate=$('projectTargetDate').value;
@@ -1175,7 +1200,7 @@ async function installApp(){
 }
 function init(){if(!window.supabase||typeof window.supabase.createClient!=='function'){message($('authMessage'),'تعذر تحميل مكتبة الاتصال. تحقق من الإنترنت ثم أعد تحميل الصفحة.','error');return;}try{client=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY,{auth:{autoRefreshToken:true,persistSession:true,detectSessionInUrl:true}});}catch(e){message($('authMessage'),'تعذر تهيئة الاتصال: '+e.message,'error');return;}
  client.auth.onAuthStateChange((event,session)=>{if(event==='PASSWORD_RECOVERY')showRecovery();else if(event==='SIGNED_OUT'){recoveryMode=false;showAuth('تم تسجيل الخروج.');}else if(event==='SIGNED_IN'&&session&&!recoveryMode)showApp(session.user);});
- $('loginForm').addEventListener('submit',login);$('signupForm').addEventListener('submit',signup);$('resetRequestForm').addEventListener('submit',resetRequest);$('newPasswordForm').addEventListener('submit',saveNewPassword);$('projectForm').addEventListener('submit',saveProject);$('projectSearch').addEventListener('input',renderProjects);
+ $('loginForm').addEventListener('submit',login);$('signupForm').addEventListener('submit',signup);$('resetConnectForm').addEventListener('submit',resetConnect);$('newPasswordForm').addEventListener('submit',saveNewPassword);$('projectForm').addEventListener('submit',saveProject);$('projectSearch').addEventListener('input',renderProjects);
  $('cancelProjectButton').addEventListener('click',()=>{editingProjectId=null;$('projectForm').reset();activeView('projects');});
  $('closeDetail').addEventListener('click',()=>$('detailBackdrop').hidden=true);$('detailCloseButton').addEventListener('click',()=>$('detailBackdrop').hidden=true);$('detailBackdrop').addEventListener('click',e=>{if(e.target===$('detailBackdrop'))$('detailBackdrop').hidden=true;});$('closeNotifications').addEventListener('click',()=>$('notificationBackdrop').hidden=true);$('notificationBackdrop').addEventListener('click',e=>{if(e.target===$('notificationBackdrop'))$('notificationBackdrop').hidden=true;});
  $('detailEdit').addEventListener('click',()=>{const p=projectsCache.find(x=>String(x.id)===String(lastViewedProjectId));$('detailBackdrop').hidden=true;if(p)goForm(p);});
@@ -1207,7 +1232,7 @@ function init(){if(!window.supabase||typeof window.supabase.createClient!=='func
  }catch(err){message($('appMessage'),'تعذر تحديث الحالة: '+(err.message||'خطأ'),'error');}
  });
 
- document.querySelectorAll('[data-auth-panel]').forEach(b=>b.addEventListener('click',()=>{const name=b.dataset.authPanel;if(name==='reset'){$('resetRequestForm').hidden=false;$('newPasswordForm').hidden=true;$('resetEmail').value=$('loginEmail').value.trim();}authPanel(name);if(b.closest('#publicLanding'))$('authShell').querySelector('.auth-card').scrollIntoView({behavior:'smooth',block:'start'});}));
+ document.querySelectorAll('[data-auth-panel]').forEach(b=>b.addEventListener('click',()=>{const name=b.dataset.authPanel;if(name==='reset'){$('resetConnectForm').hidden=false;$('newPasswordForm').hidden=true;$('resetEmail').value=$('loginEmail').value.trim();}authPanel(name);if(b.closest('#publicLanding'))$('authShell').querySelector('.auth-card').scrollIntoView({behavior:'smooth',block:'start'});}));
  $('appShell').addEventListener('click',clickApp);
  $('marketingLang').addEventListener('click',()=>setAppLanguage(appLanguage==='en'?'ar':'en'));
  setAppLanguage(appLanguage);
@@ -1215,8 +1240,8 @@ function init(){if(!window.supabase||typeof window.supabase.createClient!=='func
  window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredInstallPrompt=e;$('installButton').hidden=false;});
  if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').catch(e=>console.warn('AMMIR service worker:',e.message));
  const hp=new URLSearchParams(location.hash.replace(/^#/,'')).get('type'),qp=new URLSearchParams(location.search).get('type');const hashError=new URLSearchParams(location.hash.replace(/^#/,'')).get('error_description')||new URLSearchParams(location.search).get('error_description');
- if(hp==='recovery'||qp==='recovery'){recoveryMode=true;authPanel('reset');$('resetRequestForm').hidden=true;$('newPasswordForm').hidden=false;message($('authMessage'),'جارٍ التحقق من رابط الاستعادة...');}if(pendingInviteToken&&!recoveryMode)message($('authMessage'),'تم فتح رابط دعوة. سجّل الدخول أو أنشئ حساباً بالبريد الذي تلقى الدعوة.','info');
- client.auth.getSession().then(r=>{if(r.error){showAuth('تعذر التحقق من الجلسة: '+r.error.message,'error');return;}if(recoveryMode){if(r.data.session)showRecovery();else message($('authMessage'),'رابط الاستعادة غير صالح أو منتهي. اطلب رابطاً جديداً.','error');}else if(r.data.session)showApp(r.data.session.user);else if(hashError)showAuth('تعذر إكمال رابط البريد: '+hashError,'error');else showAuth();}).catch(e=>showAuth('حدث خطأ أثناء فتح التطبيق: '+e.message,'error'));
+ if(hp==='recovery'||qp==='recovery'){recoveryMode=true;authPanel('reset');$('resetConnectForm').hidden=true;$('newPasswordForm').hidden=false;message($('authMessage'),'جارٍ التحقق من رابط الاستعادة...');}if(pendingInviteToken&&!recoveryMode)message($('authMessage'),'تم فتح رابط دعوة. سجّل الدخول أو أنشئ حساباً بالبريد الذي تلقى الدعوة.','info');
+ client.auth.getSession().then(r=>{if(r.error){showAuth('تعذر التحقق من الجلسة: '+r.error.message,'error');return;}if(recoveryMode){if(r.data.session)showRecovery();else message($('authMessage'),'رابط الاستعادة غير صالح أو منتهي. تواصل رابطاً جديداً.','error');}else if(r.data.session)showApp(r.data.session.user);else if(hashError)showAuth('تعذر إكمال رابط البريد: '+hashError,'error');else showAuth();}).catch(e=>showAuth('حدث خطأ أثناء فتح التطبيق: '+e.message,'error'));
 }
 init();
 })();
