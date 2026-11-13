@@ -78,6 +78,114 @@ html[lang="en"] .search-input{text-align:left}
 html[lang="en"] .detail-label,html[lang="en"] .detail-value{text-align:left}
 html[lang="en"] .topbar .brand{direction:ltr}
 html[lang="en"] .top-user{direction:ltr}
+
+/* AMMIR Command Center — product-grade workspace */
+:root{--g:#176b57;--gd:#102f29;--gs:#e7f0ec;--ink:#17231f;--muted:#738079;--line:#e3e9e5;--bg:#f3f5f2;--accent:#d69a58;--shadow:0 16px 42px rgba(17,44,35,.07);--r:18px}
+body{background:var(--bg);font-family:"Noto Sans Arabic",Tahoma,Arial,sans-serif}
+.topbar{height:76px;padding-inline:clamp(18px,4vw,52px);background:rgba(255,255,255,.94);backdrop-filter:blur(16px);border-bottom-color:#e8ece8}
+.topbar .brand-mark{width:42px;height:42px;border-radius:13px;background:var(--gd);box-shadow:0 7px 18px #102f2924}
+.topbar .brand h1{font-size:21px;letter-spacing:-.5px}
+.layout{max-width:1600px;grid-template-columns:248px minmax(0,1fr);gap:28px;padding:28px clamp(18px,3vw,42px)}
+.sidebar{border:0;border-radius:20px;padding:16px 13px;height:calc(100vh - 132px);top:104px;box-shadow:0 8px 30px rgba(17,44,35,.045)}
+.side-label{padding-inline:12px;letter-spacing:.3px}
+.nav-btn{padding:13px 14px;border-radius:12px;transition:background .18s,color .18s,transform .18s}
+.nav-btn:hover{transform:translateX(-2px)}
+.nav-btn.active{background:#eaf2ee;color:var(--gd);box-shadow:inset -3px 0 0 var(--g)}
+.nav-icon{font-size:19px}
+.content{max-width:1240px;margin-inline:auto;width:100%}
+#dashboardView .heading{align-items:center;margin:3px 0 24px}
+#dashboardView .heading h2{font-size:29px;letter-spacing:-.6px;color:var(--gd)}
+#dashboardView .heading p{font-size:14px;margin-top:7px}
+#dashboardView .heading .btn{border-radius:12px;padding:13px 18px;box-shadow:0 8px 18px #176b5724}
+.ammir-welcome{position:relative;overflow:hidden;display:grid;grid-template-columns:minmax(0,1.35fr) minmax(220px,.65fr);gap:22px;align-items:center;padding:30px 32px;border-radius:22px;background:linear-gradient(118deg,#102f29 0%,#17483d 58%,#236451 100%);color:#fff;box-shadow:0 18px 40px rgba(16,47,41,.17);margin-bottom:22px}
+.ammir-welcome:before,.ammir-welcome:after{content:"";position:absolute;border:1px solid rgba(255,255,255,.10);border-radius:50%;pointer-events:none}
+.ammir-welcome:before{width:360px;height:360px;left:-110px;top:-210px}
+.ammir-welcome:after{width:230px;height:230px;left:20px;bottom:-175px}
+.ammir-welcome-copy,.ammir-welcome-side{position:relative;z-index:1}
+.ammir-kicker{display:inline-flex;align-items:center;gap:8px;color:#c9ddd4;font-size:12px;font-weight:700;margin-bottom:13px}
+.ammir-kicker:before{content:"";width:7px;height:7px;border-radius:50%;background:#e2ad72;box-shadow:0 0 0 5px #e2ad7224}
+.ammir-welcome h3{font-size:clamp(23px,3vw,34px);line-height:1.35;margin:0 0 9px;letter-spacing:-.5px}
+.ammir-welcome p{font-size:13px;color:#d1e0d9;line-height:1.9;margin:0;max-width:590px}
+.ammir-welcome-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:21px}
+.ammir-welcome-actions .btn{border-radius:11px;padding:11px 16px}
+.ammir-welcome-actions .btn.primary{background:#f1d4ae;color:#273a32}
+.ammir-welcome-actions .btn.welcome-ghost{background:#ffffff14;color:#fff;border:1px solid #ffffff35}
+.ammir-welcome-side{justify-self:end;width:min(100%,260px);padding:19px 20px;border:1px solid #ffffff25;border-radius:17px;background:#ffffff0c;backdrop-filter:blur(8px)}
+.ammir-welcome-side small{display:block;color:#c4d8cf;font-size:11px}
+.ammir-welcome-side strong{display:block;font-size:43px;line-height:1.25;margin:5px 0 2px;letter-spacing:-1px}
+.ammir-welcome-side span{font-size:12px;color:#d5e3dc}
+.ammir-section-head{display:flex;align-items:end;justify-content:space-between;gap:12px;margin:27px 0 13px}
+.ammir-section-head h3{font-size:17px;color:var(--gd);margin:0;letter-spacing:-.2px}
+.ammir-section-head p{font-size:12px;color:var(--muted);margin:4px 0 0}
+.ammir-overview{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:13px;margin-bottom:22px}
+.ammir-metric{background:#fff;border:1px solid var(--line);border-radius:16px;padding:17px 18px;min-width:0;box-shadow:0 4px 16px rgba(20,50,38,.025)}
+.ammir-metric-top{display:flex;align-items:center;justify-content:space-between;gap:8px;color:var(--muted);font-size:12px}
+.ammir-metric-icon{width:32px;height:32px;border-radius:10px;display:grid;place-items:center;background:#edf3ef;color:var(--gd);font-size:15px;font-weight:800}
+.ammir-metric strong{display:block;font-size:29px;line-height:1.3;color:var(--gd);margin-top:10px;direction:ltr;text-align:right}
+.ammir-metric small{display:block;font-size:11px;color:#87928c;margin-top:4px}
+.ammir-dashboard-grid{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(260px,.75fr);gap:17px;align-items:start}
+.ammir-surface{background:#fff;border:1px solid var(--line);border-radius:18px;padding:20px;box-shadow:0 4px 18px rgba(20,50,38,.025);min-width:0}
+.ammir-surface .panel-head{margin-bottom:15px}
+.ammir-surface .panel-head h3{font-size:16px;color:var(--gd)}
+.ammir-status-list{display:grid;gap:17px}
+.ammir-status-row{display:grid;grid-template-columns:100px minmax(0,1fr) 28px;align-items:center;gap:10px;font-size:12px;color:#52615a}
+.ammir-status-track{height:7px;border-radius:10px;background:#edf1ee;overflow:hidden}
+.ammir-status-fill{height:100%;border-radius:10px;background:linear-gradient(90deg,#236451,#7da995);min-width:0}
+.ammir-status-count{font-weight:800;color:var(--gd);text-align:left;direction:ltr}
+.ammir-insight{border-radius:14px;background:#f5f7f4;padding:15px;margin-top:17px}
+.ammir-insight strong{font-size:13px;color:var(--gd);display:block}
+.ammir-insight p{font-size:12px;line-height:1.8;color:#68756e;margin:6px 0 0}
+.ammir-quick-actions{display:grid;gap:9px}
+.ammir-quick-action{display:flex;align-items:center;gap:12px;padding:13px;border:1px solid var(--line);border-radius:13px;background:#fff;color:var(--ink);text-align:right;width:100%;transition:border .18s,background .18s,transform .18s}
+.ammir-quick-action:hover{border-color:#b8cec2;background:#f8faf8;transform:translateY(-1px)}
+.ammir-quick-icon{width:38px;height:38px;flex:0 0 38px;display:grid;place-items:center;border-radius:11px;background:#edf3ef;color:var(--gd);font-size:18px}
+.ammir-quick-action strong{display:block;font-size:12px;color:var(--gd)}
+.ammir-quick-action small{display:block;font-size:11px;color:var(--muted);margin-top:3px}
+#recentProjects.project-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+#recentProjects .project-card{border-radius:14px;padding:15px;border-color:#e9eeea}
+#recentProjects .project-card h4{font-size:15px}
+#recentProjects .project-card .actions .btn{border-radius:9px}
+.ammir-empty{padding:28px 18px;text-align:center;border:1px dashed #cbd8d0;border-radius:15px;background:#fafcfb}
+.ammir-empty-mark{width:52px;height:52px;margin:0 auto 12px;border-radius:16px;background:#eaf2ee;color:var(--gd);display:grid;place-items:center;font-size:24px}
+.ammir-empty h4{margin:0;color:var(--gd);font-size:15px}
+.ammir-empty p{margin:7px auto 15px;max-width:360px;font-size:12px;line-height:1.8;color:var(--muted)}
+#dashboardView .notice{border-radius:12px;margin-top:17px;background:#eef3ef;border-right-color:#b58b5c}
+@media(max-width:1050px){.ammir-overview{grid-template-columns:repeat(2,minmax(0,1fr))}.ammir-dashboard-grid{grid-template-columns:1fr}.ammir-welcome{grid-template-columns:1fr}.ammir-welcome-side{justify-self:start;width:100%;max-width:260px}}
+@media(max-width:680px){
+ .topbar{height:64px;padding:0 14px}.topbar .brand h1{font-size:17px}.topbar .brand small{font-size:10px}.topbar .brand-mark{width:36px;height:36px}
+ .top-user{gap:6px}.top-user .btn{padding:8px 9px;font-size:11px}.top-user .notification-toggle{font-size:0;gap:0}.top-user .notification-badge{font-size:10px}
+ .layout{padding:13px 12px 94px;gap:0}
+ #dashboardView .heading{margin:4px 1px 16px;align-items:center}
+ #dashboardView .heading h2{font-size:23px}
+ #dashboardView .heading p{font-size:12px}
+ #dashboardView .heading .btn{padding:10px 12px;font-size:11px}
+ .ammir-welcome{padding:22px 19px;border-radius:18px;gap:17px;margin-bottom:16px}
+ .ammir-welcome h3{font-size:23px}
+ .ammir-welcome p{font-size:12px}
+ .ammir-welcome-side{max-width:none;padding:13px 15px;display:flex;align-items:center;gap:12px}
+ .ammir-welcome-side strong{font-size:31px;margin:0}
+ .ammir-welcome-side small{margin:0}
+ .ammir-welcome-side span{font-size:11px}
+ .ammir-overview{gap:8px;margin-bottom:16px}
+ .ammir-metric{padding:12px;border-radius:13px}
+ .ammir-metric-top{font-size:10px}
+ .ammir-metric-icon{width:28px;height:28px}
+ .ammir-metric strong{font-size:24px;margin-top:7px}
+ .ammir-metric small{font-size:10px}
+ .ammir-section-head{margin:20px 1px 11px}
+ .ammir-surface{padding:14px;border-radius:15px}
+ #recentProjects.project-grid{grid-template-columns:1fr}
+ #recentProjects .project-card{padding:13px}
+ .ammir-status-row{grid-template-columns:88px minmax(0,1fr) 22px;gap:7px;font-size:11px}
+ .ammir-quick-actions{grid-template-columns:1fr 1fr}
+ .ammir-quick-action{padding:10px;gap:8px;align-items:flex-start}
+ .ammir-quick-icon{width:31px;height:31px;flex-basis:31px;font-size:15px}
+ .ammir-quick-action strong{font-size:11px}
+ .ammir-quick-action small{font-size:10px}
+ .mobile-nav{padding:7px 7px calc(7px + env(safe-area-inset-bottom));box-shadow:0 -8px 24px rgba(17,44,35,.07)}
+ .mobile-nav .nav-btn{min-width:65px;border-radius:10px}
+}
+
 </style>
 </head>
 <body>
@@ -144,10 +252,41 @@ html[lang="en"] .top-user{direction:ltr}
 <div class="layout">
 <aside class="sidebar"><div class="side-label">مساحة العمل</div><button class="nav-btn active" type="button" data-view="dashboard"><span class="nav-icon">⌂</span>الرئيسية</button><button class="nav-btn" type="button" data-view="projects"><span class="nav-icon">▤</span>مشاريعي</button><button class="nav-btn" type="button" data-view="form"><span class="nav-icon">＋</span>إنشاء مشروع</button><div class="sidebar-bottom"><div class="side-label">الحساب</div><button class="nav-btn" type="button" data-action="logout"><span class="nav-icon">↪</span>تسجيل الخروج</button></div></aside>
 <main class="content"><div id="appMessage" class="message" role="status" aria-live="polite"></div>
-<section id="dashboardView" class="view active"><div class="heading"><div><h2>الرئيسية</h2><p>نظرة عامة على مشاريعك العقارية.</p></div><button class="btn primary" type="button" data-view="form">＋ مشروع جديد</button></div>
- <div class="stats"><article class="stat"><div class="stat-label">إجمالي المشاريع</div><div class="stat-value" id="statProjects">—</div></article><article class="stat"><div class="stat-label">آخر مشروع أُضيف</div><div class="stat-value" id="statLatest" style="font-size:17px;direction:rtl">—</div></article><article class="stat"><div class="stat-label">حالة الاتصال</div><div class="stat-value" id="statConnection" style="font-size:17px;direction:rtl">متصل</div></article></div>
- <section class="panel"><div class="panel-head"><h3>أحدث المشاريع</h3><button class="btn light" type="button" data-view="projects">عرض الكل</button></div><div id="recentProjects" class="project-grid"><div class="empty">جارٍ تحميل المشاريع...</div></div></section>
- <div class="notice">بيانات المشاريع خاصة بحسابك وفق صلاحيات قاعدة البيانات. لا تشارك كلمة المرور، وسجّل الخروج عند استخدام جهاز مشترك.</div>
+
+<section id="dashboardView" class="view active">
+ <div class="heading"><div><h2>مساحة عملك</h2><p>صورة واضحة لما يجري في مشاريعك، دون أرقام تقديرية أو بيانات مصطنعة</p></div><button class="btn primary" type="button" data-view="form">＋ مشروع جديد</button></div>
+ <section class="ammir-welcome" aria-label="ملخص مساحة العمل">
+  <div class="ammir-welcome-copy"><span class="ammir-kicker">AMMIR PROJECT OPERATING SYSTEM</span><h3>من أول قرار إلى آخر تفصيلة في الموقع</h3><p>اجمع المشروع والفريق والميزانية والمشتريات والتنفيذ في سجل واحد يمكن الرجوع إليه ومراجعته</p>
+   <div class="ammir-welcome-actions"><button class="btn primary" type="button" data-view="form">ابدأ مشروعاً جديداً <span aria-hidden="true">←</span></button><button class="btn welcome-ghost" type="button" data-view="projects">استعرض المشاريع</button></div>
+  </div>
+  <div class="ammir-welcome-side"><div><small>إجمالي المشاريع المسجلة</small><strong id="statProjects">—</strong><span>المشاريع التي تملكها أو تشارك فيها</span></div></div>
+ </section>
+ <div class="ammir-section-head"><div><h3>مؤشرات المحفظة</h3><p>أرقام محسوبة من سجلات مشاريعك الفعلية</p></div><span id="statConnection" class="pill">جارٍ التحقق من الاتصال</span></div>
+ <div class="ammir-overview">
+  <article class="ammir-metric"><div class="ammir-metric-top"><span>قيد التنفيذ</span><span class="ammir-metric-icon">↗</span></div><strong id="metricInProgress">—</strong><small>مشاريع بحالة تنفيذ</small></article>
+  <article class="ammir-metric"><div class="ammir-metric-top"><span>قيد التخطيط</span><span class="ammir-metric-icon">◷</span></div><strong id="metricPlanning">—</strong><small>مشاريع قبل بدء التنفيذ</small></article>
+  <article class="ammir-metric"><div class="ammir-metric-top"><span>مكتملة</span><span class="ammir-metric-icon">✓</span></div><strong id="metricCompleted">—</strong><small>مشاريع أُغلقت حالتها كمكتملة</small></article>
+  <article class="ammir-metric"><div class="ammir-metric-top"><span>مشتركة معك</span><span class="ammir-metric-icon">◎</span></div><strong id="metricShared">—</strong><small>مشاريع أنت عضو في فريقها</small></article>
+ </div>
+ <div class="ammir-dashboard-grid">
+  <section class="ammir-surface">
+   <div class="panel-head"><div><h3>توزيع حالات المشاريع</h3><p class="muted">التوزيع الحالي حسب حالة كل مشروع</p></div><button class="btn quiet" type="button" data-view="projects">كل المشاريع</button></div>
+   <div id="projectStatusBreakdown" class="ammir-status-list"></div>
+   <div class="ammir-insight"><strong>مبدأ عَمِّر التشغيلي</strong><p>كل تغيير في المشروع يجب أن يرتبط بمسؤول وقرار وتاريخ وسجل يمكن مراجعته، بدلاً من الاعتماد على رسائل متفرقة ووعود غير موثقة</p></div>
+  </section>
+  <section class="ammir-surface">
+   <div class="panel-head"><div><h3>اختصارات العمل</h3><p class="muted">انتقل مباشرة إلى الإجراء التالي</p></div></div>
+   <div class="ammir-quick-actions">
+    <button class="ammir-quick-action" type="button" data-view="form"><span class="ammir-quick-icon">＋</span><span><strong>إنشاء مشروع</strong><small>ابدأ مساحة تشغيل جديدة</small></span></button>
+    <button class="ammir-quick-action" type="button" data-view="projects"><span class="ammir-quick-icon">▤</span><span><strong>إدارة المشاريع</strong><small>افتح السجل وابحث</small></span></button>
+    <button class="ammir-quick-action" type="button" data-action="refresh"><span class="ammir-quick-icon">↻</span><span><strong>تحديث البيانات</strong><small>مزامنة السجلات الحالية</small></span></button>
+    <button class="ammir-quick-action" type="button" data-action="notifications"><span class="ammir-quick-icon">♧</span><span><strong>مركز الإشعارات</strong><small>راجع آخر التنبيهات</small></span></button>
+   </div>
+  </section>
+ </div>
+ <div class="ammir-section-head"><div><h3>آخر المشاريع</h3><p>أحدث السجلات التي لديك صلاحية الوصول إليها</p></div><button class="btn light" type="button" data-view="projects">عرض السجل الكامل ←</button></div>
+ <div id="recentProjects" class="project-grid"><div class="empty">جارٍ تحميل المشاريع...</div></div>
+ <div class="notice">البيانات المعروضة مرتبطة بسجلات حسابك وصلاحياته، ولا تُنشأ مؤشرات تقدم أو أسعار أو توفر موردين دون بيانات موثقة</div>
 </section>
 <section id="projectsView" class="view"><div class="heading"><div><h2>مشاريعي</h2><p>استعرض المشاريع وابحث فيها وعدّل بياناتها.</p></div><button class="btn primary" type="button" data-view="form">＋ مشروع جديد</button></div>
  <section class="panel"><div class="panel-head"><h3>قائمة المشاريع</h3><button class="btn quiet" type="button" data-action="refresh">تحديث ↻</button></div><div class="toolbar"><input id="projectSearch" class="search-input" type="search" placeholder="ابحث بالعنوان أو الموقع أو الوصف..." aria-label="ابحث في المشاريع"></div><p id="projectCount" class="muted"></p><div id="allProjects" class="project-grid"><div class="empty">جارٍ تحميل المشاريع...</div></div></section>
@@ -742,7 +881,28 @@ function card(p){
 }
 
 function sorted(){return projectsCache.slice().sort((a,b)=>(new Date(b.created_at||0).getTime()||0)-(new Date(a.created_at||0).getTime()||0));}
-function renderDashboard(){const s=sorted();$('statProjects').textContent=String(s.length);$('statLatest').textContent=s.length?(s[0].title||'مشروع بدون عنوان'):'لا يوجد';$('recentProjects').innerHTML=s.length?s.slice(0,4).map(card).join(''):'<div class="empty"><strong>لا توجد مشاريع حتى الآن</strong><p>ابدأ بإضافة أول مشروع لترميم أو صيانة عقار.</p><button class="btn primary" type="button" data-view="form">إنشاء أول مشروع</button></div>';}
+function renderDashboard(){
+ const s=sorted(),total=s.length;
+ const count=status=>s.filter(p=>(p.status||'planning')===status).length;
+ const owned=s.filter(p=>String(p.client_id)===String(currentUser.id)).length;
+ const shared=total-owned;
+ $('statProjects').textContent=String(total);
+ $('metricInProgress').textContent=String(count('in_progress'));
+ $('metricPlanning').textContent=String(count('planning')+count('approved'));
+ $('metricCompleted').textContent=String(count('completed'));
+ $('metricShared').textContent=String(shared);
+ const groups=[
+  ['قيد التنفيذ',count('in_progress')],
+  ['قيد التخطيط',count('planning')],
+  ['معتمد',count('approved')],
+  ['متوقف مؤقتاً',count('on_hold')],
+  ['مكتمل',count('completed')],
+  ['ملغي',count('cancelled')]
+ ];
+ const max=Math.max(1,...groups.map(x=>x[1]));
+ $('projectStatusBreakdown').innerHTML=groups.map(([label,n])=>'<div class="ammir-status-row"><span>'+label+'</span><div class="ammir-status-track" role="img" aria-label="'+label+': '+n+'"><div class="ammir-status-fill" style="width:'+((n/max)*100)+'%"></div></div><strong class="ammir-status-count">'+n+'</strong></div>').join('');
+ $('recentProjects').innerHTML=total?s.slice(0,4).map(card).join(''):'<div class="ammir-empty"><div class="ammir-empty-mark">＋</div><h4>مساحة العمل تبدأ بمشروعك الأول</h4><p>أنشئ سجل المشروع، ثم أضف فريقك ومهامه ومصروفاته وتقارير الموقع حتى تصبح كل التفاصيل في مكان واحد</p><button class="btn primary" type="button" data-view="form">إنشاء أول مشروع</button></div>';
+}
 function renderProjects(){const q=($('projectSearch').value||'').trim().toLowerCase();const found=sorted().filter(p=>[p.title,p.description,p.property_location,p.property_type,p.budget].join(' ').toLowerCase().includes(q));$('projectCount').textContent='عرض '+found.length+' من '+projectsCache.length+' مشروع';$('allProjects').innerHTML=found.length?found.map(card).join(''):(projectsCache.length?'<div class="empty">لا توجد نتائج مطابقة لبحثك.</div>':'<div class="empty"><strong>قائمة المشاريع فارغة</strong><p>أنشئ مشروعك الأول وستظهر بياناته هنا.</p><button class="btn primary" type="button" data-view="form">＋ إنشاء مشروع</button></div>');}
 async function loadProjects(){
  if(!client||!currentUser)return false;
