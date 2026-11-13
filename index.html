@@ -1011,11 +1011,10 @@ async function submitExecutionForm(form){
   if(!version||version.status!=='draft')throw new Error('يمكن الاستيراد إلى إصدار BOQ مسودة فقط');
   if(file.size>5*1024*1024)throw new Error('حجم ملف CSV يتجاوز الحد المسموح 5 ميغابايت');
   const rows=parseAmmirCsv(await file.text());
+  if(rows.length>500)throw new Error('الحد الأقصى 500 بند في ملف واحد، قسّم الملف إلى عدة ملفات');
   const payload=rows.map((x,i)=>({...x,project_id:pid,boq_version_id:versionId,created_by:currentUser.id,sort_order:(moduleData.boqItems||[]).length+i}));
-  for(let offset=0;offset<payload.length;offset+=100){
-   const inserted=await client.from('ammir_project_boq_items').insert(payload.slice(offset,offset+100));
-   if(inserted.error)throw inserted.error;
-  }
+  const inserted=await client.from('ammir_project_boq_items').insert(payload);
+  if(inserted.error)throw inserted.error;
   await logActivity('boq_items_imported','استيراد '+payload.length+' بند إلى BOQ','boq_version',versionId,{count:payload.length});
 }else if(kind==='rfq'){
   if(!v.boq_version_id)throw new Error('اختر إصدار BOQ منشوراً حتى يحتوي طلب السعر على كميات ومواصفات ثابتة');
