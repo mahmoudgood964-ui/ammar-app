@@ -413,7 +413,7 @@ const SUPABASE_URL='https://uutwijowzewmvvrzsaww.supabase.co';
 const SUPABASE_KEY='sb_publishable_o-zC0NdMggZbPPY2l1REhA_w8Sbvjw_';
 const APP_URL='https://ammar-app.vercel.app/';
 const $=id=>document.getElementById(id);
-let client=null,currentUser=null,deferredInstallPrompt=null,projectsCache=[],editingProjectId=null,recoveryMode=false,lastViewedProjectId=null,activeProject=null,moduleTab='tasks',pendingInviteToken=new URLSearchParams(location.search).get('invite')||localStorage.getItem('ammar_pending_invite')||null,inviteAccepting=false,notificationTimer=null,lastInviteUrl='',moduleData={tasks:[],expenses:[],quotes:[],updates:[],documents:[],payments:[],activity:[],comments:[],members:[],invitations:[],siteReports:[],issues:[],changeOrders:[],handover:[],paymentMilestones:[],paymentEvents:[]},moduleLoadWarnings=[],moduleLoading=false;
+let client=null,currentUser=null,deferredInstallPrompt=null,projectsCache=[],editingProjectId=null,recoveryMode=false,lastViewedProjectId=null,activeProject=null,moduleTab='tasks',pendingInviteToken=new URLSearchParams(location.search).get('invite')||localStorage.getItem('ammar_pending_invite')||null,inviteAccepting=false,notificationTimer=null,lastInviteUrl='',moduleData={tasks:[],expenses:[],quotes:[],updates:[],documents:[],payments:[],activity:[],comments:[],members:[],invitations:[],siteReports:[],issues:[],changeOrders:[],handover:[],paymentMilestones:[],paymentEvents:[]},moduleLoadWarnings=[],moduleLoading=false,moduleLoadRequest=0;
 if(pendingInviteToken)localStorage.setItem('ammar_pending_invite',pendingInviteToken);
 const projectStatusLabels={planning:'قيد التخطيط',approved:'معتمد',in_progress:'قيد التنفيذ',on_hold:'متوقف مؤقتاً',completed:'مكتمل',cancelled:'ملغي'};
 const memberRoleLabels={manager:'مدير مشروع',supervisor:'مشرف',engineer:'مهندس',accountant:'محاسب',worker:'منفذ',viewer:'مشاهدة فقط'};
@@ -586,7 +586,7 @@ function translated(value){
  const startMatch=trimmed.match(/^البداية:\\s*(.+)$/);if(startMatch)return value.replace(trimmed,'Start: '+startMatch[1]);
  const targetMatch=trimmed.match(/^التسليم المستهدف:\\s*(.+)$/);if(targetMatch)return value.replace(trimmed,'Target handover: '+targetMatch[1]);
  const expenseMatch=trimmed.match(/^إجمالي المصروفات · (.+)$/);if(expenseMatch)return value.replace(trimmed,'Total expenses · '+expenseMatch[1]);
- const observationMatch=trimmed.match(/^(\\d+) ملاحظة مسجلة إجمالاً$/);if(observationMatch)return value.replace(trimmed,observationMatch[1]+' observations recorded in total');
+ const observationMatch=trimmed.match(/^(\d+) ملاحظة مسجلة إجمالاً$/);if(observationMatch)return value.replace(trimmed,observationMatch[1]+' observations recorded in total');
  const m=trimmed.match(/^عرض (\d+) من (\d+) مشروع$/);
  if(m)return value.replace(trimmed,'Showing '+m[1]+' of '+m[2]+' projects');
  const durationMatch=trimmed.match(/^التنفيذ: (\d+) يوم$/);if(durationMatch)return value.replace(trimmed,'Duration: '+durationMatch[1]+' days');
@@ -918,17 +918,19 @@ function renderModulePanel(){
 
 async function loadProjectModules(){
  if(!activeProject||!client)return;
+ const requestId=++moduleLoadRequest,projectId=String(activeProject.id);
  moduleLoading=true;renderModulePanel();
  const map={tasks:'project_tasks',expenses:'project_expenses',quotes:'project_quotes',updates:'project_updates',documents:'project_documents',payments:'project_payments',activity:'project_activity',comments:'project_comments',members:'project_members',invitations:'project_invitations',siteReports:'project_site_reports',issues:'project_issues',changeOrders:'project_change_orders',handover:'project_handover_items',paymentMilestones:'project_payment_milestones',paymentEvents:'project_payment_events'};
  const failures=[];
  const pairs=await Promise.all(Object.entries(map).map(async([k,t])=>{
   if(k==='invitations'&&String(activeProject.client_id)!==String(currentUser.id))return[k,[]];
   try{
-   let q=client.from(t).select(k==='invitations'?'id,project_id,email,member_role,status,expires_at,created_at':'*').eq('project_id',activeProject.id);
+   let q=client.from(t).select(k==='invitations'?'id,project_id,email,member_role,status,expires_at,created_at':'*').eq('project_id',projectId);
    if(!['members','invitations'].includes(k))q=q.order('created_at',{ascending:false}).limit(100);
    const r=await q;if(r.error)throw r.error;return[k,r.data||[]];
   }catch(error){failures.push({module:k,error});return[k,[]];}
  }));
+ if(requestId!==moduleLoadRequest||!activeProject||String(activeProject.id)!==projectId)return;
  pairs.forEach(([k,v])=>moduleData[k]=v);
  moduleLoadWarnings=failures.map(x=>x.module);
  moduleLoading=false;
