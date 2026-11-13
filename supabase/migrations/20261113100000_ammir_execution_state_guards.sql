@@ -8,7 +8,7 @@ CREATE OR REPLACE FUNCTION public.ammir_guard_boq_version_state()
 RETURNS trigger
 LANGUAGE plpgsql
 SET search_path = public, pg_temp
-AS $
+AS $$
 BEGIN
   IF TG_OP='INSERT' THEN
     IF NEW.status <> 'draft' THEN
@@ -29,7 +29,7 @@ BEGIN
   END IF;
   RAISE EXCEPTION 'Invalid BOQ version state transition or attempted edit of a published version';
 END;
-$;
+$$;
 
 DROP TRIGGER IF EXISTS ammir_guard_boq_version_state_trigger
   ON public.ammir_project_boq_versions;
@@ -41,7 +41,7 @@ CREATE OR REPLACE FUNCTION public.ammir_guard_invite_state()
 RETURNS trigger
 LANGUAGE plpgsql
 SET search_path = public, pg_temp
-AS $
+AS $$
 BEGIN
   IF TG_OP='INSERT' THEN
     IF NEW.status <> 'invited' THEN
@@ -54,7 +54,7 @@ BEGIN
   END IF;
   RAISE EXCEPTION 'Provider invitation response is final and cannot be reopened or overwritten';
 END;
-$;
+$$;
 
 DROP TRIGGER IF EXISTS ammir_guard_invite_state_trigger
   ON public.ammir_project_rfq_invites;
