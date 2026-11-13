@@ -3,6 +3,68 @@
 
 BEGIN;
 
+
+CREATE OR REPLACE FUNCTION public.ammir_guard_boq_version_state()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = public, pg_temp
+AS $
+BEGIN
+  IF TG_OP='INSERT' THEN
+    IF NEW.status <> 'draft' THEN
+      RAISE EXCEPTION 'BOQ versions must be created as drafts';
+    END IF;
+    RETURN NEW;
+  END IF;
+  IF OLD.status='draft' AND NEW.status IN ('draft','published','archived') THEN
+    RETURN NEW;
+  END IF;
+  IF OLD.status='published' AND NEW.status='archived'
+     AND NEW.project_id=OLD.project_id
+     AND NEW.version_no=OLD.version_no
+     AND NEW.title=OLD.title
+     AND NEW.revision_notes IS NOT DISTINCT FROM OLD.revision_notes
+     AND NEW.created_by=OLD.created_by THEN
+    RETURN NEW;
+  END IF;
+  RAISE EXCEPTION 'Invalid BOQ version state transition or attempted edit of a published version';
+END;
+$;
+
+DROP TRIGGER IF EXISTS ammir_guard_boq_version_state_trigger
+  ON public.ammir_project_boq_versions;
+CREATE TRIGGER ammir_guard_boq_version_state_trigger
+BEFORE INSERT OR UPDATE ON public.ammir_project_boq_versions
+FOR EACH ROW EXECUTE FUNCTION public.ammir_guard_boq_version_state();
+
+CREATE OR REPLACE FUNCTION public.ammir_guard_invite_state()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = public, pg_temp
+AS $
+BEGIN
+  IF TG_OP='INSERT' THEN
+    IF NEW.status <> 'invited' THEN
+      RAISE EXCEPTION 'Provider invitations must be created in invited state';
+    END IF;
+    RETURN NEW;
+  END IF;
+  IF OLD.status='invited' AND NEW.status IN ('accepted','declined','withdrawn') THEN
+    RETURN NEW;
+  END IF;
+  RAISE EXCEPTION 'Provider invitation response is final and cannot be reopened or overwritten';
+END;
+$;
+
+DROP TRIGGER IF EXISTS ammir_guard_invite_state_trigger
+  ON public.ammir_project_rfq_invites;
+CREATE TRIGGER ammir_guard_invite_state_trigger
+BEFORE INSERT OR UPDATE ON public.ammir_project_rfq_invites
+FOR EACH ROW EXECUTE FUNCTION public.ammir_guard_invite_state();
+
+-- Managers may stamp the issuance time when transitioning a draft award to issued.
+GRANT UPDATE(issued_at) ON public.ammir_project_awards TO authenticated;
+
 CREATE OR REPLACE FUNCTION public.ammir_guard_rfq_state()
 RETURNS trigger
 LANGUAGE plpgsql
@@ -296,6 +358,8 @@ WITH CHECK (
 );
 
 REVOKE ALL ON FUNCTION public.ammir_guard_boq_version_insert() FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.ammir_guard_boq_version_state() FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.ammir_guard_invite_state() FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.ammir_guard_rfq_state() FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.ammir_guard_rfq_item_draft_state() FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.ammir_guard_award_item_draft_state() FROM PUBLIC, anon, authenticated;
