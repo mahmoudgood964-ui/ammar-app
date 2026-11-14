@@ -108,6 +108,19 @@ assert.ok(moduleSource.includes('ecoPartnerSearch'), 'Partner directory search i
 assert.ok(moduleSource.includes('UN-Habitat Sudan'), 'Housing support organization lead is missing');
 assert.ok(moduleSource.includes('ATC Group'), 'Construction company lead is missing');
 assert.ok(moduleSource.includes('info@ctiunited.com'), 'CTI public contact is missing');
+assert.ok(moduleSource.includes('const cbosBanks = ['), 'Official CBOS bank directory data is missing');
+const cbosBankStart = moduleSource.indexOf('const cbosBanks = [');
+const testNewline = String.fromCharCode(10);
+const cbosBankEnd = moduleSource.indexOf(testNewline + '  ];', cbosBankStart);
+assert.ok(cbosBankStart >= 0 && cbosBankEnd > cbosBankStart, 'CBOS bank list could not be parsed');
+const cbosBankEntries = moduleSource.slice(cbosBankStart, cbosBankEnd).split(testNewline).filter(line => line.trim().startsWith("'"));
+assert.equal(cbosBankEntries.length, 38, 'Expected 38 banks from the published CBOS licensed-institutions list');
+assert.ok(moduleSource.includes('value="financial"'), 'Financial institution filter is missing');
+assert.ok(moduleSource.includes('حالة التشغيل تحتاج تحققاً مباشراً'), 'Financial directory must not imply that every listed bank is operating');
+assert.ok(moduleSource.includes('لا توجد حالياً اتفاقات مصرفية أو عروض تمويل معتمدة'), 'Financial directory must not imply AMMIR bank partnerships or available finance');
+assert.ok(html.includes('function authErrorMessage('), 'Friendly authentication error mapper is missing');
+assert.ok(html.includes('البريد الإلكتروني أو كلمة المرور غير صحيحة.'), 'Invalid login guidance is missing');
+assert.ok(!html.includes("تعذر تسجيل الدخول: '+(err.message"), 'Raw authentication errors must not be exposed to users');
 
 
 assert.ok(trustMigration.includes('ammir_guard_provider_trust_fields'), 'Provider self-verification trigger is missing');

@@ -212,23 +212,82 @@
     {name:'UN-Habitat Sudan',type:'support',scope:'الإسكان والمستوطنات والتأهيل الحضري وتقنيات البناء منخفضة التكلفة',site:'https://unhabitat.org/sudan-housing-and-slum-upgrading',contact:'صفحة البرنامج',label:'صفحة البرنامج الرسمية؛ تحقق من البرامج النشطة وشروط الأهلية'},
     {name:'UNOPS Sudan',type:'support',scope:'بنية تحتية ومياه ومشتريات وإدارة مشاريع؛ فرص مؤسسية وليست خدمة أفراد مباشرة',site:'https://www.unops.org/sudan',contact:'صفحة البلد',label:'صفحة البلد الرسمية'}
   ];
+  const cbosBanks = [
+    'بنك الخرطوم',
+    'بنك النيلين',
+    'البنك الزراعي السوداني',
+    'البنك العقاري التجاري',
+    'بنك الثروة الحيوانية',
+    'بنك النيل',
+    'بنك الإدخار والتنمية الاجتماعية',
+    'بنك أمدرمان الوطني',
+    'البنك السوداني الفرنسي',
+    'بنك فيصل الإسلامي',
+    'بنك التضامن الإسلامي',
+    'بنك البركة السوداني',
+    'البنك السعودي السوداني',
+    'البنك الإسلامي السوداني',
+    'بنك البلد',
+    'البنك الأهلي السوداني',
+    'بنك تنمية الصادرات',
+    'بنك العمال الوطني',
+    'مصرف المزارع التجاري',
+    'بنك إيفوري',
+    'بنك أفريقيا والخليج',
+    'بنك النيل الأزرق المشرق',
+    'بنك الاستثمار المالي',
+    'مصرف الساحل والصحراء',
+    'بنك بيبلوس أفريقيا',
+    'البنك السوداني المصري',
+    'مصرف السلام',
+    'مصرف التنمية الصناعية',
+    'بنك المال المتحد',
+    'بنك الجزيرة السوداني الأردني',
+    'بنك الأسرة',
+    'بنك قطر الوطني',
+    'البنك العربي السوداني',
+    'البنك الأهلي المصري',
+    'مصرف أبوظبي الإسلامي',
+    'بنك الخليج',
+    'بنك قطر الإسلامي',
+    'بنك زراعات كاتيليم'
+  ];
+  const cbosDirectoryUrl='https://cbos.gov.sd/ar/node/24142';
+  const cbosAnnualReportUrl='https://cbos.gov.sd/sites/default/files/_%D8%A7%D9%84%D8%AA%D9%82%D8%B1%D9%8A%D8%B1%20%D8%A7%D9%84%D8%B3%D9%86%D9%88%D9%8A%20%D9%84%D8%A8%D9%86%D9%83%20%D8%A7%D9%84%D8%B3%D9%88%D8%AF%D8%A7%D9%86%20%D8%A7%D9%84%D9%85%D8%B1%D9%83%D8%B2%D9%8A%20%D9%84%D9%84%D8%B9%D8%A7%D9%85%20%202025.pdf';
+  const cbosBankLeads=cbosBanks.map(name=>({
+    name,type:'financial',
+    scope:'اسم وارد في قائمة المصارف المنشورة من بنك السودان المركزي. يجب التأكد مباشرة من الفرع والخدمات وحالة التشغيل قبل أي تعامل.',
+    site:cbosDirectoryUrl,
+    contact:'لا توجد قناة اتصال موحدة في القائمة؛ استخدم قنوات المصرف الرسمية بعد التحقق منها.',
+    label:'المصدر: سجل بنك السودان المركزي. هذا الإدراج لا يعني شراكة أو اتفاقاً مع عَمِّر.'
+  }));
+  const allPartnerLeads=partnerLeads.concat(cbosBankLeads);
+
 
   function partnerDirectoryHtml(){
-    return `<div class="eco-note"><strong>تنبيه مهم:</strong> هذا دليل استكشافي لجهات محتملة فقط. لا تمثل هذه الجهات شركاء معتمدين أو مزودين متعاقدين مع عَمِّر، ولم تُنشأ لها حسابات داخل التطبيق. لا تعرض علامة «موثّق» ولا تنشر أسعاراً أو مخزوناً نيابة عنها قبل موافقتها والتحقق من مستنداتها ومراجعها.</div>
-      <div class="eco-form" style="margin-bottom:15px"><div><label for="ecoPartnerSearch">ابحث عن جهة أو خدمة</label><input id="ecoPartnerSearch" placeholder="اسم الجهة، مقاولات، استشارات، دعم..." autocomplete="off"></div><div><label for="ecoPartnerType">نوع الجهة</label><select id="ecoPartnerType"><option value="all">كل الجهات</option><option value="commercial">شركات ومقدمو خدمات</option><option value="support">جهات دعم وإعمار</option></select></div></div>
-      <div id="ecoPartnerGrid" class="eco-grid">${partnerCards(partnerLeads)}</div>
-      <div class="eco-note">خطوة الاعتماد قبل إدراج أي جهة كشريك: موافقة مكتوبة، إثبات الكيان والتسجيل والتراخيص المناسبة، التحقق من الشخص المفوض، مراجعة أعمال سابقة ومراجع مستقلة، ثم تحديد نطاق الخدمة والمناطق وشروط التعامل.</div>`;
+    return `<div class="eco-note"><strong>تنبيه:</strong> دليل الجهات التجارية والداعمة أدناه استكشافي؛ لا يعني وجود شراكة أو حساب أو موافقة لدى عَمِّر؛ لم تُنشأ لها حسابات داخل التطبيق ولم تمنحنا موافقتها. لا تستخدم شارة «موثّق» ولا تعرض أسعاراً أو مخزوناً نيابة عن أي جهة قبل موافقتها والتحقق من مستنداتها.</div>
+      <div class="eco-note"><strong>المصارف:</strong> أُدرجت الأسماء الـ38 كما تظهر في قائمة بنك السودان المركزي المنشورة. القائمة لا تثبت أن كل مصرف يعمل حالياً أو أن له فرعاً نشطاً في ولايتك أو أنه يقدم تمويلاً محدداً. تقرير البنك المركزي السنوي لعام 2025 أشار إلى توقف نشاط بعض المصارف مؤقتاً؛ لذلك تحقق مباشرة قبل أي تعامل. تاريخ مراجعة الرابط: 14 نوفمبر 2026. <a href="${cbosDirectoryUrl}" target="_blank" rel="noopener noreferrer">قائمة بنك السودان المركزي</a> · <a href="${cbosAnnualReportUrl}" target="_blank" rel="noopener noreferrer">التقرير السنوي 2025</a>.</div>
+      <div class="eco-form" style="margin-bottom:15px"><div><label for="ecoPartnerSearch">ابحث عن جهة أو خدمة</label><input id="ecoPartnerSearch" placeholder="اسم الجهة، مصرف، مقاولات، استشارات، دعم..." autocomplete="off"></div><div><label for="ecoPartnerType">نوع الجهة</label><select id="ecoPartnerType"><option value="all">كل الجهات</option><option value="commercial">شركات ومقدمو خدمات</option><option value="support">جهات دعم وإعمار</option><option value="financial">مصارف مدرجة في قائمة البنك المركزي</option></select></div></div>
+      <div id="ecoPartnerGrid" class="eco-grid">${partnerCards(allPartnerLeads)}</div>
+      <div class="eco-note">خطوة اعتماد أي شريك تجاري داخل عَمِّر: موافقة مكتوبة، إثبات الكيان والتسجيل والتراخيص المناسبة، التحقق من الشخص المفوض، مراجعة أعمال سابقة ومراجع مستقلة، ثم تحديد نطاق الخدمة والمناطق وشروط التعامل. لا توجد حالياً اتفاقات مصرفية أو عروض تمويل معتمدة داخل التطبيق.</div>`;
   }
 
   function partnerCards(rows){
     if(!rows.length)return '<div class="eco-empty">لا توجد نتائج مطابقة. جرّب عبارة بحث أخرى.</div>';
-    return rows.map(p=>`<article class="eco-card"><h3>${esc(p.name)}</h3><div class="eco-meta"><span class="eco-pill">${p.type==='support'?'جهة دعم/إعمار':'شركة أو مقدم خدمة'}</span><span class="eco-pill">جهة محتملة — غير معتمدة</span></div><p>${esc(p.scope)}</p><p class="muted">قناة التواصل: ${esc(p.contact)}</p><p class="hint">${esc(p.label)}</p><div class="eco-actions"><a class="btn light" href="${esc(p.site)}" target="_blank" rel="noopener noreferrer">الموقع الرسمي</a>${p.contact.includes('@')?`<a class="btn quiet" href="mailto:${esc(p.contact)}">مراسلة بالبريد</a>`:''}</div></article>`).join('');
+    const financialRows=rows.filter(p=>p.type==='financial');
+    const otherRows=rows.filter(p=>p.type!=='financial');
+    const financialHtml=financialRows.length?`<article class="eco-card"><div class="eco-meta"><span class="eco-pill">سجل رسمي منشور</span><span class="eco-pill">حالة التشغيل تحتاج تحققاً مباشراً</span></div><h3>المصارف المدرجة في قائمة بنك السودان المركزي (${financialRows.length})</h3><div class="eco-grid" style="grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:9px">${financialRows.map(p=>`<div class="eco-card" style="padding:12px"><strong>${esc(p.name)}</strong><p class="hint">مدرج في القائمة؛ تحقق من نشاط الفرع والخدمة.</p></div>`).join('')}</div><p class="hint">القائمة لا تثبت أن المصرف يعمل حالياً أو يقدم تمويلاً محدداً، ولا تعني وجود شراكة مع عَمِّر. <a href="${cbosDirectoryUrl}" target="_blank" rel="noopener noreferrer">افتح السجل الرسمي للتحقق</a>.</p></article>`:'';
+    const partnerHtml=otherRows.map(p=>{
+      const category=p.type==='support'?'جهة دعم/إعمار':'شركة أو مقدم خدمة';
+      return `<article class="eco-card"><h3>${esc(p.name)}</h3><div class="eco-meta"><span class="eco-pill">${category}</span><span class="eco-pill">جهة محتملة — غير معتمدة</span></div><p>${esc(p.scope)}</p><p class="muted">قناة التواصل: ${esc(p.contact)}</p><p class="hint">${esc(p.label)}</p><div class="eco-actions"><a class="btn light" href="${esc(p.site)}" target="_blank" rel="noopener noreferrer">الموقع الرسمي</a>${p.contact.includes('@')?`<a class="btn quiet" href="mailto:${esc(p.contact)}">مراسلة بالبريد</a>`:''}</div></article>`;
+    }).join('');
+    return financialHtml+partnerHtml;
   }
 
   function filterPartnerDirectory(){
     const grid=$('ecoPartnerGrid');if(!grid)return;
     const q=($('ecoPartnerSearch')?.value||'').trim().toLowerCase(),type=$('ecoPartnerType')?.value||'all';
-    const rows=partnerLeads.filter(p=>(type==='all'||p.type===type)&&[p.name,p.scope,p.contact].join(' ').toLowerCase().includes(q));
+    const rows=allPartnerLeads.filter(p=>(type==='all'||p.type===type)&&[p.name,p.scope,p.contact].join(' ').toLowerCase().includes(q));
     grid.innerHTML=partnerCards(rows);
   }
 
