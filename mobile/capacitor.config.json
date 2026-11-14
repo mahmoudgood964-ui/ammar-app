@@ -1,0 +1,32 @@
+{
+  "appId": "com.ammir.app",
+  "appName": "AMMIR",
+  "webDir": "dist",
+  "server": {
+    "androidScheme": "https",
+    "iosScheme": "https"
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 1200,
+      "launchAutoHide": true,
+      "launchFadeOutDuration": 250,
+      "backgroundColor": "#102f29",
+      "showSpinner": false
+    },
+    "StatusBar": {
+      "style": "DARK",
+      "backgroundColor": "#f3f5f2",
+      "overlaysWebView": false
+    }
+  },
+  "ios": {
+    "contentInset": "automatic",
+    "scrollEnabled": true,
+    "backgroundColor": "#f3f5f2"
+  },
+  "android": {
+    "backgroundColor": "#f3f5f2",
+    "allowMixedContent": false
+  }
+}

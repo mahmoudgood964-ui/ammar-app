@@ -1,0 +1,84 @@
+html.ammir-native,
+html.ammir-native body {
+  min-height: 100%;
+  overscroll-behavior-y: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html.ammir-native body {
+  -webkit-text-size-adjust: 100%;
+  background: #f3f5f2;
+}
+
+html.ammir-native input,
+html.ammir-native select,
+html.ammir-native textarea {
+  font-size: 16px;
+}
+
+html.ammir-native button,
+html.ammir-native a {
+  touch-action: manipulation;
+}
+
+.ammir-native-camera-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 40px;
+  margin-top: 9px;
+  padding: 9px 13px;
+  border: 1px solid #c8d8ce;
+  border-radius: 11px;
+  background: #edf4ef;
+  color: #123f35;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.ammir-native-camera-action:active {
+  transform: scale(.985);
+}
+
+.ammir-native-network {
+  position: fixed;
+  z-index: 10000;
+  top: calc(env(safe-area-inset-top, 0px) + 8px);
+  left: 12px;
+  right: 12px;
+  display: none;
+  padding: 11px 14px;
+  border: 1px solid #d9a6a0;
+  border-radius: 12px;
+  background: #fff1ef;
+  color: #8e2722;
+  box-shadow: 0 10px 28px rgba(45, 22, 18, .14);
+  text-align: center;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.ammir-native-network.is-visible {
+  display: block;
+}
+
+html.ammir-native .mobile-nav {
+  padding-bottom: max(8px, env(safe-area-inset-bottom));
+}
+
+html.ammir-native .ammir-project-section,
+html.ammir-native .ammir-project-navigation {
+  scroll-margin-top: 74px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html.ammir-native *,
+  html.ammir-native *::before,
+  html.ammir-native *::after {
+    scroll-behavior: auto !important;
+    animation-duration: .01ms !important;
+    transition-duration: .01ms !important;
+  }
+}
