@@ -59,3 +59,27 @@ Apple review also evaluates whether the product offers meaningful app-specific v
 - No Supabase migration or production database write is performed by this mobile layer.
 - The deferred bank payment milestone workflow is untouched.
 - Production remains at https://ammar-app.vercel.app
+
+## Continuous build verification
+
+The repository workflow builds both platform targets on changes to this folder or on manual dispatch:
+
+- `ammir-android-builds`: Android debug APK for install testing and an unsigned release AAB for packaging validation.
+- `ammir-ios-simulator`: iOS Simulator app archive for simulator validation only.
+
+A successful CI build validates compilation and artifact packaging. It does not replace device-level testing of camera permissions, file uploads and downloads, Realtime behavior, push notifications, offline operation, or account recovery.
+
+## Release acceptance checklist
+
+Before public release, record a separate pass/fail result for each item:
+
+1. Android physical-device install, first launch, update/install-over-existing, and launcher icon.
+2. Android camera and photo-library permissions, capture, upload, preview, and deletion.
+3. iPhone/iPad physical-device signing, installation, safe-area layout, camera/photo library, and sharing.
+4. Owner and provider accounts: registration, confirmation, sign-in, password recovery, and sign-out.
+5. Project file access with two unrelated accounts, including denied cross-project downloads.
+6. Realtime messages, notifications, delivery/read receipts, and reconnect after network loss.
+7. 360px, 390px, and tablet/desktop layouts; Arabic and English content; weak network behavior.
+8. Store distribution signing, privacy disclosures, screenshots, support URL, and reviewer credentials.
+
+Do not mark an item complete based only on a simulator or synthetic database test. Keep real-device and two-account acceptance evidence alongside the release record.
