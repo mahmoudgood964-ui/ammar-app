@@ -116,7 +116,7 @@ assert.ok(cbosBankStart >= 0 && cbosBankEnd > cbosBankStart, 'CBOS bank list cou
 const cbosBankEntries = moduleSource.slice(cbosBankStart, cbosBankEnd).split(testNewline).filter(line => line.trim().startsWith("'"));
 assert.equal(cbosBankEntries.length, 38, 'Expected 38 banks from the published CBOS licensed-institutions list');
 assert.ok(moduleSource.includes('value="financial"'), 'Financial institution filter is missing');
-assert.ok(moduleSource.includes('حالة التشغيل غير مؤكدة'), 'Financial directory must not imply that every listed bank is operating');
+assert.ok(moduleSource.includes('حالة التشغيل تحتاج تحققاً مباشراً'), 'Financial directory must not imply that every listed bank is operating');
 assert.ok(moduleSource.includes('لا توجد حالياً اتفاقات مصرفية أو عروض تمويل معتمدة'), 'Financial directory must not imply AMMIR bank partnerships or available finance');
 assert.ok(html.includes('function authErrorMessage('), 'Friendly authentication error mapper is missing');
 assert.ok(html.includes('البريد الإلكتروني أو كلمة المرور غير صحيحة.'), 'Invalid login guidance is missing');
