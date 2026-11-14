@@ -2,21 +2,19 @@
   "id": "/",
   "name": "عَمِّر | AMMIR",
   "short_name": "AMMIR",
-  "description": "إدارة مشاريع البناء والترميم والمقاولات من التخطيط إلى التوريد والتنفيذ والتسليم.",
+  "description": "نظام تشغيل رحلة البناء من التخطيط إلى التنفيذ والاستلام",
   "lang": "ar",
   "dir": "rtl",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
   "orientation": "any",
-  "background_color": "#f4f7f5",
-  "theme_color": "#123f35",
+  "background_color": "#f2f0e8",
+  "theme_color": "#102f29",
   "icons": [
-    {
-      "src": "/icon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
-      "purpose": "any maskable"
-    }
+    {"src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
+    {"src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable"},
+    {"src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any"}
   ]
 }
