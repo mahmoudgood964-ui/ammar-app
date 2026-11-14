@@ -110,9 +110,10 @@ assert.ok(moduleSource.includes('ATC Group'), 'Construction company lead is miss
 assert.ok(moduleSource.includes('info@ctiunited.com'), 'CTI public contact is missing');
 assert.ok(moduleSource.includes('const cbosBanks = ['), 'Official CBOS bank directory data is missing');
 const cbosBankStart = moduleSource.indexOf('const cbosBanks = [');
-const cbosBankEnd = moduleSource.indexOf('\\n  ];', cbosBankStart);
+const testNewline = String.fromCharCode(10);
+const cbosBankEnd = moduleSource.indexOf(testNewline + '  ];', cbosBankStart);
 assert.ok(cbosBankStart >= 0 && cbosBankEnd > cbosBankStart, 'CBOS bank list could not be parsed');
-const cbosBankEntries = moduleSource.slice(cbosBankStart, cbosBankEnd).split('\\n').filter(line => line.trim().startsWith("'"));
+const cbosBankEntries = moduleSource.slice(cbosBankStart, cbosBankEnd).split(testNewline).filter(line => line.trim().startsWith("'"));
 assert.equal(cbosBankEntries.length, 38, 'Expected 38 banks from the published CBOS licensed-institutions list');
 assert.ok(moduleSource.includes('value="financial"'), 'Financial institution filter is missing');
 assert.ok(moduleSource.includes('حالة التشغيل غير مؤكدة'), 'Financial directory must not imply that every listed bank is operating');
