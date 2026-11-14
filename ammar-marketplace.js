@@ -252,7 +252,7 @@
     'بنك قطر الإسلامي',
     'بنك زراعات كاتيليم'
   ];
-  const cbosDirectoryUrl='https://cbos.gov.sd/ar/content/المصارف-والمؤسسات-المالية-المرخص-لها-بالعمل-من-بنك-السودان-المركزى-0';
+  const cbosDirectoryUrl='https://cbos.gov.sd/ar/node/24142';
   const cbosAnnualReportUrl='https://cbos.gov.sd/sites/default/files/_%D8%A7%D9%84%D8%AA%D9%82%D8%B1%D9%8A%D8%B1%20%D8%A7%D9%84%D8%B3%D9%86%D9%88%D9%8A%20%D9%84%D8%A8%D9%86%D9%83%20%D8%A7%D9%84%D8%B3%D9%88%D8%AF%D8%A7%D9%86%20%D8%A7%D9%84%D9%85%D8%B1%D9%83%D8%B2%D9%8A%20%D9%84%D9%84%D8%B9%D8%A7%D9%85%20%202025.pdf';
   const cbosBankLeads=cbosBanks.map(name=>({
     name,type:'financial',
@@ -274,16 +274,14 @@
 
   function partnerCards(rows){
     if(!rows.length)return '<div class="eco-empty">لا توجد نتائج مطابقة. جرّب عبارة بحث أخرى.</div>';
-    return rows.map(p=>{
-      const financial=p.type==='financial';
-      const category=p.type==='support'?'جهة دعم/إعمار':financial?'مصرف وارد في قائمة CBOS':'شركة أو مقدم خدمة';
-      const status=financial?'مدرج في القائمة الرسمية — حالة التشغيل غير مؤكدة':'جهة محتملة — غير معتمدة';
-      const contact=financial?'بيانات التواصل: راجع القنوات الرسمية للمصرف؛ لا تتوفر هنا بيانات مباشرة موحدة.':'قناة التواصل: '+p.contact;
-      const note=financial?'ورود الاسم في القائمة لا يثبت نشاط الفرع حالياً أو توافر التمويل أو وجود اتفاق مع عَمِّر.':p.label;
-      const linkLabel=financial?'عرض قائمة البنك المركزي':'الموقع الرسمي';
-      const emailLink=!financial&&p.contact.includes('@')?`<a class="btn quiet" href="mailto:${esc(p.contact)}">مراسلة بالبريد</a>`:'';
-      return `<article class="eco-card"><h3>${esc(p.name)}</h3><div class="eco-meta"><span class="eco-pill">${category}</span><span class="eco-pill">${status}</span></div><p>${esc(p.scope)}</p><p class="muted">${esc(contact)}</p><p class="hint">${esc(note)}</p><div class="eco-actions"><a class="btn light" href="${esc(p.site)}" target="_blank" rel="noopener noreferrer">${linkLabel}</a>${emailLink}</div></article>`;
+    const financialRows=rows.filter(p=>p.type==='financial');
+    const otherRows=rows.filter(p=>p.type!=='financial');
+    const financialHtml=financialRows.length?`<article class="eco-card"><div class="eco-meta"><span class="eco-pill">سجل رسمي منشور</span><span class="eco-pill">حالة التشغيل تحتاج تحققاً مباشراً</span></div><h3>المصارف المدرجة في قائمة بنك السودان المركزي (${financialRows.length})</h3><div class="eco-grid" style="grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:9px">${financialRows.map(p=>`<div class="eco-card" style="padding:12px"><strong>${esc(p.name)}</strong><p class="hint">مدرج في القائمة؛ تحقق من نشاط الفرع والخدمة.</p></div>`).join('')}</div><p class="hint">القائمة لا تثبت أن المصرف يعمل حالياً أو يقدم تمويلاً محدداً، ولا تعني وجود شراكة مع عَمِّر. <a href="${cbosDirectoryUrl}" target="_blank" rel="noopener noreferrer">افتح السجل الرسمي للتحقق</a>.</p></article>`:'';
+    const partnerHtml=otherRows.map(p=>{
+      const category=p.type==='support'?'جهة دعم/إعمار':'شركة أو مقدم خدمة';
+      return `<article class="eco-card"><h3>${esc(p.name)}</h3><div class="eco-meta"><span class="eco-pill">${category}</span><span class="eco-pill">جهة محتملة — غير معتمدة</span></div><p>${esc(p.scope)}</p><p class="muted">قناة التواصل: ${esc(p.contact)}</p><p class="hint">${esc(p.label)}</p><div class="eco-actions"><a class="btn light" href="${esc(p.site)}" target="_blank" rel="noopener noreferrer">الموقع الرسمي</a>${p.contact.includes('@')?`<a class="btn quiet" href="mailto:${esc(p.contact)}">مراسلة بالبريد</a>`:''}</div></article>`;
     }).join('');
+    return financialHtml+partnerHtml;
   }
 
   function filterPartnerDirectory(){
