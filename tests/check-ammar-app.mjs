@@ -195,4 +195,20 @@ assert.equal(importedRows[0].description,'Concrete, C30','CSV parser should pres
 assert.equal(importedRows[0].quantity,10,'CSV parser should normalize numeric quantities');
 assert.equal(importedRows[1].unit_rate,null,'CSV parser should accept a blank optional unit rate');
 
+
+const identityCss = fs.readFileSync('ammir-identity.css', 'utf8');
+const pwaManifest = JSON.parse(fs.readFileSync('manifest.webmanifest', 'utf8'));
+assert.ok(html.includes('<link rel="stylesheet" href="/ammir-identity.css">'), 'Identity stylesheet must load on the first page visit without relying on service-worker HTML rewriting');
+assert.ok(html.includes('<link rel="apple-touch-icon" sizes="192x192" href="/icon-192.png">'), 'Apple launcher icon declaration is missing');
+assert.ok(html.includes('<meta name="mobile-web-app-capable" content="yes">'), 'Android standalone app metadata is missing');
+assert.ok(html.includes('<meta name="theme-color" content="#102f29">'), 'Browser chrome theme must match the AMMIR identity');
+assert.equal(pwaManifest.display, 'standalone', 'PWA must request standalone display');
+assert.ok(pwaManifest.icons.some(icon => icon.src === '/icon-192.png' && icon.sizes === '192x192'), '192px install icon is missing from the manifest');
+assert.ok(pwaManifest.icons.some(icon => icon.src === '/icon-512.png' && icon.sizes === '512x512' && icon.purpose.includes('maskable')), '512px maskable install icon is missing from the manifest');
+assert.ok(identityCss.includes("url('/icon.svg')"), 'The app brand mark must use the canonical AMMIR seal');
+assert.ok(identityCss.includes(':focus-visible'), 'Keyboard-visible focus treatment is missing');
+assert.ok(serviceWorker.includes('/icon-512.png'), 'The 512px install icon must be cached in the app shell');
+assert.ok(serviceWorker.includes('ammir-shell-v9-identity-first-load'), 'Service worker cache must be versioned for the new identity assets');
+assert.ok(!serviceWorker.includes("html.replace('</head>'"), 'Service worker must not rewrite HTML to inject identity assets; first-load HTML must declare them directly');
+
 console.log('AMMIR static application and migration checks passed.');
