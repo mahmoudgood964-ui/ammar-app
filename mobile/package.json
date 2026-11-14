@@ -5,7 +5,7 @@
   "type": "module",
   "description": "Native Android and iOS shell for عَمِّر | AMMIR",
   "scripts": {
-    "build:web": "node scripts/copy-web.mjs && vite build",
+    "build:web": "node scripts/copy-web.mjs && vite build && node scripts/copy-runtime-assets.mjs",
     "verify:web": "node scripts/verify-web-build.mjs",
     "prepare:android": "node scripts/prepare-native.mjs android",
     "prepare:ios": "node scripts/prepare-native.mjs ios"
