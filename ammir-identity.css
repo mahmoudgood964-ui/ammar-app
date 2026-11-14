@@ -119,3 +119,10 @@ button,.btn,input,select,textarea{font-family:inherit}
 .landing-section-heading h3{color:#fff}
 .landing-record .landing-section-heading h3{color:var(--gd)}
 @media(max-width:900px){.auth-shell:before{inset:0;height:auto;clip-path:none}.landing-section-heading h3{color:var(--gd)}}
+
+
+/* Use the same original architectural seal in every brand placement. */
+.brand-mark{background:#102f29 url('/icon.svg') center/cover no-repeat;border:0;color:transparent;box-shadow:none}
+.brand-mark:before,.brand-mark:after{content:none;display:none}
+.mobile-nav .nav-btn{min-height:48px}
+:focus-visible{outline:3px solid #c58d54;outline-offset:3px}
