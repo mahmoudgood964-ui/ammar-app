@@ -20,8 +20,10 @@ for (const file of required) {
 
 const html = await readFile(resolve(dist, 'index.html'), 'utf8');
 if (!html.includes('viewport-fit=cover')) throw new Error('Safe-area viewport is missing.');
-if (!html.includes('native-shell.css')) throw new Error('Native layout stylesheet is not linked.');
 if (!html.includes('AMMIR')) throw new Error('AMMIR identity is missing from the built app.');
+
+const nativeCss = await readFile(resolve(dist, 'native-shell.css'), 'utf8');
+if (!nativeCss.includes('.ammir-native-camera-action')) throw new Error('Native layout stylesheet is incomplete.');
 
 const assetDir = resolve(dist, 'assets');
 const entries = await readdir(assetDir, { withFileTypes: true });
