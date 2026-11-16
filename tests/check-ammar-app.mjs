@@ -226,7 +226,7 @@ assert.ok(!serviceWorker.includes("html.replace('</head>'"), 'Service worker mus
 
 console.log('AMMIR static application and migration checks passed.');
 
-assert.match(html, /function passwordPolicyError\\(password\\)/, 'Password policy helper must exist');
-assert.match(html, /password\\.length<12/, 'Signup and recovery must require at least 12 characters');
+assert.match(html, /function passwordPolicyError\(password\)/, 'Password policy helper must exist');
+assert.match(html, /password\.length<12/, 'Signup and recovery must require at least 12 characters');
 assert.match(html, /classes<3/, 'Password policy must require three character classes');
 assert.match(html, /minlength="12"/, 'Password inputs must expose the 12-character minimum');
