@@ -269,6 +269,11 @@ BEGIN
     v_function := to_regprocedure(v_signature);
     IF v_function IS NOT NULL THEN
       EXECUTE format('ALTER FUNCTION %s SET search_path = %L', v_function, '');
+      EXECUTE format('REVOKE EXECUTE ON FUNCTION %s FROM PUBLIC, anon', v_function);
+      EXECUTE format('GRANT EXECUTE ON FUNCTION %s TO authenticated', v_function);
+      IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'service_role') THEN
+        EXECUTE format('GRANT EXECUTE ON FUNCTION %s TO service_role', v_function);
+      END IF;
     END IF;
   END LOOP;
 END
