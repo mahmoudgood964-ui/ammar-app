@@ -97,6 +97,11 @@ BEGIN
       IF has_function_privilege('anon',v_resolved,'EXECUTE') THEN
         RAISE EXCEPTION 'RPC % is executable by anon',v_signature;
       END IF;
+
+      IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname='service_role')
+         AND NOT has_function_privilege('service_role',v_resolved,'EXECUTE') THEN
+        RAISE EXCEPTION 'RPC % is not executable by service_role',v_signature;
+      END IF;
     END IF;
   END LOOP;
 
