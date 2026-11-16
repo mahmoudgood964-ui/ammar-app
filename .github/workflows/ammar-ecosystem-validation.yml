@@ -105,5 +105,13 @@ jobs:
         env:
           PGPASSWORD: postgres
         run: psql -h 127.0.0.1 -U postgres -d ammar_test -v ON_ERROR_STOP=1 -f tests/ammir-project-workflows.sql
+      - name: Apply AMMIR security defense-in-depth migration
+        env:
+          PGPASSWORD: postgres
+        run: psql -h 127.0.0.1 -U postgres -d ammar_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261116210000_ammir_security_defense_in_depth.sql
+      - name: Run AMMIR security defense-in-depth tests
+        env:
+          PGPASSWORD: postgres
+        run: psql -h 127.0.0.1 -U postgres -d ammar_test -v ON_ERROR_STOP=1 -f tests/ammir-security-hardening.sql
       - name: Validate browser code and migration wiring
         run: node tests/check-ammar-app.mjs
