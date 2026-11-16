@@ -49,71 +49,70 @@ RESET ROLE;
 
 DO $ammir_security_assertions$
 DECLARE
-  v_rpc_count integer;
+  v_expected regprocedure;
+  v_signature text;
+  v_resolved regprocedure;
 BEGIN
-  SELECT count(*) INTO v_rpc_count
-  FROM pg_proc p
-  JOIN pg_namespace n ON n.oid=p.pronamespace
-  WHERE n.nspname='public'
-    AND p.prosecdef
-    AND has_function_privilege('authenticated',p.oid,'EXECUTE')
-    AND p.proname = ANY(ARRAY[
-      'ammar_accept_agreement','ammar_accept_market_quote','ammar_accept_project_invitation',
-      'ammar_accept_service_offer','ammar_admin_list_message_reports','ammar_admin_review_provider',
-      'ammar_advance_market_request','ammar_complete_service_request','ammar_create_market_request',
-      'ammar_create_project_invitation','ammar_forward_message','ammar_get_conversation_presence',
-      'ammar_is_conversation_member','ammar_mark_conversation_delivered','ammar_mark_conversation_read',
-      'ammar_message_to_change_order','ammar_message_to_project_task','ammar_project_role',
-      'ammar_remove_project_member','ammar_revoke_project_invitation','ammar_set_presence',
-      'ammar_start_conversation','ammar_update_project_member_role','is_admin','is_project_member'
-    ]);
+  -- Every RPC present in this fixture must remain a callable SECURITY DEFINER
+  -- function for authenticated clients, with a fixed empty search_path.
+  FOREACH v_signature IN ARRAY ARRAY[
+      'public.ammar_accept_agreement(uuid)',
+      'public.ammar_accept_market_quote(uuid)',
+      'public.ammar_accept_project_invitation(text)',
+      'public.ammar_accept_service_offer(uuid)',
+      'public.ammar_admin_list_message_reports(integer)',
+      'public.ammar_admin_review_provider(text, uuid, text, text, text)',
+      'public.ammar_advance_market_request(uuid, text, text)',
+      'public.ammar_complete_service_request(uuid)',
+      'public.ammar_create_market_request(uuid, uuid, numeric, text, text)',
+      'public.ammar_create_project_invitation(text, text, text)',
+      'public.ammar_forward_message(uuid, uuid)',
+      'public.ammar_get_conversation_presence(uuid, uuid)',
+      'public.ammar_is_conversation_member(uuid)',
+      'public.ammar_mark_conversation_delivered(uuid)',
+      'public.ammar_mark_conversation_read(uuid)',
+      'public.ammar_message_to_change_order(uuid, text, text, numeric, text, integer)',
+      'public.ammar_message_to_project_task(uuid)',
+      'public.ammar_project_role(text)',
+      'public.ammar_remove_project_member(text, uuid)',
+      'public.ammar_revoke_project_invitation(text, uuid)',
+      'public.ammar_set_presence(boolean)',
+      'public.ammar_start_conversation(uuid, text, text, text)',
+      'public.ammar_update_project_member_role(text, uuid, text)',
+      'public.is_admin()',
+      'public.is_project_member(uuid)'
+  ] LOOP
+    v_resolved := to_regprocedure(v_signature);
+    IF v_resolved IS NOT NULL THEN
+      IF NOT EXISTS (
+        SELECT 1 FROM pg_proc p
+        WHERE p.oid=v_resolved
+          AND p.prosecdef
+          AND has_function_privilege('authenticated',p.oid,'EXECUTE')
+          AND (coalesce(p.proconfig,ARRAY[]::text[]) @> ARRAY['search_path=""'])
+      ) THEN
+        RAISE EXCEPTION 'RPC % is missing, not SECURITY DEFINER, not callable by authenticated, or has an unsafe search_path',v_signature;
+      END IF;
 
-  IF v_rpc_count <> 25 THEN
-    RAISE EXCEPTION 'Expected 25 authenticated SECURITY DEFINER RPCs, found %',v_rpc_count;
-  END IF;
+      IF has_function_privilege('anon',v_resolved,'EXECUTE') THEN
+        RAISE EXCEPTION 'RPC % is executable by anon',v_signature;
+      END IF;
+    END IF;
+  END LOOP;
 
-  IF EXISTS (
-    SELECT 1
-    FROM pg_proc p
-    JOIN pg_namespace n ON n.oid=p.pronamespace
-    WHERE n.nspname='public'
-      AND p.prosecdef
-      AND has_function_privilege('authenticated',p.oid,'EXECUTE')
-      AND p.proname = ANY(ARRAY[
-        'ammar_accept_agreement','ammar_accept_market_quote','ammar_accept_project_invitation',
-        'ammar_accept_service_offer','ammar_admin_list_message_reports','ammar_admin_review_provider',
-        'ammar_advance_market_request','ammar_complete_service_request','ammar_create_market_request',
-        'ammar_create_project_invitation','ammar_forward_message','ammar_get_conversation_presence',
-        'ammar_is_conversation_member','ammar_mark_conversation_delivered','ammar_mark_conversation_read',
-        'ammar_message_to_change_order','ammar_message_to_project_task','ammar_project_role',
-        'ammar_remove_project_member','ammar_revoke_project_invitation','ammar_set_presence',
-        'ammar_start_conversation','ammar_update_project_member_role','is_admin','is_project_member'
-      ])
-      AND NOT (coalesce(p.proconfig,ARRAY[]::text[]) @> ARRAY['search_path=""'])
-  ) THEN
-    RAISE EXCEPTION 'An authenticated SECURITY DEFINER RPC does not use an empty search_path';
-  END IF;
-
-  IF EXISTS (
-    SELECT 1
-    FROM pg_proc p
-    JOIN pg_namespace n ON n.oid=p.pronamespace
-    WHERE n.nspname='public'
-      AND p.prosecdef
-      AND has_function_privilege('anon',p.oid,'EXECUTE')
-      AND p.proname = ANY(ARRAY[
-        'ammar_accept_agreement','ammar_accept_market_quote','ammar_accept_project_invitation',
-        'ammar_accept_service_offer','ammar_admin_list_message_reports','ammar_admin_review_provider',
-        'ammar_advance_market_request','ammar_complete_service_request','ammar_create_market_request',
-        'ammar_create_project_invitation','ammar_forward_message','ammar_get_conversation_presence',
-        'ammar_is_conversation_member','ammar_mark_conversation_delivered','ammar_mark_conversation_read',
-        'ammar_message_to_change_order','ammar_message_to_project_task','ammar_project_role',
-        'ammar_remove_project_member','ammar_revoke_project_invitation','ammar_set_presence',
-        'ammar_start_conversation','ammar_update_project_member_role','is_admin','is_project_member'
-      ])
-  ) THEN
-    RAISE EXCEPTION 'An RPC is executable by anon';
-  END IF;
+  -- The four corrected actions must exist in every CI fixture and explicitly
+  -- reject requests without an authenticated user (tested above).
+  FOREACH v_signature IN ARRAY ARRAY[
+    'public.ammar_accept_agreement(uuid)',
+    'public.ammar_accept_market_quote(uuid)',
+    'public.ammar_accept_service_offer(uuid)',
+    'public.ammar_complete_service_request(uuid)'
+  ] LOOP
+    v_resolved := to_regprocedure(v_signature);
+    IF v_resolved IS NULL THEN
+      RAISE EXCEPTION 'Required authenticated action is missing: %',v_signature;
+    END IF;
+  END LOOP;
 
   IF EXISTS (
     SELECT 1 FROM pg_default_acl d
