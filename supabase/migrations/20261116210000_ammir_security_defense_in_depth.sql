@@ -234,55 +234,45 @@ END;
 $function$
 ;
 
-ALTER FUNCTION public.ammar_accept_agreement(uuid) SET search_path = '';
-
-ALTER FUNCTION public.ammar_accept_market_quote(uuid) SET search_path = '';
-
-ALTER FUNCTION public.ammar_accept_project_invitation(text) SET search_path = '';
-
-ALTER FUNCTION public.ammar_accept_service_offer(uuid) SET search_path = '';
-
-ALTER FUNCTION public.ammar_admin_list_message_reports(integer) SET search_path = '';
-
-ALTER FUNCTION public.ammar_admin_review_provider(text, uuid, text, text, text) SET search_path = '';
-
-ALTER FUNCTION public.ammar_advance_market_request(uuid, text, text) SET search_path = '';
-
-ALTER FUNCTION public.ammar_complete_service_request(uuid) SET search_path = '';
-
-ALTER FUNCTION public.ammar_create_market_request(uuid, uuid, numeric, text, text) SET search_path = '';
-
-ALTER FUNCTION public.ammar_create_project_invitation(text, text, text) SET search_path = '';
-
-ALTER FUNCTION public.ammar_forward_message(uuid, uuid) SET search_path = '';
-
-ALTER FUNCTION public.ammar_get_conversation_presence(uuid, uuid) SET search_path = '';
-
-ALTER FUNCTION public.ammar_is_conversation_member(uuid) SET search_path = '';
-
-ALTER FUNCTION public.ammar_mark_conversation_delivered(uuid) SET search_path = '';
-
-ALTER FUNCTION public.ammar_mark_conversation_read(uuid) SET search_path = '';
-
-ALTER FUNCTION public.ammar_message_to_change_order(uuid, text, text, numeric, text, integer) SET search_path = '';
-
-ALTER FUNCTION public.ammar_message_to_project_task(uuid) SET search_path = '';
-
-ALTER FUNCTION public.ammar_project_role(text) SET search_path = '';
-
-ALTER FUNCTION public.ammar_remove_project_member(text, uuid) SET search_path = '';
-
-ALTER FUNCTION public.ammar_revoke_project_invitation(text, uuid) SET search_path = '';
-
-ALTER FUNCTION public.ammar_set_presence(boolean) SET search_path = '';
-
-ALTER FUNCTION public.ammar_start_conversation(uuid, text, text, text) SET search_path = '';
-
-ALTER FUNCTION public.ammar_update_project_member_role(text, uuid, text) SET search_path = '';
-
-ALTER FUNCTION public.is_admin() SET search_path = '';
-
-ALTER FUNCTION public.is_project_member(uuid) SET search_path = '';
+DO $ammir_rpc_search_path$
+DECLARE
+  v_signature text;
+  v_function regprocedure;
+BEGIN
+  FOREACH v_signature IN ARRAY ARRAY[
+    'public.ammar_accept_agreement(uuid)',
+    'public.ammar_accept_market_quote(uuid)',
+    'public.ammar_accept_project_invitation(text)',
+    'public.ammar_accept_service_offer(uuid)',
+    'public.ammar_admin_list_message_reports(integer)',
+    'public.ammar_admin_review_provider(text, uuid, text, text, text)',
+    'public.ammar_advance_market_request(uuid, text, text)',
+    'public.ammar_complete_service_request(uuid)',
+    'public.ammar_create_market_request(uuid, uuid, numeric, text, text)',
+    'public.ammar_create_project_invitation(text, text, text)',
+    'public.ammar_forward_message(uuid, uuid)',
+    'public.ammar_get_conversation_presence(uuid, uuid)',
+    'public.ammar_is_conversation_member(uuid)',
+    'public.ammar_mark_conversation_delivered(uuid)',
+    'public.ammar_mark_conversation_read(uuid)',
+    'public.ammar_message_to_change_order(uuid, text, text, numeric, text, integer)',
+    'public.ammar_message_to_project_task(uuid)',
+    'public.ammar_project_role(text)',
+    'public.ammar_remove_project_member(text, uuid)',
+    'public.ammar_revoke_project_invitation(text, uuid)',
+    'public.ammar_set_presence(boolean)',
+    'public.ammar_start_conversation(uuid, text, text, text)',
+    'public.ammar_update_project_member_role(text, uuid, text)',
+    'public.is_admin()',
+    'public.is_project_member(uuid)'
+  ] LOOP
+    v_function := to_regprocedure(v_signature);
+    IF v_function IS NOT NULL THEN
+      EXECUTE format('ALTER FUNCTION %s SET search_path = %L', v_function, '');
+    END IF;
+  END LOOP;
+END
+$ammir_rpc_search_path$;
 
 DO $ammir_payment_table_lockdown$
 BEGIN
