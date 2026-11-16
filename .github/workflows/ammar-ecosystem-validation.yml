@@ -3,6 +3,7 @@ name: AMMAR ecosystem validation
 on:
   push:
     branches:
+      - main
       - feature/ammar-market-messaging
       - launch/ammir-trust-hardening
       - fix/ammir-android-pwa-install
