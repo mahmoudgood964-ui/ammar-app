@@ -284,9 +284,18 @@ ALTER FUNCTION public.is_admin() SET search_path = '';
 
 ALTER FUNCTION public.is_project_member(uuid) SET search_path = '';
 
-REVOKE ALL ON TABLE public.project_payment_milestones FROM anon, authenticated;
-
-REVOKE ALL ON TABLE public.project_payment_events FROM anon, authenticated;
+DO $ammir_payment_table_lockdown$
+BEGIN
+  -- The bank-milestone feature remains paused. Lock direct API table access only
+  -- when these legacy tables exist; do not create them or change their workflow.
+  IF to_regclass('public.project_payment_milestones') IS NOT NULL THEN
+    EXECUTE 'REVOKE ALL ON TABLE public.project_payment_milestones FROM anon, authenticated';
+  END IF;
+  IF to_regclass('public.project_payment_events') IS NOT NULL THEN
+    EXECUTE 'REVOKE ALL ON TABLE public.project_payment_events FROM anon, authenticated';
+  END IF;
+END
+$ammir_payment_table_lockdown$;
 
 ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public REVOKE ALL ON TABLES FROM anon, authenticated;
 
