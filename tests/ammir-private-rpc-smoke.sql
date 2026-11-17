@@ -28,15 +28,20 @@ INSERT INTO public.ammar_conversation_participants(
   ('bbbbbbbb-2000-4000-8000-000000000001','aaaaaaaa-2000-4000-8000-000000000002','participant')
 ON CONFLICT (conversation_id,user_id) DO NOTHING;
 
+-- Insert the message through the actual participant JWT so the
+-- sender/session guard remains active in this regression test.
+SET LOCAL ROLE authenticated;
+SELECT set_config('request.jwt.claim.sub','aaaaaaaa-2000-4000-8000-000000000002',true);
 INSERT INTO public.ammar_messages(
   id,conversation_id,sender_id,message_type,body
 ) VALUES (
   'bbbbbbbb-2000-4000-8000-000000000002',
   'bbbbbbbb-2000-4000-8000-000000000001',
-  'aaaaaaaa-2000-4000-8000-000000000002',
+  auth.uid(),
   'text','Private RPC wrapper smoke message'
 )
 ON CONFLICT (id) DO NOTHING;
+RESET ROLE;
 
 INSERT INTO public.ammar_message_receipts(message_id,user_id)
 VALUES (
