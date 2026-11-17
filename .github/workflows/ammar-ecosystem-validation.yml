@@ -114,10 +114,6 @@ jobs:
         env:
           PGPASSWORD: postgres
         run: psql -h 127.0.0.1 -U postgres -d ammar_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261116211825_explicit_deny_policies_for_paused_payment_tables.sql
-      - name: Run AMMIR security defense-in-depth tests
-        env:
-          PGPASSWORD: postgres
-        run: psql -h 127.0.0.1 -U postgres -d ammar_test -v ON_ERROR_STOP=1 -f tests/ammir-security-hardening.sql
       - name: Consolidate AMMIR admin and owner RLS policies
         env:
           PGPASSWORD: postgres
@@ -127,6 +123,22 @@ jobs:
           PGPASSWORD: postgres
         run: |
           psql -h 127.0.0.1 -U postgres -d ammar_test -v ON_ERROR_STOP=1 -f tests/ammir-rls-policy-consolidation.sql
+          psql -h 127.0.0.1 -U postgres -d ammar_test -v ON_ERROR_STOP=1 -f tests/ammar-trust-admin.sql
+      - name: Move authenticated SECURITY DEFINER implementations to app_private
+        env:
+          PGPASSWORD: postgres
+        run: psql -h 127.0.0.1 -U postgres -d ammar_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261117083000_move_authenticated_definer_rpcs_to_app_private.sql
+      - name: Verify AMMIR private RPC wrappers and access
+        env:
+          PGPASSWORD: postgres
+        run: psql -h 127.0.0.1 -U postgres -d ammar_test -v ON_ERROR_STOP=1 -f tests/ammir-security-hardening.sql
+      - name: Re-run marketplace, messaging and project workflows through public RPC wrappers
+        env:
+          PGPASSWORD: postgres
+        run: |
+          psql -h 127.0.0.1 -U postgres -d ammar_test -v ON_ERROR_STOP=1 -f tests/ammar-marketplace-integration.sql
+          psql -h 127.0.0.1 -U postgres -d ammar_test -v ON_ERROR_STOP=1 -f tests/ammar-messaging-plus.sql
+          psql -h 127.0.0.1 -U postgres -d ammar_test -v ON_ERROR_STOP=1 -f tests/ammir-project-workflows.sql
           psql -h 127.0.0.1 -U postgres -d ammar_test -v ON_ERROR_STOP=1 -f tests/ammar-trust-admin.sql
       - name: Validate browser code and migration wiring
         run: node tests/check-ammar-app.mjs
