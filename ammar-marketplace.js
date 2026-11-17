@@ -12,7 +12,7 @@
     proposed:'عرض مقدم',rejected:'مرفوض',open:'مفتوح',awarded:'تم اختيار مقدم الخدمة'
   };
 
-  let db=null,user=null,supplier=null,provider=null,products=[],myProducts=[],projects=[];
+  let db=null,user=null,supplier=null,provider=null,products=[],myProducts=[],projects=[],serviceProviders=[];
   let tab='market',activeConversation=null,messageChannel=null,refreshTimer=null,presenceTimer=null,mounted=false;
   let replyToMessageId=null,availableConversations=[],showLastSeen=true,isAdmin=false;
 
@@ -107,13 +107,19 @@
       </div>`;
     document.querySelector('#appShell .content').appendChild(view);
     view.addEventListener('click',click);view.addEventListener('submit',submit);
-    view.addEventListener('input',e=>{if(e.target.id==='ecoChatSearch')filterChatList();if(e.target.id==='ecoMessageSearch')filterMessageBubbles();if(e.target.id==='ecoPartnerSearch'||e.target.id==='ecoPartnerType')filterPartnerDirectory();});
+    view.addEventListener('input',e=>{
+      if(e.target.id==='ecoChatSearch')filterChatList();
+      if(e.target.id==='ecoMessageSearch')filterMessageBubbles();
+      if(e.target.id==='ecoPartnerSearch'||e.target.id==='ecoPartnerType')filterPartnerDirectory();
+      if(['ecoProviderSearch','ecoProviderLocationFilter'].includes(e.target.id))filterServiceProviders();
+    });
     view.addEventListener('change',e=>{
       if(e.target.id==='ecoProviderType'){
         const target=$('ecoSpecialtyOptions');
         if(target)target.innerHTML=providerSpecialtiesHtml(e.target.value,[]);
       }
       if(e.target.id==='ecoChatFilter')filterChatList();
+      if(e.target.id==='ecoProviderCategoryFilter')filterServiceProviders();
       const report=e.target.closest('[data-admin-report-status]');
       if(report)handleAdminReportChange(report).catch(err=>tell(err.message,'error'));
       const dispute=e.target.closest('[data-admin-dispute-status]');
@@ -795,6 +801,9 @@
     }else if(c.data.context_type==='supplier'){
       const q=await db.from('ammar_market_suppliers').select('business_name,market_name,city,governorate,description').eq('id',c.data.context_id).maybeSingle();
       if(!q.error&&q.data)contextCard=`<div class="eco-note"><strong>ملف المورد</strong><p>${esc(q.data.business_name)} · ${esc(q.data.market_name||'')}</p><small>${esc(q.data.city||'')} · ${esc(q.data.governorate||'')} · ${esc(q.data.description||'')}</small></div>`;
+    }else if(c.data.context_type==='service_provider'){
+      const q=await db.from('ammar_service_providers').select('business_name,provider_type,specialties,city,governorate,description,portfolio_url,is_verified').eq('id',c.data.context_id).maybeSingle();
+      if(!q.error&&q.data)contextCard=`<div class="eco-note"><strong>ملف مقدم الخدمة</strong><p>${esc(q.data.business_name)} · ${esc(providerTypeLabel(q.data.provider_type))}</p><small>${esc((q.data.specialties||[]).join('، '))} · ${esc(q.data.city||'')} · ${esc(q.data.governorate||'')}</small>${q.data.is_verified?'<span class="eco-pill">AMMIR Verified</span>':'<span class="eco-pill">غير موثّق بعد</span>'}</div>`;
     }else if(c.data.context_type==='project'){
       const q=await db.from('projects').select('title,status,budget_amount,budget_currency').eq('id',c.data.context_id).maybeSingle();
       if(!q.error&&q.data)contextCard=`<div class="eco-note"><strong>المشروع المرتبط</strong><p>${esc(q.data.title)} · ${esc(statusText[q.data.status]||q.data.status||'')}</p><small>${q.data.budget_amount==null?'': 'الميزانية: '+money(q.data.budget_amount,q.data.budget_currency||'SDG')}</small></div>`;
@@ -834,7 +843,46 @@ function providerSpecialtiesHtml(type,selected=[]){
   return options.map(value=>'<label style="display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid var(--line);border-radius:9px;background:#fff;font-size:12px"><input type="checkbox" name="specialties" value="'+esc(value)+'" '+(selected.includes(value)?'checked':'')+'><span>'+esc(value)+'</span></label>').join('');
 }
 
-async function servicesHtml(){
+function providerTypeLabel(type){
+    return ({contractor:'مقاولات وتنفيذ',maintenance:'صيانة',engineering:'هندسة واستشارات وإشراف',transport:'نقل ولوجستيات',equipment_rental:'تأجير معدات وآليات',other:'فحص وجودة وخدمات متخصصة'}[type]||'مقدم خدمة');
+  }
+
+  function providerDirectoryCards(rows){
+    if(!rows.length)return '<div class="eco-empty">لا توجد ملفات مقدمي خدمات نشطة في هذا الدليل حتى الآن. يمكن للجهات إنشاء ملفاتها وإضافة تخصصاتها.</div>';
+    return rows.map(x=>{
+      const location=[x.city,x.governorate,x.area].filter(Boolean).join(' — ');
+      const verified=x.is_verified===true;
+      const portfolio=x.portfolio_url&&(x.portfolio_url.startsWith('https://')||x.portfolio_url.startsWith('http://'))
+        ?'<a class="btn quiet" href="'+esc(x.portfolio_url)+'" target="_blank" rel="noopener noreferrer">سابقة الأعمال</a>':'';
+      return '<article class="eco-card">'+
+        '<div class="eco-meta"><span class="eco-pill">'+esc(providerTypeLabel(x.provider_type))+'</span>'+
+        (verified?'<span class="eco-pill">AMMIR Verified</span>':'<span class="eco-pill" style="background:#fff1d6;color:#805300">غير موثّق بعد</span>')+
+        '</div><h3>'+esc(x.business_name)+'</h3>'+
+        '<p><strong>التخصصات:</strong> '+esc((x.specialties||[]).join('، ')||'لم تُحدد التخصصات')+'</p>'+
+        '<p>'+esc(location||'الموقع غير محدد')+'</p>'+
+        (x.description?'<p>'+esc(x.description)+'</p>':'')+
+        '<div class="eco-actions">'+
+        '<button class="btn primary" type="button" data-eco-provider-chat="'+esc(x.id)+'" data-owner="'+esc(x.owner_id)+'" data-name="'+esc(x.business_name)+'">مراسلة الجهة</button>'+
+        portfolio+'</div>'+
+        (verified?'':'<p class="hint">يمكنك التواصل الأولي مع الجهة؛ تقديم العروض الرسمية يتاح بعد اعتمادها من إدارة عَمِّر.</p>')+
+        '</article>';
+    }).join('');
+  }
+
+  function filterServiceProviders(){
+    const grid=$('ecoProviderDirectoryGrid');if(!grid)return;
+    const q=($('ecoProviderSearch')?.value||'').trim().toLowerCase();
+    const category=$('ecoProviderCategoryFilter')?.value||'';
+    const location=($('ecoProviderLocationFilter')?.value||'').trim().toLowerCase();
+    const rows=serviceProviders.filter(x=>{
+      const hay=[x.business_name,providerTypeLabel(x.provider_type),...(x.specialties||[]),x.description].filter(Boolean).join(' ').toLowerCase();
+      const place=[x.city,x.governorate,x.area].filter(Boolean).join(' ').toLowerCase();
+      return (!q||hay.includes(q))&&(!category||x.provider_type===category)&&(!location||place.includes(location));
+    });
+    grid.innerHTML=providerDirectoryCards(rows);
+  }
+
+  async function servicesHtml(){
     const p=provider;
     const profile=`<section class="eco-card eco-subsection"><h3>${p?'ملف مقدم الخدمة':'إنشاء ملف مقاول أو مقدم خدمة'}</h3>
       <form id="ecoProviderForm" class="eco-form">
@@ -859,8 +907,14 @@ async function servicesHtml(){
         <div class="wide"><label>رابط سابقة الأعمال أو ملف المشروعات (اختياري)</label><input name="portfolio_url" type="url" value="${esc(p?.portfolio_url)}" placeholder="https://..."></div>
         <div class="wide"><button class="btn primary" type="submit">${p?'تحديث الملف':'إنشاء الملف'}</button></div>
       </form></section>`;
-    const req=await db.from('ammar_service_requests').select('*').order('created_at',{ascending:false}).limit(100);
-    if(req.error)throw req.error;
+    const [req, directory]=await Promise.all([
+      db.from('ammar_service_requests').select('*').order('created_at',{ascending:false}).limit(100),
+      db.from('ammar_service_providers')
+        .select('id,owner_id,business_name,provider_type,specialties,governorate,city,area,description,portfolio_url,is_verified,status')
+        .eq('status','active').order('created_at',{ascending:false}).limit(150)
+    ]);
+    if(req.error)throw req.error;if(directory.error)throw directory.error;
+    serviceProviders=(directory.data||[]).filter(x=>x.owner_id!==user.id);
     const requestIds=(req.data||[]).map(x=>x.id);
     let offerRows=[];
     if(requestIds.length){
@@ -881,7 +935,25 @@ async function servicesHtml(){
       const completeAction=own&&r.status==='awarded'?'<button class="btn primary" type="button" data-eco-complete-service="'+esc(r.id)+'">تأكيد اكتمال الخدمة</button>':'';
       return '<article class="eco-card"><h3>'+esc(r.title)+'</h3><div class="eco-meta"><span class="eco-pill">'+esc(r.service_type)+'</span><span class="eco-pill">'+esc(r.city||'الموقع غير محدد')+'</span><span class="eco-pill">'+esc(statusText[r.status]||r.status)+'</span></div><p>'+esc(r.description)+'</p><p>الميزانية القصوى: '+(r.budget_max==null?'غير محددة':money(r.budget_max,r.currency))+'</p>'+offerForm+'<div class="eco-subsection"><strong>العروض المقدمة</strong>'+(offersHtml||'<p class="muted">لا توجد عروض بعد.</p>')+'</div>'+completeAction+'</article>';
     }).join('');
-    return `${profile}${provider&&(!provider.is_verified||provider.status!=='active')?'<div class="eco-note">ملف مقدم الخدمة غير معتمد حالياً، لذلك يمكنك استعراض الطلبات والتواصل مع أصحابها، لكن تقديم العروض الرسمية يتاح بعد اعتماد حسابك من إدارة عَمِّر</div>':''}<section class="eco-card eco-subsection"><h3>نشر طلب خدمة أو مقاول</h3>
+    const providerDirectory=`<section class="eco-card eco-subsection">
+      <h3>دليل المقاولين والمهندسين ومقدمي الخدمات</h3>
+      <p class="muted">اعثر على جهة حسب التخصص والموقع. شارة التوثيق تعني أن إدارة عَمِّر راجعت ملف الجهة؛ التسجيل وحده لا يعني الاعتماد.</p>
+      <div class="eco-form" style="margin-bottom:12px">
+        <div><label for="ecoProviderSearch">ابحث عن اسم أو تخصص</label><input id="ecoProviderSearch" type="search" placeholder="مقاولات، كهرباء، مساحة، تكييف..."></div>
+        <div><label for="ecoProviderCategoryFilter">الفئة الرئيسية</label><select id="ecoProviderCategoryFilter">
+          <option value="">كل الفئات</option>
+          <option value="contractor">مقاولات وتنفيذ</option><option value="maintenance">صيانة</option>
+          <option value="engineering">هندسة واستشارات وإشراف</option><option value="transport">نقل ولوجستيات</option>
+          <option value="equipment_rental">تأجير معدات وآليات</option><option value="other">فحص وجودة وخدمات متخصصة</option>
+        </select></div>
+        <div><label for="ecoProviderLocationFilter">المدينة أو الولاية</label><input id="ecoProviderLocationFilter" placeholder="اكتب المدينة أو الولاية"></div>
+      </div>
+      <div id="ecoProviderDirectoryGrid" class="eco-grid">${providerDirectoryCards(serviceProviders)}</div>
+    </section>`;
+    return `${profile}${provider&&(!provider.is_verified||provider.status!=='active')?'<div class="eco-note">ملف مقدم الخدمة غير معتمد حالياً، لذلك يمكنك استعراض الطلبات والتواصل مع أصحابها، لكن تقديم العروض الرسمية يتاح بعد اعتماد حسابك من إدارة عَمِّر</div>':''}
+      ${providerDirectory}
+      <div class="eco-note"><strong>سياسة العمولة:</strong> عمولة عَمِّر المعتمدة 5% على مقدم الخدمة عند اكتمال المعاملة وفق شروطها؛ لا تُحمّل على العميل، ولا تعني أن عَمِّر تستلم الأموال أو تحتفظ بها.</div>
+      <section class="eco-card eco-subsection"><h3>نشر طلب خدمة أو مقاول</h3>
       <form id="ecoServiceRequestForm" class="eco-form">
         <div><label>نوع الخدمة *</label><select name="service_type"><option value="contractor">مقاولات</option><option value="renovation">ترميم</option><option value="maintenance">صيانة</option><option value="engineering">هندسة</option><option value="inspection">معاينة</option><option value="transport">نقل</option><option value="equipment_rental">تأجير معدات</option><option value="other">أخرى</option></select></div>
         <div><label>عنوان الطلب *</label><input name="title" required minlength="5" maxlength="180"></div>
@@ -950,7 +1022,7 @@ async function servicesHtml(){
     const t=e.target.closest('[data-eco-tab]');if(t){chooseTab(t.dataset.ecoTab);return;}
     const adminButton=e.target.closest('[data-admin-review]');
     if(adminButton){handleAdminClick(adminButton).catch(err=>tell('تعذر حفظ قرار التحقق: '+(err.message||'خطأ'),'error'));return;}
-    const b=e.target.closest('[data-eco-action],[data-eco-buy],[data-eco-contact],[data-eco-toggle-product],[data-eco-open-chat],[data-eco-accept-quote],[data-eco-submit-quote],[data-eco-advance],[data-eco-order-chat],[data-eco-create-agreement],[data-eco-service-offer],[data-eco-accept-service],[data-eco-service-chat],[data-eco-service-agreement],[data-eco-complete-service],[data-eco-accept-agreement],[data-eco-submit-review],[data-eco-quote-chat],[data-eco-agreement-chat],[data-eco-reply],[data-eco-clear-reply],[data-eco-pin],[data-eco-unpin],[data-eco-report],[data-eco-forward],[data-eco-archive],[data-eco-block],[data-eco-presence-toggle],[data-eco-location],[data-eco-to-task],[data-eco-to-change],[data-eco-unblock]');
+    const b=e.target.closest('[data-eco-provider-chat],[data-eco-action],[data-eco-buy],[data-eco-contact],[data-eco-toggle-product],[data-eco-open-chat],[data-eco-accept-quote],[data-eco-submit-quote],[data-eco-advance],[data-eco-order-chat],[data-eco-create-agreement],[data-eco-service-offer],[data-eco-accept-service],[data-eco-service-chat],[data-eco-service-agreement],[data-eco-complete-service],[data-eco-accept-agreement],[data-eco-submit-review],[data-eco-quote-chat],[data-eco-agreement-chat],[data-eco-reply],[data-eco-clear-reply],[data-eco-pin],[data-eco-unpin],[data-eco-report],[data-eco-forward],[data-eco-archive],[data-eco-block],[data-eco-presence-toggle],[data-eco-location],[data-eco-to-task],[data-eco-to-change],[data-eco-unblock]');
     if(!b)return;
     try{
       if(b.dataset.ecoQuoteChat){await startConversation(b.dataset.other,'market_quote',b.dataset.ecoQuoteChat,'مراسلة حول عرض السعر');return;}
@@ -1030,6 +1102,10 @@ async function servicesHtml(){
         const r=await db.rpc('ammar_create_market_request',{p_supplier_id:p.supplier_id,p_product_id:p.id,p_quantity:qty,p_project_id:projectId,p_buyer_note:null});
         if(r.error)throw r.error;chooseTab('orders');tell('تم إنشاء طلب الشراء.','success');return;
       }
+      if(b.dataset.ecoProviderChat){
+        const selected=serviceProviders.find(x=>x.id===b.dataset.ecoProviderChat);
+        await startConversation(b.dataset.owner,'service_provider',b.dataset.ecoProviderChat,'استفسار عن خدمات: '+(selected?.business_name||b.dataset.name||'مقدم خدمة'));return;
+      }
       if(b.dataset.ecoContact){
         const p=products.find(x=>x.id===b.dataset.ecoContact);
         await startConversation(b.dataset.owner,'market_product',b.dataset.ecoContact,'استفسار عن: '+(p?.title||'منتج'));return;
@@ -1088,7 +1164,7 @@ async function servicesHtml(){
         await startConversation(b.dataset.other,'service_offer',b.dataset.ecoServiceChat,'محادثة عرض خدمة');return;
       }
       if(b.dataset.ecoCompleteService){
-        if(!window.confirm('هل تؤكد اكتمال الخدمة واستلامها؟ سيُسجّل المبلغ ضمن مصروفات المشروع. لا توجد حالياً عمولة مفعّلة؛ أي عمولة مستقبلية تتطلب اتفاقاً تجارياً واضحاً وتفعيل إعداد معتمد.'))return;
+        if(!window.confirm('هل تؤكد اكتمال الخدمة واستلامها؟ سيُسجّل المبلغ ضمن مصروفات المشروع، وتُسجّل عمولة عَمِّر المعتمدة 5% على مقدم الخدمة وفق شروط إتمام المعاملة. لا تستلم المنصة أموال العميل ولا تحتفظ بها.'))return;
         const r=await db.rpc('ammar_complete_service_request',{p_request_id:b.dataset.ecoCompleteService});
         if(r.error)throw r.error;await render();tell('تم تأكيد اكتمال الخدمة وتسجيل مصروف المشروع. لم يتم تحصيل أو تحويل أي أموال.','success');return;
       }
