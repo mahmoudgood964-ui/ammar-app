@@ -1,6 +1,6 @@
 \set ON_ERROR_STOP on
 
--- Run after 20261116210000_ammir_security_defense_in_depth.sql.
+-- Run after the AMMIR security and paused-payment deny-policy migrations.
 -- Uses no real account, inserts no business data, and rolls back its session changes.
 BEGIN;
 
@@ -149,6 +149,46 @@ BEGIN
   END IF;
 END
 $ammir_security_assertions$;
+
+
+DO $ammir_paused_payment_policy_tests$
+DECLARE
+  v_table regclass;
+BEGIN
+  FOREACH v_table IN ARRAY ARRAY[
+    'public.project_payment_milestones'::regclass,
+    'public.project_payment_events'::regclass
+  ] LOOP
+    IF NOT EXISTS (
+      SELECT 1 FROM pg_class c
+      WHERE c.oid=v_table AND c.relrowsecurity
+    ) THEN
+      RAISE EXCEPTION 'Paused payment table % does not have RLS enabled',v_table;
+    END IF;
+
+    IF NOT EXISTS (
+      SELECT 1
+      FROM pg_policy p
+      WHERE p.polrelid=v_table
+        AND p.polcmd='*'
+        AND (
+          SELECT count(DISTINCT role_oid)
+          FROM unnest(p.polroles) AS role_oid
+          WHERE role_oid IN ('anon'::regrole,'authenticated'::regrole)
+        )=2
+        AND pg_get_expr(p.polqual,p.polrelid)='false'
+        AND pg_get_expr(p.polwithcheck,p.polrelid)='false'
+    ) THEN
+      RAISE EXCEPTION 'Paused payment table % is missing its deny-all client policy',v_table;
+    END IF;
+
+    IF has_table_privilege('anon',v_table,'SELECT')
+       OR has_table_privilege('authenticated',v_table,'SELECT') THEN
+      RAISE EXCEPTION 'Paused payment table % still grants direct client SELECT',v_table;
+    END IF;
+  END LOOP;
+END
+$ammir_paused_payment_policy_tests$;
 
 ROLLBACK;
 
