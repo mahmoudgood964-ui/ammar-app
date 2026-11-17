@@ -147,7 +147,7 @@
 
   async function loadProducts(){
     const r=await db.from('ammar_market_products')
-      .select('id,supplier_id,title,category,brand,description,unit,price,currency,quantity_available,availability,image_path,price_updated_at,supplier:ammar_market_suppliers!inner(id,owner_id,business_name,governorate,city,area,market_name,is_verified)')
+      .select('id,supplier_id,title,category,brand,description,unit,price,currency,quantity_available,availability,image_path,price_updated_at,supplier:ammar_market_suppliers!inner(id,owner_id,business_name,governorate,city,area,market_name,is_verified,brands,delivery_mode,delivery_coverage,minimum_order_amount,minimum_order_currency,typical_lead_time_days,delivery_terms)')
       .eq('is_active',true).neq('availability','unavailable')
       .order('created_at',{ascending:false}).limit(150);
     if(r.error)throw r.error;products=r.data||[];
@@ -487,10 +487,20 @@
       const loc=[s?.governorate,s?.city,s?.area,s?.market_name].filter(Boolean).join(' – ');
       const own=s?.owner_id===user.id;
       const imageUrl=p.image_path?db.storage.from('ammar-market-files').getPublicUrl(p.image_path).data.publicUrl:null;
+      const deliveryModeLabel={delivery:'توصيل إلى موقع المشروع',pickup:'استلام من مقر المورد',on_request:'التوصيل حسب الاتفاق',unknown:''}[s?.delivery_mode]||'';
+      const supplierDetails=[
+        (s?.brands||[]).length?'العلامات: '+s.brands.join('، '):null,
+        deliveryModeLabel||null,
+        s?.delivery_coverage?'التغطية: '+s.delivery_coverage:null,
+        s?.minimum_order_amount!=null?'الحد الأدنى: '+money(s.minimum_order_amount,s.minimum_order_currency):null,
+        s?.typical_lead_time_days!=null?'مدة التوريد المعتادة: '+s.typical_lead_time_days+' يوم':null,
+        s?.delivery_terms||null
+      ].filter(Boolean).join(' · ');
       return `<article class="eco-card">${imageUrl?`<img src="${esc(imageUrl)}" alt="${esc(p.title)}" loading="lazy" style="width:100%;max-height:170px;object-fit:cover;border-radius:10px;margin-bottom:9px">`:''}<h3>${esc(p.title)}</h3>
         <div class="eco-meta"><span class="eco-pill">${esc(p.category)}</span><span class="eco-pill">${esc(p.availability==='limited'?'كمية محدودة':'متوفر')}</span>${s?.is_verified?'<span class="eco-pill">AMMIR Verified</span>':'<span class="eco-pill" style="background:#fff1d6;color:#805300">غير موثّق</span>'}</div>
         <p>${esc(p.description||p.brand||'')}</p><div class="eco-price">${money(p.price,p.currency)} / ${esc(p.unit)}</div>
         <p><strong>${esc(s?.business_name||'مورد')}</strong></p><p>${esc(loc||'الموقع غير محدد')}</p>
+        ${supplierDetails?`<p class="muted">${esc(supplierDetails)}</p>`:''}
         <p class="muted">آخر تحديث للسعر: ${esc(p.price_updated_at?new Date(p.price_updated_at).toLocaleString('ar'):'غير متاح')}</p>
         <div class="eco-actions">${own?'<span class="eco-pill">منتجك</span>':s?.is_verified&&s?.status==='active'?`<input class="eco-inline-input" style="width:92px" type="number" min="0.001" step="0.001" value="1" aria-label="الكمية" id="ecoQty-${esc(p.id)}">
           <button class="btn primary" type="button" data-eco-buy="${esc(p.id)}">طلب شراء</button>
@@ -528,6 +538,18 @@
         <div><label>المنطقة</label><input name="area" value="${esc(p?.area)}"></div>
         <div><label>السوق</label><input name="market_name" value="${esc(p?.market_name)}" placeholder="مثلاً: السجانة"></div>
         <div class="wide"><label>العنوان</label><input name="address" value="${esc(p?.address)}"></div>
+        <div class="wide"><label>العلامات التجارية التي تتعامل معها</label><input name="brands" value="${esc((p?.brands||[]).join('، '))}" placeholder="اكتب الأسماء وافصل بينها بفاصلة"></div>
+        <div><label>طريقة استلام / توصيل الطلب</label><select name="delivery_mode">
+          <option value="unknown" ${!p||p.delivery_mode==='unknown'?'selected':''}>لم تحدد بعد</option>
+          <option value="delivery" ${p?.delivery_mode==='delivery'?'selected':''}>توصيل إلى موقع المشروع</option>
+          <option value="pickup" ${p?.delivery_mode==='pickup'?'selected':''}>استلام من مقر المورد</option>
+          <option value="on_request" ${p?.delivery_mode==='on_request'?'selected':''}>حسب الطلب والاتفاق</option>
+        </select></div>
+        <div><label>مدة التوريد المعتادة (أيام)</label><input name="typical_lead_time_days" type="number" min="0" max="3650" step="1" value="${esc(p?.typical_lead_time_days)}"></div>
+        <div class="wide"><label>المدن والمناطق التي تغطيها</label><input name="delivery_coverage" value="${esc(p?.delivery_coverage)}" placeholder="مثلاً: الخرطوم، بحري، أم درمان"></div>
+        <div><label>الحد الأدنى للطلب (اختياري)</label><input name="minimum_order_amount" type="number" min="0" step="0.01" value="${esc(p?.minimum_order_amount)}"></div>
+        <div><label>عملة الحد الأدنى</label><select name="minimum_order_currency"><option value="SDG" ${!p||p.minimum_order_currency==='SDG'?'selected':''}>SDG</option><option value="USD" ${p?.minimum_order_currency==='USD'?'selected':''}>USD</option><option value="EGP" ${p?.minimum_order_currency==='EGP'?'selected':''}>EGP</option></select></div>
+        <div class="wide"><label>شروط النقل والتسليم</label><textarea name="delivery_terms">${esc(p?.delivery_terms)}</textarea></div>
         <div class="wide"><label>نبذة عن النشاط</label><textarea name="description">${esc(p?.description)}</textarea></div>
         <div class="wide"><button class="btn primary" type="submit">${p?'حفظ بيانات المورد':'إنشاء حساب المورد'}</button></div>
       </form>${p?`<div class="eco-meta"><span class="eco-pill">حالة الحساب: ${esc(p.status)}</span><span class="eco-pill">${p.is_verified?'تم التحقق':'لم يتم التحقق بعد'}</span></div>`:''}
@@ -834,6 +856,7 @@ async function servicesHtml(){
         <div><label>اسم المسؤول</label><input name="contact_name" value="${esc(p?.contact_name)}"></div><div><label>الهاتف</label><input name="contact_phone" value="${esc(p?.contact_phone)}"></div>
         <div><label>الولاية</label><input name="governorate" value="${esc(p?.governorate)}"></div><div><label>المدينة</label><input name="city" value="${esc(p?.city)}"></div><div><label>المنطقة</label><input name="area" value="${esc(p?.area)}"></div>
         <div class="wide"><label>وصف الخدمات والخبرة</label><textarea name="description">${esc(p?.description)}</textarea></div>
+        <div class="wide"><label>رابط سابقة الأعمال أو ملف المشروعات (اختياري)</label><input name="portfolio_url" type="url" value="${esc(p?.portfolio_url)}" placeholder="https://..."></div>
         <div class="wide"><button class="btn primary" type="submit">${p?'تحديث الملف':'إنشاء الملف'}</button></div>
       </form></section>`;
     const req=await db.from('ammar_service_requests').select('*').order('created_at',{ascending:false}).limit(100);
@@ -1101,7 +1124,8 @@ async function servicesHtml(){
     try{
       const d=Object.fromEntries(new FormData(form).entries());
       if(form.id==='ecoSupplierForm'){
-        const payload={business_name:d.business_name.trim(),contact_name:d.contact_name||null,contact_phone:d.contact_phone||null,whatsapp_phone:d.whatsapp_phone||null,governorate:d.governorate||null,city:d.city||null,area:d.area||null,market_name:d.market_name||null,address:d.address||null,description:d.description||null};
+        const brands=[...new Set(String(d.brands||'').split(/[،,]/).map(x=>x.trim()).filter(Boolean))].slice(0,30);
+        const payload={business_name:d.business_name.trim(),contact_name:d.contact_name||null,contact_phone:d.contact_phone||null,whatsapp_phone:d.whatsapp_phone||null,governorate:d.governorate||null,city:d.city||null,area:d.area||null,market_name:d.market_name||null,address:d.address||null,description:d.description||null,brands,delivery_mode:d.delivery_mode||'unknown',delivery_coverage:d.delivery_coverage||null,minimum_order_amount:d.minimum_order_amount===''?null:Number(d.minimum_order_amount),minimum_order_currency:d.minimum_order_currency||'SDG',typical_lead_time_days:d.typical_lead_time_days===''?null:Number(d.typical_lead_time_days),delivery_terms:d.delivery_terms||null};
         const r=supplier?await db.from('ammar_market_suppliers').update(payload).eq('owner_id',user.id):await db.from('ammar_market_suppliers').insert({...payload,owner_id:user.id});
         if(r.error)throw r.error;await loadProfiles();await loadMyProducts();await render();tell('تم حفظ ملف المورد.','success');
       }else if(form.id==='ecoProductForm'){
@@ -1121,7 +1145,7 @@ async function servicesHtml(){
       }else if(form.id==='ecoProviderForm'){
         const specialties=[...form.querySelectorAll('input[name="specialties"]:checked')].map(x=>x.value);
         if(!specialties.length)throw new Error('اختر تخصصاً واحداً على الأقل.');
-        const payload={business_name:d.business_name.trim(),provider_type:d.provider_type,specialties,contact_name:d.contact_name||null,contact_phone:d.contact_phone||null,governorate:d.governorate||null,city:d.city||null,area:d.area||null,description:d.description||null};
+        const payload={business_name:d.business_name.trim(),provider_type:d.provider_type,specialties,contact_name:d.contact_name||null,contact_phone:d.contact_phone||null,governorate:d.governorate||null,city:d.city||null,area:d.area||null,description:d.description||null,portfolio_url:d.portfolio_url||null};
         const r=provider?await db.from('ammar_service_providers').update(payload).eq('owner_id',user.id):await db.from('ammar_service_providers').insert({...payload,owner_id:user.id});
         if(r.error)throw r.error;await loadProfiles();await render();tell('تم حفظ ملف مقدم الخدمة.','success');
       }else if(form.id==='ecoServiceRequestForm'){
