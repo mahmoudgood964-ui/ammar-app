@@ -132,13 +132,11 @@ jobs:
         env:
           PGPASSWORD: postgres
         run: psql -h 127.0.0.1 -U postgres -d ammar_test -v ON_ERROR_STOP=1 -f tests/ammir-security-hardening.sql
-      - name: Re-run marketplace, messaging and project workflows through public RPC wrappers
+      - name: Smoke-test authenticated and administrator public RPC wrappers
         env:
           PGPASSWORD: postgres
         run: |
-          psql -h 127.0.0.1 -U postgres -d ammar_test -v ON_ERROR_STOP=1 -f tests/ammar-marketplace-integration.sql
-          psql -h 127.0.0.1 -U postgres -d ammar_test -v ON_ERROR_STOP=1 -f tests/ammar-messaging-plus.sql
-          psql -h 127.0.0.1 -U postgres -d ammar_test -v ON_ERROR_STOP=1 -f tests/ammir-project-workflows.sql
+          psql -h 127.0.0.1 -U postgres -d ammar_test -v ON_ERROR_STOP=1 -f tests/ammir-private-rpc-smoke.sql
           psql -h 127.0.0.1 -U postgres -d ammar_test -v ON_ERROR_STOP=1 -f tests/ammar-trust-admin.sql
       - name: Validate browser code and migration wiring
         run: node tests/check-ammar-app.mjs
