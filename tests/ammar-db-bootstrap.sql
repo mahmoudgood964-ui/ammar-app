@@ -88,3 +88,19 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT USAGE,SELECT ON SEQUENCES TO aut
 GRANT SELECT,INSERT,UPDATE,DELETE ON storage.objects TO authenticated;
 ALTER TABLE storage.objects ENABLE ROW LEVEL SECURITY;
 GRANT SELECT ON storage.buckets TO authenticated,anon;
+
+-- Isolated fixtures for the paused legacy payment tables. These are never
+-- populated and exist only to prove client access stays denied in CI.
+CREATE TABLE public.project_payment_milestones (
+ id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+ project_id uuid NOT NULL
+);
+CREATE TABLE public.project_payment_events (
+ id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+ milestone_id uuid NOT NULL
+);
+ALTER TABLE public.project_payment_milestones ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.project_payment_events ENABLE ROW LEVEL SECURITY;
+GRANT SELECT,INSERT,UPDATE,DELETE
+ ON public.project_payment_milestones, public.project_payment_events
+ TO anon,authenticated;
