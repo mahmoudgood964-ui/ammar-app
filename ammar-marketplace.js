@@ -109,6 +109,10 @@
     view.addEventListener('click',click);view.addEventListener('submit',submit);
     view.addEventListener('input',e=>{if(e.target.id==='ecoChatSearch')filterChatList();if(e.target.id==='ecoMessageSearch')filterMessageBubbles();if(e.target.id==='ecoPartnerSearch'||e.target.id==='ecoPartnerType')filterPartnerDirectory();});
     view.addEventListener('change',e=>{
+      if(e.target.id==='ecoProviderType'){
+        const target=$('ecoSpecialtyOptions');
+        if(target)target.innerHTML=providerSpecialtiesHtml(e.target.value,[]);
+      }
       if(e.target.id==='ecoChatFilter')filterChatList();
       const report=e.target.closest('[data-admin-report-status]');
       if(report)handleAdminReportChange(report).catch(err=>tell(err.message,'error'));
@@ -293,7 +297,7 @@
 
   async function adminDashboardHtml(){
     if(!isAdmin)throw new Error('صلاحية المدير مطلوبة');
-    const [s,p,r,d,e]=await Promise.all([
+    const [s,p,r,d,e,c]=await Promise.all([
       db.from('ammar_market_suppliers')
         .select('id,business_name,owner_id,contact_name,contact_phone,whatsapp_phone,governorate,city,status,is_verified,created_at')
         .order('created_at',{ascending:false}).limit(100),
@@ -306,10 +310,12 @@
         .order('created_at',{ascending:false}).limit(100),
       db.from('ammar_provider_verification_events')
         .select('id,entity_type,entity_id,business_name_snapshot,decision,reason,evidence_reference,actor_id,created_at')
-        .order('created_at',{ascending:false}).limit(20)
+        .order('created_at',{ascending:false}).limit(20),
+      db.from('ammar_commission_rules').select('activity_type,rate_percent,payer_side,is_active,effective_from').order('activity_type')
     ]);
-    for(const x of [s,p,r,d,e])if(x.error)throw x.error;
-    const suppliers=s.data||[],providers=p.data||[],reports=r.data||[],disputes=d.data||[],events=e.data||[];
+    for(const x of [s,p,r,d,e,c])if(x.error)throw x.error;
+    const suppliers=s.data||[],providers=p.data||[],reports=r.data||[],disputes=d.data||[],events=e.data||[],commissionRules=c.data||[];
+    const activeCommissionRules=commissionRules.filter(x=>x.is_active);
     const pendingProviders=[...suppliers.map(x=>({...x,_type:'supplier'})),...providers.map(x=>({...x,_type:'service_provider'}))]
       .filter(x=>!x.is_verified||x.status==='suspended');
     const openReports=reports.filter(x=>['pending','investigating'].includes(x.report_status)).length;
@@ -321,7 +327,13 @@
         <article class="eco-card"><span class="eco-meta">بلاغات مفتوحة أو قيد التحقيق</span><h2>${openReports}</h2></article>
         <article class="eco-card"><span class="eco-meta">نزاعات مفتوحة</span><h2>${openDisputes}</h2></article>
       </div>
-      <section class="eco-subsection"><div class="eco-note"><strong>العمولات:</strong> لا توجد حالياً أي نسبة عمولة مفعّلة في النظام. لا تفعّل نسبة أو تعرض سعراً قبل اعتماد الشروط التجارية كتابةً.</div></section>
+      <section class="eco-subsection"><h3>سياسة العمولة المعتمدة</h3>
+        <div class="eco-note"><strong>عمولة الطرف المورّد / مقدم الخدمة:</strong> ${activeCommissionRules.length} من ${commissionRules.length} قواعد مفعّلة.</div>
+        <div class="eco-grid">
+          ${activeCommissionRules.map(x=>'<article class="eco-card"><strong>'+esc(({market_materials:'توريد مواد البناء',contracting:'المقاولات والتنفيذ',maintenance:'الصيانة',engineering:'الخدمات الهندسية',other:'الخدمات الأخرى'}[x.activity_type]||x.activity_type))+'</strong><div class="eco-price">'+Number(x.rate_percent).toFixed(2)+'%</div><p>تُحمّل على مقدم الخدمة / المورد، ولا تُحمّل على العميل.</p></article>').join('')}
+        </div>
+        <p class="hint">تُسجّل العمولة محاسبياً عند اكتمال المعاملة وفق شروط النظام. عَمِّر لا تحتفظ بأموال العملاء ولا تنفّذ التحويلات أو الضمان المالي.</p>
+      </section>
       <section class="eco-subsection"><h3>اعتماد الموردين ومقدمي الخدمات</h3>
         ${providerReviewCards(pendingProviders)}
       </section>
@@ -524,7 +536,16 @@
     const add=`<section class="eco-card eco-subsection"><h3>إضافة منتج جديد</h3>
       <form id="ecoProductForm" class="eco-form">
         <div><label>اسم المنتج *</label><input name="title" required maxlength="180"></div>
-        <div><label>التصنيف *</label><input name="category" required placeholder="أسمنت / حديد / دهانات"></div>
+        <div><label>التصنيف الرئيسي *</label><select name="category" required>
+          <option value="">اختر تصنيف المنتج</option>
+          <option>أسمنت ومواد رابطة</option><option>حديد وتسليح</option><option>طوب وبلوك</option>
+          <option>رمل وحصى وركام</option><option>خرسانة جاهزة</option><option>أخشاب وقوالب</option>
+          <option>سيراميك وبورسلان</option><option>رخام وجرانيت</option><option>دهانات ومواد تشطيب</option>
+          <option>جبس وأسقف</option><option>عزل وكيماويات البناء</option><option>كابلات ومستلزمات كهرباء</option>
+          <option>مواسير وسباكة وأدوات صحية</option><option>أبواب ونوافذ وألمنيوم وزجاج</option>
+          <option>تكييف وتهوية</option><option>مكافحة حريق وسلامة</option><option>مضخات وخزانات</option>
+          <option>أثاث وتجهيزات</option><option>أخرى</option>
+        </select></div>
         <div><label>الماركة</label><input name="brand"></div>
         <div><label>وحدة البيع *</label><input name="unit" required placeholder="جوال، طن، متر، قطعة"></div>
         <div><label>السعر *</label><input name="price" type="number" min="0" step="0.01" required></div>
@@ -778,12 +799,38 @@
       </form>`;
   }
 
+const providerSpecialtyCatalog={
+  contractor:['مقاولات عامة','أعمال خرسانية وإنشائية','قواعد وأساسات','مبانٍ مسبقة الصنع','ترميم وتأهيل','تشطيبات داخلية','تشطيبات خارجية وواجهات','أعمال معدنية'],
+  maintenance:['صيانة مبانٍ عامة','صيانة كهربائية','صيانة سباكة وصرف','تكييف وتهوية','دهانات','عزل مائي وحراري','نجارة وأبواب ونوافذ'],
+  engineering:['تصميم معماري','هندسة مدنية وإنشائية','هندسة كهربائية','هندسة ميكانيكية','هندسة سباكة وصرف','رفع ومساحة','حصر كميات وتقدير تكلفة','إدارة مشاريع وإشراف','فحص وضبط جودة'],
+  transport:['نقل مواد البناء','نقل معدات وآليات','تحميل وتنزيل','نقل داخل المدن','نقل بين الولايات'],
+  equipment_rental:['حفارات وشيولات','رافعات وأوناش','معدات خرسانة','سقالات وشدات','مولدات كهرباء','معدات دمك وتسوية','معدات رفع ومناولة'],
+  other:['مختبرات مواد البناء','اختبارات تربة وخرسانة','فحص واستلام مستقل','سلامة مهنية ومكافحة حريق','استشارات فنية متخصصة']
+};
+function providerSpecialtiesHtml(type,selected=[]){
+  const options=providerSpecialtyCatalog[type]||providerSpecialtyCatalog.other;
+  return options.map(value=>'<label style="display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid var(--line);border-radius:9px;background:#fff;font-size:12px"><input type="checkbox" name="specialties" value="'+esc(value)+'" '+(selected.includes(value)?'checked':'')+'><span>'+esc(value)+'</span></label>').join('');
+}
+
 async function servicesHtml(){
     const p=provider;
     const profile=`<section class="eco-card eco-subsection"><h3>${p?'ملف مقدم الخدمة':'إنشاء ملف مقاول أو مقدم خدمة'}</h3>
       <form id="ecoProviderForm" class="eco-form">
         <div><label>اسم النشاط *</label><input name="business_name" required value="${esc(p?.business_name)}"></div>
-        <div><label>نوع النشاط *</label><select name="provider_type"><option value="contractor">مقاولات</option><option value="maintenance">صيانة</option><option value="engineering">خدمات هندسية</option><option value="transport">نقل</option><option value="equipment_rental">تأجير معدات</option><option value="other">أخرى</option></select></div>
+        <div><label>الفئة الرئيسية *</label><select name="provider_type" id="ecoProviderType">
+          <option value="contractor" ${p?.provider_type==='contractor'?'selected':''}>مقاولات وتنفيذ</option>
+          <option value="maintenance" ${p?.provider_type==='maintenance'?'selected':''}>صيانة</option>
+          <option value="engineering" ${p?.provider_type==='engineering'?'selected':''}>هندسة واستشارات وإشراف</option>
+          <option value="transport" ${p?.provider_type==='transport'?'selected':''}>نقل ولوجستيات</option>
+          <option value="equipment_rental" ${p?.provider_type==='equipment_rental'?'selected':''}>تأجير معدات وآليات</option>
+          <option value="other" ${p?.provider_type==='other'?'selected':''}>فحص وجودة وخدمات متخصصة</option>
+        </select></div>
+        <div class="wide"><label>التخصصات الدقيقة (اختر كل ما ينطبق) *</label>
+          <div id="ecoSpecialtyOptions" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px">
+            ${providerSpecialtiesHtml(p?.provider_type||'contractor',p?.specialties||[])}
+          </div>
+          <small class="muted">تظهر هذه التخصصات لتمكين العميل من العثور على الجهة المناسبة، ولا تعني اعتمادها من عَمِّر.</small>
+        </div>
         <div><label>اسم المسؤول</label><input name="contact_name" value="${esc(p?.contact_name)}"></div><div><label>الهاتف</label><input name="contact_phone" value="${esc(p?.contact_phone)}"></div>
         <div><label>الولاية</label><input name="governorate" value="${esc(p?.governorate)}"></div><div><label>المدينة</label><input name="city" value="${esc(p?.city)}"></div><div><label>المنطقة</label><input name="area" value="${esc(p?.area)}"></div>
         <div class="wide"><label>وصف الخدمات والخبرة</label><textarea name="description">${esc(p?.description)}</textarea></div>
@@ -794,7 +841,7 @@ async function servicesHtml(){
     const requestIds=(req.data||[]).map(x=>x.id);
     let offerRows=[];
     if(requestIds.length){
-      const offers=await db.from('ammar_service_offers').select('*,provider:ammar_service_providers(owner_id,business_name)').in('request_id',requestIds).order('created_at',{ascending:false});
+      const offers=await db.from('ammar_service_offers').select('*,provider:ammar_service_providers(owner_id,business_name,specialties)').in('request_id',requestIds).order('created_at',{ascending:false});
       if(offers.error)throw offers.error;offerRows=offers.data||[];
     }
     const offersMap=new Map();offerRows.forEach(o=>{if(!offersMap.has(o.request_id))offersMap.set(o.request_id,[]);offersMap.get(o.request_id).push(o);});
@@ -805,7 +852,7 @@ async function servicesHtml(){
         const actions=(own&&o.status==='proposed'?'<button class="btn primary" type="button" data-eco-accept-service="'+esc(o.id)+'">قبول العرض</button>':'')
           +(own?'<button class="btn light" type="button" data-eco-service-chat="'+esc(o.id)+'" data-other="'+esc(sp?.owner_id)+'">مراسلة مقدم الخدمة</button>':'<button class="btn light" type="button" data-eco-service-chat="'+esc(o.id)+'" data-other="'+esc(r.requester_id)+'">مراسلة صاحب الطلب</button>')
           +(o.status==='accepted'?'<button class="btn light" type="button" data-eco-service-agreement="'+esc(o.id)+'">إنشاء اتفاق</button>':'');
-        return '<div class="eco-row"><div><strong>'+esc(sp?.business_name||'مقدم خدمة')+'</strong><div class="muted">'+money(o.amount,o.currency)+' · '+esc(o.duration_days==null?'المدة غير محددة':o.duration_days+' يوم')+' · '+esc(statusText[o.status]||o.status)+'</div></div><div class="eco-actions">'+actions+'</div></div>';
+        return '<div class="eco-row"><div><strong>'+esc(sp?.business_name||'مقدم خدمة')+'</strong><div class="muted">'+esc((sp?.specialties||[]).join('، ')||'التخصصات غير مضافة')+'</div><div class="muted">'+money(o.amount,o.currency)+' · '+esc(o.duration_days==null?'المدة غير محددة':o.duration_days+' يوم')+' · '+esc(statusText[o.status]||o.status)+'</div></div><div class="eco-actions">'+actions+'</div></div>';
       }).join('');
       const offerForm=provider&&provider.is_verified===true&&provider.status==='active'&&!own&&r.status==='open'?'<div class="eco-form"><div><label>عرضك المالي</label><input id="ecoSvcAmount-'+esc(r.id)+'" type="number" min="0" step="0.01"></div><div><label>مدة التنفيذ (يوم)</label><input id="ecoSvcDays-'+esc(r.id)+'" type="number" min="1"></div><div class="wide"><button class="btn primary" type="button" data-eco-service-offer="'+esc(r.id)+'">تقديم عرض</button></div></div>':'';
       const completeAction=own&&r.status==='awarded'?'<button class="btn primary" type="button" data-eco-complete-service="'+esc(r.id)+'">تأكيد اكتمال الخدمة</button>':'';
@@ -1072,7 +1119,9 @@ async function servicesHtml(){
         const r=await db.from('ammar_market_products').insert({supplier_id:supplier.id,title:d.title.trim(),category:d.category.trim(),brand:d.brand||null,unit:d.unit.trim(),price:Number(d.price),currency:d.currency||'SDG',quantity_available:d.quantity_available?Number(d.quantity_available):null,availability:d.availability||'available',description:d.description||null,image_path:imagePath});
         if(r.error)throw r.error;await loadMyProducts();await render();tell('تم نشر المنتج في السوق.','success');
       }else if(form.id==='ecoProviderForm'){
-        const payload={business_name:d.business_name.trim(),provider_type:d.provider_type,contact_name:d.contact_name||null,contact_phone:d.contact_phone||null,governorate:d.governorate||null,city:d.city||null,area:d.area||null,description:d.description||null};
+        const specialties=[...form.querySelectorAll('input[name="specialties"]:checked')].map(x=>x.value);
+        if(!specialties.length)throw new Error('اختر تخصصاً واحداً على الأقل.');
+        const payload={business_name:d.business_name.trim(),provider_type:d.provider_type,specialties,contact_name:d.contact_name||null,contact_phone:d.contact_phone||null,governorate:d.governorate||null,city:d.city||null,area:d.area||null,description:d.description||null};
         const r=provider?await db.from('ammar_service_providers').update(payload).eq('owner_id',user.id):await db.from('ammar_service_providers').insert({...payload,owner_id:user.id});
         if(r.error)throw r.error;await loadProfiles();await render();tell('تم حفظ ملف مقدم الخدمة.','success');
       }else if(form.id==='ecoServiceRequestForm'){
