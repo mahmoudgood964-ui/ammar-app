@@ -18,6 +18,7 @@ ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA app_private
 DO $ammir_move_definer_rpcs$
 DECLARE
   v_count integer;
+  v_expected_count integer;
   v_row record;
   v_call_args text;
   v_wrapper_body text;
@@ -27,6 +28,37 @@ DECLARE
   v_comment text;
 BEGIN
   SELECT count(*)
+  INTO v_expected_count
+  FROM unnest(ARRAY[
+      'public.ammar_accept_agreement(uuid)',
+      'public.ammar_accept_market_quote(uuid)',
+      'public.ammar_accept_project_invitation(text)',
+      'public.ammar_accept_service_offer(uuid)',
+      'public.ammar_admin_list_message_reports(integer)',
+      'public.ammar_admin_review_provider(text, uuid, text, text, text)',
+      'public.ammar_advance_market_request(uuid, text, text)',
+      'public.ammar_complete_service_request(uuid)',
+      'public.ammar_create_market_request(uuid, uuid, numeric, text, text)',
+      'public.ammar_create_project_invitation(text, text, text)',
+      'public.ammar_forward_message(uuid, uuid)',
+      'public.ammar_get_conversation_presence(uuid, uuid)',
+      'public.ammar_is_conversation_member(uuid)',
+      'public.ammar_mark_conversation_delivered(uuid)',
+      'public.ammar_mark_conversation_read(uuid)',
+      'public.ammar_message_to_change_order(uuid, text, text, numeric, text, integer)',
+      'public.ammar_message_to_project_task(uuid)',
+      'public.ammar_project_role(text)',
+      'public.ammar_remove_project_member(text, uuid)',
+      'public.ammar_revoke_project_invitation(text, uuid)',
+      'public.ammar_set_presence(boolean)',
+      'public.ammar_start_conversation(uuid, text, text, text)',
+      'public.ammar_update_project_member_role(text, uuid, text)',
+      'public.is_admin()',
+      'public.is_project_member(uuid)'
+    ]) AS expected(signature)
+  WHERE to_regprocedure(expected.signature) IS NOT NULL;
+
+  SELECT count(*)
   INTO v_count
   FROM pg_proc AS p
   JOIN pg_namespace AS n ON n.oid = p.pronamespace
@@ -34,10 +66,10 @@ BEGIN
     AND p.prosecdef
     AND has_function_privilege('authenticated', p.oid, 'EXECUTE');
 
-  IF v_count <> 25 THEN
+  IF v_expected_count = 0 OR v_count <> v_expected_count THEN
     RAISE EXCEPTION
-      'Expected exactly 25 authenticated SECURITY DEFINER RPCs in public, found %; aborting safely',
-      v_count;
+      'Authenticated SECURITY DEFINER RPC inventory mismatch: expected %, found %; aborting safely',
+      v_expected_count, v_count;
   END IF;
 
   IF EXISTS (
@@ -167,7 +199,40 @@ DO $ammir_private_rpc_assertions$
 DECLARE
   v_public_count integer;
   v_private_count integer;
+  v_expected_count integer;
 BEGIN
+  SELECT count(*)
+  INTO v_expected_count
+  FROM unnest(ARRAY[
+      'public.ammar_accept_agreement(uuid)',
+      'public.ammar_accept_market_quote(uuid)',
+      'public.ammar_accept_project_invitation(text)',
+      'public.ammar_accept_service_offer(uuid)',
+      'public.ammar_admin_list_message_reports(integer)',
+      'public.ammar_admin_review_provider(text, uuid, text, text, text)',
+      'public.ammar_advance_market_request(uuid, text, text)',
+      'public.ammar_complete_service_request(uuid)',
+      'public.ammar_create_market_request(uuid, uuid, numeric, text, text)',
+      'public.ammar_create_project_invitation(text, text, text)',
+      'public.ammar_forward_message(uuid, uuid)',
+      'public.ammar_get_conversation_presence(uuid, uuid)',
+      'public.ammar_is_conversation_member(uuid)',
+      'public.ammar_mark_conversation_delivered(uuid)',
+      'public.ammar_mark_conversation_read(uuid)',
+      'public.ammar_message_to_change_order(uuid, text, text, numeric, text, integer)',
+      'public.ammar_message_to_project_task(uuid)',
+      'public.ammar_project_role(text)',
+      'public.ammar_remove_project_member(text, uuid)',
+      'public.ammar_revoke_project_invitation(text, uuid)',
+      'public.ammar_set_presence(boolean)',
+      'public.ammar_start_conversation(uuid, text, text, text)',
+      'public.ammar_update_project_member_role(text, uuid, text)',
+      'public.is_admin()',
+      'public.is_project_member(uuid)'
+    ]) AS expected(signature)
+  WHERE to_regprocedure(expected.signature) IS NOT NULL
+     OR to_regprocedure(replace(expected.signature, 'public.', 'app_private.')) IS NOT NULL;
+
   SELECT count(*)
   INTO v_public_count
   FROM pg_proc AS p
@@ -186,10 +251,12 @@ BEGIN
     AND has_function_privilege('authenticated', p.oid, 'EXECUTE')
     AND has_function_privilege('service_role', p.oid, 'EXECUTE');
 
-  IF v_public_count < 25 OR v_private_count <> 25 THEN
+  IF v_expected_count = 0
+     OR v_public_count <> v_expected_count
+     OR v_private_count <> v_expected_count THEN
     RAISE EXCEPTION
-      'RPC separation incomplete: public wrappers %, private implementations %',
-      v_public_count, v_private_count;
+      'RPC separation incomplete: expected %, public wrappers %, private implementations %',
+      v_expected_count, v_public_count, v_private_count;
   END IF;
 
   IF has_schema_privilege('anon', 'app_private', 'USAGE')
