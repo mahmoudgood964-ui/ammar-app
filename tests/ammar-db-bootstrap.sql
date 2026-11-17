@@ -1,8 +1,8 @@
 -- Minimal Supabase-compatible PostgreSQL fixtures for the AMMAR ecosystem migration tests.
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 DO $$ BEGIN CREATE ROLE authenticated NOLOGIN; EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-DO $ BEGIN CREATE ROLE anon NOLOGIN; EXCEPTION WHEN duplicate_object THEN NULL; END $;
-DO $ BEGIN CREATE ROLE service_role NOLOGIN; EXCEPTION WHEN duplicate_object THEN NULL; END $;
+DO $$ BEGIN CREATE ROLE anon NOLOGIN; EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN CREATE ROLE service_role NOLOGIN; EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 CREATE SCHEMA IF NOT EXISTS auth;
 CREATE SCHEMA IF NOT EXISTS storage;
 CREATE TABLE auth.users (id uuid PRIMARY KEY,email text UNIQUE);
