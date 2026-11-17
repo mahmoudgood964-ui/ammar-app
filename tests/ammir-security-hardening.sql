@@ -49,12 +49,14 @@ RESET ROLE;
 
 DO $ammir_security_assertions$
 DECLARE
-  v_expected regprocedure;
   v_signature text;
-  v_resolved regprocedure;
+  v_private_signature text;
+  v_public regprocedure;
+  v_private regprocedure;
+  v_checked_count integer := 0;
 BEGIN
-  -- Every RPC present in this fixture must remain a callable SECURITY DEFINER
-  -- function for authenticated clients, with a fixed empty search_path.
+  -- Each Data API RPC remains available as SECURITY INVOKER, while its
+  -- privileged implementation is kept in the non-exposed app_private schema.
   FOREACH v_signature IN ARRAY ARRAY[
       'public.ammar_accept_agreement(uuid)',
       'public.ammar_accept_market_quote(uuid)',
@@ -82,39 +84,82 @@ BEGIN
       'public.is_admin()',
       'public.is_project_member(uuid)'
   ] LOOP
-    v_resolved := to_regprocedure(v_signature);
-    IF v_resolved IS NOT NULL THEN
-      IF NOT EXISTS (
-        SELECT 1 FROM pg_proc p
-        WHERE p.oid=v_resolved
-          AND p.prosecdef
-          AND has_function_privilege('authenticated',p.oid,'EXECUTE')
-          AND (coalesce(p.proconfig,ARRAY[]::text[]) @> ARRAY['search_path=""'])
-      ) THEN
-        RAISE EXCEPTION 'RPC % is missing, not SECURITY DEFINER, not callable by authenticated, or has an unsafe search_path',v_signature;
-      END IF;
+    v_public := to_regprocedure(v_signature);
+    v_private_signature := replace(v_signature, 'public.', 'app_private.');
+    v_private := to_regprocedure(v_private_signature);
 
-      IF has_function_privilege('anon',v_resolved,'EXECUTE') THEN
-        RAISE EXCEPTION 'RPC % is executable by anon',v_signature;
-      END IF;
-
-      IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname='service_role')
-         AND NOT has_function_privilege('service_role',v_resolved,'EXECUTE') THEN
-        RAISE EXCEPTION 'RPC % is not executable by service_role',v_signature;
-      END IF;
+    -- The lightweight CI fixture does not include every production RPC.
+    -- Skip a signature only when neither version exists; if either exists,
+    -- both the public wrapper and private implementation must exist.
+    IF v_public IS NULL AND v_private IS NULL THEN
+      CONTINUE;
     END IF;
+
+    IF v_public IS NULL OR v_private IS NULL THEN
+      RAISE EXCEPTION 'Public wrapper or private implementation is missing: %', v_signature;
+    END IF;
+
+    IF NOT EXISTS (
+      SELECT 1 FROM pg_proc p
+      WHERE p.oid=v_public
+        AND NOT p.prosecdef
+        AND has_function_privilege('authenticated',p.oid,'EXECUTE')
+        AND has_function_privilege('service_role',p.oid,'EXECUTE')
+        AND (coalesce(p.proconfig,ARRAY[]::text[]) @> ARRAY['search_path=""'])
+    ) THEN
+      RAISE EXCEPTION 'Public RPC % is not a safe SECURITY INVOKER wrapper',v_signature;
+    END IF;
+
+    IF has_function_privilege('anon',v_public,'EXECUTE') THEN
+      RAISE EXCEPTION 'Public RPC % is executable by anon',v_signature;
+    END IF;
+
+    IF NOT EXISTS (
+      SELECT 1 FROM pg_proc p
+      WHERE p.oid=v_private
+        AND p.prosecdef
+        AND has_function_privilege('authenticated',p.oid,'EXECUTE')
+        AND has_function_privilege('service_role',p.oid,'EXECUTE')
+        AND (coalesce(p.proconfig,ARRAY[]::text[]) @> ARRAY['search_path=""'])
+    ) THEN
+      RAISE EXCEPTION 'Private implementation % is not safely privileged',v_private_signature;
+    END IF;
+
+    IF has_function_privilege('anon',v_private,'EXECUTE') THEN
+      RAISE EXCEPTION 'Private implementation % is executable by anon',v_private_signature;
+    END IF;
+
+    v_checked_count := v_checked_count + 1;
   END LOOP;
 
-  -- The four corrected actions must exist in every CI fixture and explicitly
-  -- reject requests without an authenticated user (tested above).
+  IF v_checked_count = 0 THEN
+    RAISE EXCEPTION 'No approved privileged RPC implementations were checked';
+  END IF;
+
+  IF NOT has_schema_privilege('authenticated','app_private','USAGE')
+     OR has_schema_privilege('anon','app_private','USAGE') THEN
+    RAISE EXCEPTION 'Unexpected app_private schema access';
+  END IF;
+
+  IF EXISTS (
+    SELECT 1
+    FROM pg_proc p
+    JOIN pg_namespace n ON n.oid=p.pronamespace
+    WHERE n.nspname='public'
+      AND p.prosecdef
+      AND has_function_privilege('authenticated',p.oid,'EXECUTE')
+  ) THEN
+    RAISE EXCEPTION 'Authenticated SECURITY DEFINER implementations remain in public';
+  END IF;
+
+  -- The four corrected authenticated actions must remain callable by the wrapper.
   FOREACH v_signature IN ARRAY ARRAY[
     'public.ammar_accept_agreement(uuid)',
     'public.ammar_accept_market_quote(uuid)',
     'public.ammar_accept_service_offer(uuid)',
     'public.ammar_complete_service_request(uuid)'
   ] LOOP
-    v_resolved := to_regprocedure(v_signature);
-    IF v_resolved IS NULL THEN
+    IF to_regprocedure(v_signature) IS NULL THEN
       RAISE EXCEPTION 'Required authenticated action is missing: %',v_signature;
     END IF;
   END LOOP;
