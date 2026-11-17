@@ -437,7 +437,7 @@ body{background:var(--bg);font-family:"Noto Sans Arabic",Tahoma,Arial,sans-serif
 'use strict';
 const SUPABASE_URL='https://uutwijowzewmvvrzsaww.supabase.co';
 const SUPABASE_KEY='sb_publishable_o-zC0NdMggZbPPY2l1REhA_w8Sbvjw_';
-const APP_URL='https://ammar-app.vercel.app/';
+const APP_URL='https://app.ammirbuild.com/';
 const $=id=>document.getElementById(id);
 let client=null,currentUser=null,deferredInstallPrompt=null,projectsCache=[],editingProjectId=null,recoveryMode=false,lastViewedProjectId=null,activeProject=null,moduleTab='tasks',pendingInviteToken=new URLSearchParams(location.search).get('invite')||localStorage.getItem('ammar_pending_invite')||null,inviteAccepting=false,notificationTimer=null,lastInviteUrl='',moduleData={tasks:[],expenses:[],quotes:[],updates:[],documents:[],payments:[],activity:[],comments:[],members:[],invitations:[],siteReports:[],issues:[],changeOrders:[],handover:[],paymentMilestones:[],paymentEvents:[],verifiedProviders:[]},moduleLoadWarnings=[],moduleLoading=false,moduleLoadRequest=0;
 if(pendingInviteToken)localStorage.setItem('ammar_pending_invite',pendingInviteToken);
