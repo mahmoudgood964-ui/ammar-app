@@ -110,6 +110,10 @@ jobs:
         env:
           PGPASSWORD: postgres
         run: psql -h 127.0.0.1 -U postgres -d ammar_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261116210000_ammir_security_defense_in_depth.sql
+      - name: Apply paused payment table deny policies
+        env:
+          PGPASSWORD: postgres
+        run: psql -h 127.0.0.1 -U postgres -d ammar_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261116211825_explicit_deny_policies_for_paused_payment_tables.sql
       - name: Run AMMIR security defense-in-depth tests
         env:
           PGPASSWORD: postgres
