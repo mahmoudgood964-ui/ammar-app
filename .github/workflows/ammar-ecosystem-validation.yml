@@ -118,5 +118,15 @@ jobs:
         env:
           PGPASSWORD: postgres
         run: psql -h 127.0.0.1 -U postgres -d ammar_test -v ON_ERROR_STOP=1 -f tests/ammir-security-hardening.sql
+      - name: Consolidate AMMIR admin and owner RLS policies
+        env:
+          PGPASSWORD: postgres
+        run: psql -h 127.0.0.1 -U postgres -d ammar_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261117081000_consolidate_admin_permissive_rls_policies.sql
+      - name: Test AMMIR consolidated RLS policies
+        env:
+          PGPASSWORD: postgres
+        run: |
+          psql -h 127.0.0.1 -U postgres -d ammar_test -v ON_ERROR_STOP=1 -f tests/ammir-rls-policy-consolidation.sql
+          psql -h 127.0.0.1 -U postgres -d ammar_test -v ON_ERROR_STOP=1 -f tests/ammar-trust-admin.sql
       - name: Validate browser code and migration wiring
         run: node tests/check-ammar-app.mjs
