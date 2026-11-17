@@ -173,8 +173,8 @@ BEGIN
         AND p.polcmd='*'
         AND (
           SELECT count(DISTINCT role_oid)
-          FROM unnest(p.polroles) AS role_oid
-          WHERE role_oid IN ('anon'::regrole,'authenticated'::regrole)
+          FROM unnest(p.polroles) AS r(role_oid)
+          WHERE r.role_oid IN ('anon'::regrole,'authenticated'::regrole)
         )=2
         AND pg_get_expr(p.polqual,p.polrelid)='false'
         AND pg_get_expr(p.polwithcheck,p.polrelid)='false'
