@@ -305,10 +305,10 @@
     if(!isAdmin)throw new Error('صلاحية المدير مطلوبة');
     const [s,p,r,d,e,c]=await Promise.all([
       db.from('ammar_market_suppliers')
-        .select('id,business_name,owner_id,contact_name,contact_phone,whatsapp_phone,governorate,city,status,is_verified,created_at')
+        .select('id,business_name,owner_id,contact_name,contact_phone,whatsapp_phone,governorate,city,status,is_verified,brands,delivery_mode,delivery_coverage,created_at')
         .order('created_at',{ascending:false}).limit(100),
       db.from('ammar_service_providers')
-        .select('id,business_name,owner_id,contact_name,contact_phone,governorate,city,provider_type,status,is_verified,created_at')
+        .select('id,business_name,owner_id,contact_name,contact_phone,governorate,city,provider_type,specialties,portfolio_url,status,is_verified,created_at')
         .order('created_at',{ascending:false}).limit(100),
       db.rpc('ammar_admin_list_message_reports',{p_limit:100}),
       db.from('ammar_disputes')
@@ -369,7 +369,10 @@
           <span class="eco-pill">${statusLabel}</span>
         </div>
         <p>${esc([x.governorate,x.city].filter(Boolean).join(' — ')||'الموقع غير محدد')}</p>
+        ${x._type==='service_provider'?'<p><strong>التخصصات:</strong> '+esc((x.specialties||[]).join('، ')||'غير محددة')+'</p>':''}
+        ${x._type==='supplier'?'<p><strong>التغطية:</strong> '+esc(x.delivery_coverage||'غير محددة')+' · <strong>التوصيل:</strong> '+esc(({delivery:'يوصل للموقع',pickup:'استلام من المقر',on_request:'حسب الاتفاق',unknown:'غير محدد'}[x.delivery_mode]||'غير محدد'))+'</p>':''}
         <p class="muted">${esc(x.contact_name||'')} · ${esc(x.contact_phone||'')}</p>
+        ${x._type==='service_provider'&&x.portfolio_url&&x.portfolio_url.startsWith('https://')?'<p><a href="'+esc(x.portfolio_url)+'" target="_blank" rel="noopener noreferrer">فتح سابقة الأعمال</a></p>':''}
         <p class="hint">معرّف الحساب: ${esc(x.owner_id)}</p>
         <div class="eco-actions">
           <button class="btn primary" type="button" data-admin-review data-entity-type="${type}" data-entity-id="${x.id}" data-decision="approved">اعتماد بعد التحقق</button>
@@ -585,7 +588,7 @@
         <div class="wide"><button class="btn primary" type="submit">نشر المنتج في السوق</button></div>
       </form></section>`;
     const own=myProducts.length?myProducts.map(x=>`<div class="eco-row"><div><strong>${esc(x.title)}</strong><div class="muted">${money(x.price,x.currency)} / ${esc(x.unit)} · ${esc(x.availability)}</div></div><button class="btn ${x.is_active?'quiet':'light'}" type="button" data-eco-toggle-product="${esc(x.id)}" data-active="${x.is_active?'true':'false'}">${x.is_active?'إيقاف العرض':'إعادة النشر'}</button></div>`).join(''):'<div class="eco-empty">لم تضف منتجات بعد.</div>';
-    return profile+add+`<section class="eco-card"><h3>منتجاتي</h3>${own}</section>`;
+    return profile+'<div class="eco-note"><strong>سياسة العمولة:</strong> عمولة عَمِّر المعتمدة 5% على المورد عند اكتمال المعاملة وفق شروطها؛ لا تُحمّل على العميل، ولا تعني أن المنصة تستلم الأموال أو تحتفظ بها.</div>'+add+`<section class="eco-card"><h3>منتجاتي</h3>${own}</section>`;
   }
 
   async function ordersHtml(){
