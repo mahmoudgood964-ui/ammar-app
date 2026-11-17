@@ -235,7 +235,34 @@ BEGIN
 
   SELECT count(*)
   INTO v_public_count
-  FROM pg_proc AS p
+  FROM unnest(ARRAY[
+      'public.ammar_accept_agreement(uuid)',
+      'public.ammar_accept_market_quote(uuid)',
+      'public.ammar_accept_project_invitation(text)',
+      'public.ammar_accept_service_offer(uuid)',
+      'public.ammar_admin_list_message_reports(integer)',
+      'public.ammar_admin_review_provider(text, uuid, text, text, text)',
+      'public.ammar_advance_market_request(uuid, text, text)',
+      'public.ammar_complete_service_request(uuid)',
+      'public.ammar_create_market_request(uuid, uuid, numeric, text, text)',
+      'public.ammar_create_project_invitation(text, text, text)',
+      'public.ammar_forward_message(uuid, uuid)',
+      'public.ammar_get_conversation_presence(uuid, uuid)',
+      'public.ammar_is_conversation_member(uuid)',
+      'public.ammar_mark_conversation_delivered(uuid)',
+      'public.ammar_mark_conversation_read(uuid)',
+      'public.ammar_message_to_change_order(uuid, text, text, numeric, text, integer)',
+      'public.ammar_message_to_project_task(uuid)',
+      'public.ammar_project_role(text)',
+      'public.ammar_remove_project_member(text, uuid)',
+      'public.ammar_revoke_project_invitation(text, uuid)',
+      'public.ammar_set_presence(boolean)',
+      'public.ammar_start_conversation(uuid, text, text, text)',
+      'public.ammar_update_project_member_role(text, uuid, text)',
+      'public.is_admin()',
+      'public.is_project_member(uuid)'
+    ]) AS expected(signature)
+  JOIN pg_proc AS p ON p.oid = to_regprocedure(expected.signature)
   JOIN pg_namespace AS n ON n.oid = p.pronamespace
   WHERE n.nspname = 'public'
     AND NOT p.prosecdef
@@ -244,7 +271,34 @@ BEGIN
 
   SELECT count(*)
   INTO v_private_count
-  FROM pg_proc AS p
+  FROM unnest(ARRAY[
+      'public.ammar_accept_agreement(uuid)',
+      'public.ammar_accept_market_quote(uuid)',
+      'public.ammar_accept_project_invitation(text)',
+      'public.ammar_accept_service_offer(uuid)',
+      'public.ammar_admin_list_message_reports(integer)',
+      'public.ammar_admin_review_provider(text, uuid, text, text, text)',
+      'public.ammar_advance_market_request(uuid, text, text)',
+      'public.ammar_complete_service_request(uuid)',
+      'public.ammar_create_market_request(uuid, uuid, numeric, text, text)',
+      'public.ammar_create_project_invitation(text, text, text)',
+      'public.ammar_forward_message(uuid, uuid)',
+      'public.ammar_get_conversation_presence(uuid, uuid)',
+      'public.ammar_is_conversation_member(uuid)',
+      'public.ammar_mark_conversation_delivered(uuid)',
+      'public.ammar_mark_conversation_read(uuid)',
+      'public.ammar_message_to_change_order(uuid, text, text, numeric, text, integer)',
+      'public.ammar_message_to_project_task(uuid)',
+      'public.ammar_project_role(text)',
+      'public.ammar_remove_project_member(text, uuid)',
+      'public.ammar_revoke_project_invitation(text, uuid)',
+      'public.ammar_set_presence(boolean)',
+      'public.ammar_start_conversation(uuid, text, text, text)',
+      'public.ammar_update_project_member_role(text, uuid, text)',
+      'public.is_admin()',
+      'public.is_project_member(uuid)'
+    ]) AS expected(signature)
+  JOIN pg_proc AS p ON p.oid = to_regprocedure(replace(expected.signature, 'public.', 'app_private.'))
   JOIN pg_namespace AS n ON n.oid = p.pronamespace
   WHERE n.nspname = 'app_private'
     AND p.prosecdef
