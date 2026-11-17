@@ -53,6 +53,7 @@ DECLARE
   v_private_signature text;
   v_public regprocedure;
   v_private regprocedure;
+  v_checked_count integer := 0;
 BEGIN
   -- Each Data API RPC remains available as SECURITY INVOKER, while its
   -- privileged implementation is kept in the non-exposed app_private schema.
@@ -87,6 +88,13 @@ BEGIN
     v_private_signature := replace(v_signature, 'public.', 'app_private.');
     v_private := to_regprocedure(v_private_signature);
 
+    -- The lightweight CI fixture does not include every production RPC.
+    -- Skip a signature only when neither version exists; if either exists,
+    -- both the public wrapper and private implementation must exist.
+    IF v_public IS NULL AND v_private IS NULL THEN
+      CONTINUE;
+    END IF;
+
     IF v_public IS NULL OR v_private IS NULL THEN
       RAISE EXCEPTION 'Public wrapper or private implementation is missing: %', v_signature;
     END IF;
@@ -120,7 +128,13 @@ BEGIN
     IF has_function_privilege('anon',v_private,'EXECUTE') THEN
       RAISE EXCEPTION 'Private implementation % is executable by anon',v_private_signature;
     END IF;
+
+    v_checked_count := v_checked_count + 1;
   END LOOP;
+
+  IF v_checked_count = 0 THEN
+    RAISE EXCEPTION 'No approved privileged RPC implementations were checked';
+  END IF;
 
   IF NOT has_schema_privilege('authenticated','app_private','USAGE')
      OR has_schema_privilege('anon','app_private','USAGE') THEN
