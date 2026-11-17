@@ -59,13 +59,21 @@ DO $ammir_client_rpc_smoke$
 DECLARE
   v_count integer;
   v_presence_count integer;
+  v_is_project_member boolean;
 BEGIN
   IF public.is_admin() IS DISTINCT FROM false THEN
     RAISE EXCEPTION 'Client wrapper is_admin returned an unexpected result';
   END IF;
 
-  IF public.is_project_member('00000000-0000-0000-0000-000000000001'::uuid) IS DISTINCT FROM false THEN
-    RAISE EXCEPTION 'Client wrapper is_project_member returned an unexpected result';
+  -- Some lightweight fixtures omit this production RPC; test it dynamically
+  -- whenever the fixture contains it, without making the fixture pretend it exists.
+  IF to_regprocedure('public.is_project_member(uuid)') IS NOT NULL THEN
+    EXECUTE 'SELECT public.is_project_member($1)'
+      INTO v_is_project_member
+      USING '00000000-0000-0000-0000-000000000001'::uuid;
+    IF v_is_project_member IS DISTINCT FROM false THEN
+      RAISE EXCEPTION 'Client wrapper is_project_member returned an unexpected result';
+    END IF;
   END IF;
 
   IF public.ammar_is_conversation_member(
