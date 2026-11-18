@@ -1185,14 +1185,15 @@ async function loadRfqInbox(){
  const box=$('rfqInboxContent');if(!box)return;
  box.innerHTML='<div class="empty">جارٍ تحميل الدعوات والعروض...</div>';
  try{
-  const [inv,supplier,provider,awards,deliveries]=await Promise.all([
+  const [inv,supplier,provider,awards,deliveries,purchaseOrders]=await Promise.all([
    client.from('ammir_project_rfq_invites').select('*').eq('provider_user_id',currentUser.id).in('status',['invited','accepted','declined']).order('invited_at',{ascending:false}).limit(100),
    client.from('ammar_market_suppliers').select('id').eq('owner_id',currentUser.id).eq('status','active').eq('is_verified',true).limit(1),
    client.from('ammar_service_providers').select('id').eq('owner_id',currentUser.id).eq('status','active').eq('is_verified',true).limit(1),
    client.from('ammir_project_awards').select('*').eq('supplier_user_id',currentUser.id).order('created_at',{ascending:false}).limit(100),
-   client.from('ammir_project_deliveries').select('*').eq('supplier_user_id',currentUser.id).order('created_at',{ascending:false}).limit(100)
+   client.from('ammir_project_deliveries').select('*').eq('supplier_user_id',currentUser.id).order('created_at',{ascending:false}).limit(100),
+   client.from('ammir_project_purchase_orders').select('*').eq('supplier_user_id',currentUser.id).order('created_at',{ascending:false}).limit(100)
   ]);
-  for(const r of [inv,awards,deliveries])if(r.error)throw r.error;
+  for(const r of [inv,awards,deliveries,purchaseOrders])if(r.error)throw r.error;
   const invites=inv.data||[],rfqIds=[...new Set(invites.map(x=>x.rfq_id))];
   let rfqs=[],items=[],quotes=[];
   if(rfqIds.length){
@@ -1209,7 +1210,9 @@ async function loadRfqInbox(){
   const awardIds=(awards.data||[]).map(x=>x.id);let awardItems=[];
   if(awardIds.length){const a=await client.from('ammir_project_award_items').select('*').in('award_id',awardIds);if(a.error)throw a.error;awardItems=a.data||[];}
   const verified=!!((supplier.data||[]).length||(provider.data||[]).length);
-  renderRfqInbox({invites,rfqs,items,quotes,quoteItems,awards:awards.data||[],awardItems,deliveries:deliveries.data||[],verified});
+  const poIds=(purchaseOrders.data||[]).map(x=>x.id);let purchaseOrderItems=[];
+  if(poIds.length){const pi=await client.from('ammir_project_purchase_order_items').select('*').in('purchase_order_id',poIds);if(pi.error)throw pi.error;purchaseOrderItems=pi.data||[];}
+  renderRfqInbox({invites,rfqs,items,quotes,quoteItems,awards:awards.data||[],awardItems,deliveries:deliveries.data||[],purchaseOrders:purchaseOrders.data||[],purchaseOrderItems,verified});
  }catch(error){box.innerHTML='<div class="message error">تعذر تحميل الدعوات: '+esc(error.message||'خطأ في الاتصال')+' <button class="btn light" type="button" data-rfq-inbox-action="refresh">إعادة المحاولة</button></div>';}
 }
 function renderRfqInbox(data){
@@ -1228,10 +1231,12 @@ function renderRfqInbox(data){
  }).join('');
  const awardCards=data.awards.map(a=>'<article class="module-record"><div class="panel-head"><h3>'+esc(a.award_reference)+'</h3><span class="pill">'+esc(a.status)+'</span></div><p>'+esc(a.terms||'')+'</p>'+(a.status==='issued'?'<div class="actions"><button class="btn primary" type="button" data-rfq-inbox-action="award-accept" data-id="'+esc(a.id)+'">قبول الترسية</button><button class="btn quiet" type="button" data-rfq-inbox-action="award-reject" data-id="'+esc(a.id)+'">رفض الترسية</button></div>':'')+'</article>').join('');
  const deliveryCards=data.deliveries.map(d=>'<article class="module-record"><div class="panel-head"><h3>'+esc(d.delivery_reference)+'</h3><span class="pill">'+esc(d.status)+'</span></div><p>'+esc(d.vehicle_or_carrier||'الناقل غير محدد')+' · '+esc(d.scheduled_at||'الموعد غير محدد')+'</p><p>'+esc(d.notes||'')+'</p></article>').join('');
+ const purchaseOrderCards=(data.purchaseOrders||[]).map(po=>{const lines=(data.purchaseOrderItems||[]).filter(x=>x.purchase_order_id===po.id);return '<article class="module-record"><div class="panel-head"><h3>أمر شراء '+esc(po.po_reference)+'</h3><span class="pill">'+esc(po.status)+'</span></div><p><strong>'+esc(Number(po.subtotal||0).toLocaleString('en-US'))+' '+esc(po.currency)+'</strong></p><p>الشروط المعتمدة: '+esc(po.terms_snapshot||'لا توجد شروط إضافية')+'</p>'+lines.map(x=>'<div class="timeline-item"><strong>'+esc(x.description_snapshot)+'</strong><small>'+esc(x.quantity)+' '+esc(x.unit_snapshot)+' × '+esc(x.unit_rate)+' '+esc(x.currency)+'</small></div>').join('')+(po.status==='issued'?'<div class="actions"><button class="btn primary" type="button" data-rfq-inbox-action="purchase-order-accept" data-id="'+esc(po.id)+'">قبول أمر الشراء</button><button class="btn quiet" type="button" data-rfq-inbox-action="purchase-order-reject" data-id="'+esc(po.id)+'">رفض أمر الشراء</button></div>':'')+'</article>';}).join('');
  box.innerHTML='<div class="panel"><div class="panel-head"><div><h3>دعوات المشاريع</h3><p class="muted">عروضك خاصة بحسابك ولا تعرض عَمِّر عروض المنافسين لك</p></div><button class="btn light" type="button" data-rfq-inbox-action="refresh">تحديث</button></div>'+
  (!data.verified?'<div class="notice">لم يكتمل التحقق من حساب المورد أو مقدم الخدمة أو أنه غير نشط، لذلك لا يمكن إرسال عروض أسعار</div>':'')+
  (cards||'<div class="empty">لا توجد دعوات موجهة إليك حالياً</div>')+'</div>'+
  '<div class="panel"><h3>الترسيات الموجهة إليك</h3>'+(awardCards||'<div class="empty">لا توجد ترسيات جديدة</div>')+'</div>'+
+ '<div class="panel"><h3>أوامر الشراء</h3>'+(purchaseOrderCards||'<div class="empty">لا توجد أوامر شراء موجهة إليك</div>')+'</div>'+
  '<div class="panel"><h3>الشحنات والتسليمات</h3>'+(deliveryCards||'<div class="empty">لا توجد شحنات مسجلة</div>')+'</div>';
 }
 async function submitRfqProviderQuote(form){
@@ -1269,6 +1274,10 @@ async function handleRfqInboxClick(e){
  if(action==='award-accept'||action==='award-reject'){
   const status=action==='award-accept'?'accepted':'rejected';
   const r=await client.from('ammir_project_awards').update({status,accepted_at:status==='accepted'?new Date().toISOString():null}).eq('id',id).eq('supplier_user_id',currentUser.id);if(r.error)throw r.error;await loadRfqInbox();return;
+ }
+ if(action==='purchase-order-accept'||action==='purchase-order-reject'){
+  const status=action==='purchase-order-accept'?'accepted':'rejected';
+  const r=await client.from('ammir_project_purchase_orders').update({status}).eq('id',id).eq('supplier_user_id',currentUser.id).eq('status','issued');if(r.error)throw r.error;await loadRfqInbox();return;
  }
 }
 
