@@ -1064,7 +1064,8 @@ async function submitExecutionForm(form){
   const fresh=selected.filter(o=>!already.has(o.value));
   if(!fresh.length)throw new Error('كل الجهات المحددة تلقت دعوة لهذا الطلب مسبقاً');
   const rows=fresh.map(option=>({rfq_id:v.rfq_id,project_id:pid,provider_user_id:option.value,provider_type:option.dataset.kind||null,provider_name_snapshot:option.dataset.name||'جهة موثقة',invited_by:currentUser.id,status:'invited'}));
-  const r=await client.from('ammir_project_rfq_invites').insert(rows);if(r.error)throw r.error;
+  const r=await client.from('ammir_project_rfq_invites').upsert(rows,{onConflict:'rfq_id,provider_user_id',ignoreDuplicates:true}).select('id');if(r.error)throw r.error;
+  if(!r.data?.length)throw new Error('الجهات المحددة تلقت دعوات لهذا الطلب بالفعل؛ لم تُنشأ دعوات مكررة');
   if(already.size)console.info('AMMIR skipped duplicate RFQ invitations:',already.size);
  }else if(kind==='providerQuote'){
   const {data:invite,error:ie}=await client.from('ammir_project_rfq_invites').select('id').eq('rfq_id',v.rfq_id).eq('provider_user_id',currentUser.id).in('status',['invited','accepted']).maybeSingle();if(ie)throw ie;if(!invite)throw new Error('لا توجد دعوة صالحة لهذا الطلب');
