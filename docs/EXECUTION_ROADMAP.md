@@ -66,3 +66,19 @@ Do not add broad feature scope until the critical transaction journey is tested 
 ## Release rule
 
 Every implementation must include: migration (if needed), regression test, security/RLS review, preview verification, production deployment only after validation, and a concise release note. Preserve existing payment milestone tables and data.
+
+
+## Delivery reconciliation and evidence review — 2026-11-18
+
+- [x] Added optional location columns to delivery evidence with latitude/longitude/accuracy checks. The browser asks for geolocation only after the user checks an explicit consent option.
+- [x] Project manager view now displays delivery lines and evidence metadata and opens private files through signed URLs valid for five minutes.
+- [x] Receipt UI now provides per-line fields for accepted-good, damaged, missing, and condition notes.
+- [x] Added atomic ammir_reconcile_project_delivery RPC. It verifies caller authentication, project role, dispatched status, exact line coverage, duplicate item IDs, non-negative quantities, and per-line quantity bounds before updating all lines and delivery state in one transaction.
+- [x] On receipt RPC failure, the client removes any evidence metadata/object it just uploaded.
+- [x] Moved ammir_issue_purchase_order privileged implementation into app_private; the public RPC is now SECURITY INVOKER and delegates to the private function. anon has no execute permission.
+- [x] Consolidated delivery/evidence RLS policies and corrected explicit project_id qualification in evidence supplier policies.
+- [x] Added indexes covering the four purchase-order foreign-key paths.
+- [x] JavaScript syntax compilation passed for all inline scripts in index.html and ammar-marketplace.js; latest Vercel production deployment is READY.
+- [x] Unauthenticated call to the new receipt RPC was rejected with Authentication required before any write.
+- [ ] Real account acceptance across buyer, supplier, and unrelated account remains pending; no production delivery/evidence records were inserted.
+- [ ] Supabase Auth leaked-password protection remains disabled and must be enabled in Auth settings.
