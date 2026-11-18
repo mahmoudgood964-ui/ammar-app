@@ -1230,7 +1230,7 @@ function renderRfqInbox(data){
   return '<article class="module-record"><div class="panel-head"><div><h3>'+esc(rfq.reference_code)+' · '+esc(rfq.title)+'</h3><small class="muted">'+esc(rfq.delivery_location||'موقع غير محدد')+' · '+esc(rfq.deadline_at||'لا يوجد موعد نهائي')+'</small></div><span class="pill">'+esc(inv.status)+'</span></div><p>'+esc(rfq.scope_description||'')+'</p>'+items.map(i=>'<div class="timeline-item"><strong>'+esc(i.description)+'</strong><small>'+esc(i.specification||'')+' · '+esc(i.quantity)+' '+esc(i.unit)+'</small></div>').join('')+quoteNotice+(inv.status==='invited'?'<div class="actions"><button class="btn primary" type="button" data-rfq-inbox-action="invite-accept" data-id="'+esc(inv.id)+'">قبول الدعوة</button><button class="btn quiet" type="button" data-rfq-inbox-action="invite-decline" data-id="'+esc(inv.id)+'">اعتذار</button></div>':'')+form+'</article>';
  }).join('');
  const awardCards=data.awards.map(a=>'<article class="module-record"><div class="panel-head"><h3>'+esc(a.award_reference)+'</h3><span class="pill">'+esc(a.status)+'</span></div><p>'+esc(a.terms||'')+'</p>'+(a.status==='issued'?'<div class="actions"><button class="btn primary" type="button" data-rfq-inbox-action="award-accept" data-id="'+esc(a.id)+'">قبول الترسية</button><button class="btn quiet" type="button" data-rfq-inbox-action="award-reject" data-id="'+esc(a.id)+'">رفض الترسية</button></div>':'')+'</article>').join('');
- const deliveryCards=data.deliveries.map(d=>'<article class="module-record"><div class="panel-head"><h3>'+esc(d.delivery_reference)+'</h3><span class="pill">'+esc(d.status)+'</span></div><p>'+esc(d.vehicle_or_carrier||'الناقل غير محدد')+' · '+esc(d.scheduled_at||'الموعد غير محدد')+'</p><p>'+esc(d.notes||'')+'</p></article>').join('');
+ const deliveryCards=data.deliveries.map(d=>'<article class="module-record"><div class="panel-head"><h3>'+esc(d.delivery_reference)+'</h3><span class="pill">'+esc(d.status)+'</span></div><p>'+esc(d.vehicle_or_carrier||'الناقل غير محدد')+' · '+esc(d.scheduled_at||'الموعد غير محدد')+'</p><p>'+esc(d.notes||'')+'</p>'+(d.status==='planned'?'<button class="btn primary" type="button" data-rfq-inbox-action="delivery-dispatch" data-id="'+esc(d.id)+'">تأكيد خروج الشحنة</button>':'')+(['planned','dispatched'].includes(d.status)?'<form class="module-form" data-rfq-delivery-evidence data-delivery-id="'+esc(d.id)+'" data-project-id="'+esc(d.project_id)+'"><label>إثبات الشحن / التسليم<input name="evidence_file" type="file" accept="image/jpeg,image/png,image/webp,application/pdf" required></label><label>وصف الإثبات<input name="caption" maxlength="300" placeholder="رقم بوليصة الشحن أو ملاحظات التسليم"></label><button class="btn light" type="submit">رفع الإثبات</button></form>':'')+'</article>').join('');
  const purchaseOrderCards=(data.purchaseOrders||[]).map(po=>{const lines=(data.purchaseOrderItems||[]).filter(x=>x.purchase_order_id===po.id);return '<article class="module-record"><div class="panel-head"><h3>أمر شراء '+esc(po.po_reference)+'</h3><span class="pill">'+esc(po.status)+'</span></div><p><strong>'+esc(Number(po.subtotal||0).toLocaleString('en-US'))+' '+esc(po.currency)+'</strong></p><p>الشروط المعتمدة: '+esc(po.terms_snapshot||'لا توجد شروط إضافية')+'</p>'+lines.map(x=>'<div class="timeline-item"><strong>'+esc(x.description_snapshot)+'</strong><small>'+esc(x.quantity)+' '+esc(x.unit_snapshot)+' × '+esc(x.unit_rate)+' '+esc(x.currency)+'</small></div>').join('')+(po.status==='issued'?'<div class="actions"><button class="btn primary" type="button" data-rfq-inbox-action="purchase-order-accept" data-id="'+esc(po.id)+'">قبول أمر الشراء</button><button class="btn quiet" type="button" data-rfq-inbox-action="purchase-order-reject" data-id="'+esc(po.id)+'">رفض أمر الشراء</button></div>':'')+'</article>';}).join('');
  box.innerHTML='<div class="panel"><div class="panel-head"><div><h3>دعوات المشاريع</h3><p class="muted">عروضك خاصة بحسابك ولا تعرض عَمِّر عروض المنافسين لك</p></div><button class="btn light" type="button" data-rfq-inbox-action="refresh">تحديث</button></div>'+
  (!data.verified?'<div class="notice">لم يكتمل التحقق من حساب المورد أو مقدم الخدمة أو أنه غير نشط، لذلك لا يمكن إرسال عروض أسعار</div>':'')+
@@ -1264,6 +1264,18 @@ async function submitRfqProviderQuote(form){
  const sent=await client.from('ammir_project_rfq_quotes').update({status:'submitted',submitted_at:new Date().toISOString()}).eq('id',quoteId).eq('provider_user_id',currentUser.id);if(sent.error)throw sent.error;
  await loadRfqInbox();
 }
+async function submitRfqDeliveryEvidence(form){
+ const fd=new FormData(form),file=fd.get('evidence_file'),deliveryId=form.dataset.deliveryId,projectId=form.dataset.projectId;
+ if(!file||!file.size)throw new Error('اختر صورة أو مستنداً لإثبات الشحنة');
+ if(file.size>10*1024*1024)throw new Error('حجم الملف يتجاوز 10 ميغابايت');
+ if(!['image/jpeg','image/png','image/webp','application/pdf'].includes(file.type))throw new Error('الأنواع المسموحة: JPG وPNG وWEBP وPDF');
+ const safeName=file.name.replace(/[^a-zA-Z0-9._-]/g,'_'),objectPath=projectId+'/'+deliveryId+'/'+crypto.randomUUID()+'-'+safeName;
+ const up=await client.storage.from('ammir-delivery-evidence').upload(objectPath,file,{contentType:file.type,upsert:false});if(up.error)throw up.error;
+ const meta=await client.from('ammir_project_delivery_evidence').insert({delivery_id:deliveryId,project_id:projectId,object_path:objectPath,file_name:file.name,mime_type:file.type,caption:String(fd.get('caption')||'').trim()||null,uploaded_by:currentUser.id});
+ if(meta.error){await client.storage.from('ammir-delivery-evidence').remove([objectPath]);throw meta.error;}
+ await loadRfqInbox();
+}
+
 async function handleRfqInboxClick(e){
  const b=e.target.closest('[data-rfq-inbox-action]');if(!b)return;
  const action=b.dataset.rfqInboxAction,id=b.dataset.id;
@@ -1278,6 +1290,9 @@ async function handleRfqInboxClick(e){
  if(action==='purchase-order-accept'||action==='purchase-order-reject'){
   const status=action==='purchase-order-accept'?'accepted':'rejected';
   const r=await client.from('ammir_project_purchase_orders').update({status}).eq('id',id).eq('supplier_user_id',currentUser.id).eq('status','issued');if(r.error)throw r.error;await loadRfqInbox();return;
+ }
+ if(action==='delivery-dispatch'){
+  const r=await client.from('ammir_project_deliveries').update({status:'dispatched',dispatched_at:new Date().toISOString()}).eq('id',id).eq('supplier_user_id',currentUser.id).eq('status','planned');if(r.error)throw r.error;await loadRfqInbox();return;
  }
 }
 
@@ -1640,9 +1655,11 @@ function init(){if(!window.supabase||typeof window.supabase.createClient!=='func
  document.querySelectorAll('[data-auth-panel]').forEach(b=>b.addEventListener('click',()=>{const name=b.dataset.authPanel;if(name==='reset'){$('resetRequestForm').hidden=false;$('newPasswordForm').hidden=true;$('resetEmail').value=$('loginEmail').value.trim();}authPanel(name);if(b.closest('#publicLanding'))$('authShell').querySelector('.auth-card').scrollIntoView({behavior:'smooth',block:'start'});}));
  $('rfqInboxView').addEventListener('click',e=>{handleRfqInboxClick(e).catch(err=>message($('rfqInboxContent'),'تعذر تنفيذ العملية: '+(err.message||'خطأ'),'error'));});
  $('rfqInboxView').addEventListener('submit',e=>{
-  const form=e.target.closest('[data-rfq-provider-form="quote"]');if(!form)return;e.preventDefault();
-  const btn=form.querySelector('button[type="submit"]');busy(btn,true,'جارٍ إرسال العرض...');
-  submitRfqProviderQuote(form).then(()=>message($('rfqInboxContent'),'تم إرسال العرض بنجاح','success')).catch(err=>message($('rfqInboxContent'),'تعذر إرسال العرض: '+(err.message||'خطأ'),'error')).finally(()=>busy(btn,false));
+  const form=e.target.closest('[data-rfq-provider-form="quote"]');
+  const evidenceForm=e.target.closest('[data-rfq-delivery-evidence]');
+  if(!form&&!evidenceForm)return;e.preventDefault();
+  const target=form||evidenceForm,btn=target.querySelector('button[type="submit"]');busy(btn,true,form?'جارٍ إرسال العرض...':'جارٍ رفع الإثبات...');
+  (form?submitRfqProviderQuote(form):submitRfqDeliveryEvidence(evidenceForm)).then(()=>message($('rfqInboxContent'),form?'تم إرسال العرض بنجاح':'تم رفع إثبات الشحنة بنجاح','success')).catch(err=>message($('rfqInboxContent'),'تعذر تنفيذ العملية: '+(err.message||'خطأ'),'error')).finally(()=>busy(btn,false));
  });
  $('appShell').addEventListener('click',clickApp);
  $('marketingLang').addEventListener('click',()=>setAppLanguage(appLanguage==='en'?'ar':'en'));
