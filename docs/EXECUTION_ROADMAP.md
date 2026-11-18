@@ -95,3 +95,5 @@ Every implementation must include: migration (if needed), regression test, secur
 - [x] Live production browser smoke test in Chromium: official app returned HTTP 200, correct Arabic/English title, no JavaScript page errors, no same-origin failed requests, and no horizontal overflow at desktop 1365px or mobile 390px.
 - [x] Production homepage content confirms the delivery evidence review, atomic reconciliation RPC integration, and optional location UI are included in the served build.
 - [ ] Authenticated buyer/supplier project-workflow UI and Android native-device acceptance remain untested because no separate real test accounts/participants were available; no accounts or test records were created in production.
+
+- [x] Security regression for the new receipt RPC: a synthetic unrelated authenticated identity was tested against a temporary dispatched-delivery row inside a rollback transaction; the RPC rejected it with Project manager permission required. The row was confirmed absent after rollback.
