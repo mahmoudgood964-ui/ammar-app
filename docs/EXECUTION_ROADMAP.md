@@ -20,7 +20,7 @@ Do not add broad feature scope until the critical transaction journey is tested 
 
 - [x] BOQ CSV import validation: required columns, row width, CSV quoting, UTF-8 replacement-character detection, description/unit limits, positive quantities, non-negative rates, currency format/required currency when a rate is supplied, duplicate item codes within the file and against the target draft version, and aggregated row-level errors before any insert. Parser regression checks passed for valid input, duplicate codes, invalid quantity and malformed quoting; live import with a real project remains pending.
 - [x] RFQ invitations: invite multiple verified suppliers/providers in one action; production DB already has a unique index on `(rfq_id, provider_user_id)` and the client now uses conflict-safe upsert to prevent race-condition duplicates. Multi-recipient UI is deployed; end-to-end acceptance with real separate accounts and invite status/reminders remain open.
-- [ ] Quote comparison: compare line-by-line quantities, unit rates, delivery, loading, taxes, other costs, lead time, currency and terms; never compare different currencies as if equivalent.
+- [x] Quote comparison UI: group submitted offers by the same RFQ and currency (not currency alone); show each requested line, quoted unit rate/quantity/availability/lead time, total landed cost, transport, loading, taxes, other costs, validity, warranty and exclusions. Different RFQs/currencies are never mixed in the comparison. JavaScript syntax validation passed; real quote dataset/acceptance testing remains pending.
 - [ ] Partial award: award selected line items to more than one supplier while enforcing awarded quantity <= RFQ quantity.
 - [ ] Generate a separate purchase/work order for each award and preserve accepted terms/version.
 - [ ] Delivery evidence: record delivered, accepted, damaged and missing quantities, photos, timestamp, location and receiver confirmation.
@@ -47,7 +47,7 @@ Do not add broad feature scope until the critical transaction journey is tested 
 ## Current known implementation facts
 
 - BOQ versions/items, CSV import/export, RFQs, invitation, quote submission, quote comparison, award and delivery UI/schema already exist in partial form. Do not rebuild them from scratch. BOQ CSV validation was strengthened and parser regression-tested; no production data was inserted during these checks.
-- Existing comparison groups submitted quotes by currency; it needs a rigorous line-item and landed-cost review.
+- Quote comparison now groups by RFQ + currency and includes line-level coverage and landed-cost components; real-world acceptance and partial-award quantity enforcement still need dedicated tests.
 - RFQ invitations: multi-recipient selection is implemented; production schema inspection confirmed the unique index `ammir_project_rfq_invites_rfq_id_provider_user_id_key` and zero duplicate groups in the current table. Client-side duplicate precheck is backed by `upsert(... ignoreDuplicates: true)` for concurrent requests. Functional end-to-end verification with real accounts is still pending.
 - Project delivery commission logic and provider-side 5% rules have been deployed and transactionally smoke-tested.
 - RLS is enabled on all 59 public tables checked in production.
