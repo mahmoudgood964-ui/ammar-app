@@ -1064,7 +1064,7 @@ function renderExecutionPanel(){
   }).join(''):'<div class="empty">لم تُرفع إثباتات لهذه الشحنة بعد</div>';
   const lineHtml=lines.length?'<div class="table-wrap"><table><thead><tr><th>البند</th><th>المتوقع</th><th>سليم</th><th>تالف</th><th>ناقص</th></tr></thead><tbody>'+lines.map(x=>{const ai=(moduleData.awardItems||[]).find(a=>a.id===x.award_item_id);const ri=(moduleData.rfqItems||[]).find(i=>i.id===ai?.rfq_item_id);return '<tr><td>'+esc(ri?.description||'بند')+'</td><td>'+esc(x.expected_quantity)+'</td><td>'+esc(x.received_quantity)+'</td><td>'+esc(x.damaged_quantity)+'</td><td>'+esc(x.missing_quantity)+'</td></tr>';}).join('')+'</tbody></table></div>':'';
   return '<article class="project-card"><h4>'+esc(d.delivery_reference)+'</h4><div class="meta"><span class="pill">'+esc(d.status)+'</span><span class="pill">'+esc(d.scheduled_at||'موعد غير محدد')+'</span></div><p>'+esc(d.notes||'')+'</p>'+lineHtml+'<h5>إثباتات الشحنة والاستلام</h5>'+evidenceHtml+'</article>';
- }).join('');
+ }).join('')
  const canManage=['owner','manager','supervisor','engineer'].includes(currentProjectRole());
  const verifiedProviders=moduleData.verifiedProviders||[];
  const verifiedProviderOptions=verifiedProviders.map(p=>'<option value=\"'+esc(p.owner_id)+'\" data-name=\"'+esc(p.business_name)+'\" data-kind=\"'+esc(p.provider_kind)+'\">'+esc(p.business_name)+' · '+esc([p.provider_kind,p.city,p.governorate].filter(Boolean).join(' / '))+'</option>').join('');
