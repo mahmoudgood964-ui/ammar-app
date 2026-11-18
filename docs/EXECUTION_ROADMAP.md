@@ -82,3 +82,7 @@ Every implementation must include: migration (if needed), regression test, secur
 - [x] Unauthenticated call to the new receipt RPC was rejected with Authentication required before any write.
 - [ ] Real account acceptance across buyer, supplier, and unrelated account remains pending; no production delivery/evidence records were inserted.
 - [ ] Supabase Auth leaked-password protection remains disabled and must be enabled in Auth settings.
+
+
+- [x] Final storage lifecycle hardening: consolidated supplier/manager Storage SELECT and INSERT rules; evidence deletion is now manager-only so a supplier cannot delete its uploaded object while leaving an orphaned evidence metadata record. Verified the private bucket, allowed MIME types and 15 MB storage ceiling (the UI enforces 10 MB).
+- [x] Re-ran Supabase advisors after the storage change: no exposed SECURITY DEFINER warning and no multiple-permissive-policy warning remain. Only the existing Auth leaked-password protection warning and informational unused-index notices remain.
