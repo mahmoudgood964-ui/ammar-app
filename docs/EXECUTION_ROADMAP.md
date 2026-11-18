@@ -97,3 +97,7 @@ Every implementation must include: migration (if needed), regression test, secur
 - [ ] Authenticated buyer/supplier project-workflow UI and Android native-device acceptance remain untested because no separate real test accounts/participants were available; no accounts or test records were created in production.
 
 - [x] Security regression for the new receipt RPC: a synthetic unrelated authenticated identity was tested against a temporary dispatched-delivery row inside a rollback transaction; the RPC rejected it with Project manager permission required. The row was confirmed absent after rollback.
+
+- [x] Full rollback-only database workflow regression: draft RFQ → submitted quote → issued/accepted award → purchase-order RPC → supplier PO acceptance → delivery → dispatch → exception receipt. With 10 units expected, 6 good + 2 damaged + 2 missing produced gross commission basis 600 SDG and exactly 30 SDG at 5%; damaged/missing quantities were excluded.
+- [x] Replayed the delivery-item commission trigger and confirmed the ledger remained one row; a second receipt RPC call was rejected because the delivery was no longer dispatched.
+- [x] Confirmed the synthetic RFQ, award and delivery counts returned to zero after transaction rollback. This is database workflow regression coverage using one existing project-owner identity, not a two-account acceptance test.
