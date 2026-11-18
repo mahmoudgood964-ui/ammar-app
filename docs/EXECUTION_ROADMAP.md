@@ -49,7 +49,7 @@ Do not add broad feature scope until the critical transaction journey is tested 
 
 - BOQ versions/items, CSV import/export, RFQs, invitation, quote submission, quote comparison, award and delivery UI/schema already exist in partial form. Do not rebuild them from scratch. BOQ CSV validation was strengthened and parser regression-tested; no production data was inserted during these checks.
 - Purchase-order tables, line snapshots, RPC, RLS and supplier acceptance/rejection are now deployed. New purchase orders and items are currently empty; authenticated users cannot insert directly, and unauthenticated RPC issuance was rejected in a no-write guard test.
-- Quote comparison now groups by RFQ + currency and includes line-level coverage and landed-cost components; partial-award over-allocation is already guarded in production by a database trigger, though a dedicated rollback regression test remains pending.
+- Quote comparison now groups by RFQ + currency and includes line-level coverage and landed-cost components; partial-award over-allocation is guarded by an advisory-lock trigger; a 6+5 over-allocation against quantity 10 was rejected in a rollback-only production regression test.
 - Purchase orders are now issued only from accepted awards and delivery records can be created only from supplier-accepted purchase orders. Suppliers can dispatch their assigned delivery and upload evidence; DB status and storage policies enforce the supplier/project relationship. Full two-account acceptance and delivery/commission end-to-end tests remain open.
 - RFQ invitations: multi-recipient selection is implemented; production schema inspection confirmed the unique index `ammir_project_rfq_invites_rfq_id_provider_user_id_key` and zero duplicate groups in the current table. Client-side duplicate precheck is backed by `upsert(... ignoreDuplicates: true)` for concurrent requests. Functional end-to-end verification with real accounts is still pending.
 - Project delivery commission logic and provider-side 5% rules have been deployed and transactionally smoke-tested.
@@ -86,3 +86,12 @@ Every implementation must include: migration (if needed), regression test, secur
 
 - [x] Final storage lifecycle hardening: consolidated supplier/manager Storage SELECT and INSERT rules; evidence deletion is now manager-only so a supplier cannot delete its uploaded object while leaving an orphaned evidence metadata record. Verified the private bucket, allowed MIME types and 15 MB storage ceiling (the UI enforces 10 MB).
 - [x] Re-ran Supabase advisors after the storage change: no exposed SECURITY DEFINER warning and no multiple-permissive-policy warning remain. Only the existing Auth leaked-password protection warning and informational unused-index notices remain.
+
+
+## Regression and browser smoke checks — 2026-11-18
+
+- [x] Production rollback-only split-award regression: first 6 units accepted against requested quantity 10; a second 5-unit award was rejected with the expected over-allocation error. Follow-up count confirmed zero rollback-test RFQs/awards remained.
+- [x] BOQ CSV parser tests: valid UTF-8 BOM + CRLF + Arabic quoted comma + escaped quote accepted; unterminated quote, malformed quote, duplicate item code, negative quantity, missing currency for a supplied rate, and replacement-character encoding errors rejected.
+- [x] Live production browser smoke test in Chromium: official app returned HTTP 200, correct Arabic/English title, no JavaScript page errors, no same-origin failed requests, and no horizontal overflow at desktop 1365px or mobile 390px.
+- [x] Production homepage content confirms the delivery evidence review, atomic reconciliation RPC integration, and optional location UI are included in the served build.
+- [ ] Authenticated buyer/supplier project-workflow UI and Android native-device acceptance remain untested because no separate real test accounts/participants were available; no accounts or test records were created in production.
