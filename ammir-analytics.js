@@ -8,6 +8,7 @@
   var VISITOR_KEY = "ammir_analytics_visitor_v1";
   var SESSION_KEY = "ammir_analytics_session_v1";
   var ORIGINS = ["https://app.ammirbuild.com", "https://ammirbuild.com", "https://www.ammirbuild.com"];
+  var authListenerAttached = false;
 
   if (ORIGINS.indexOf(location.origin) < 0) return;
 
@@ -38,19 +39,8 @@
   }
 
   async function sendEvent(name) {
+    if (localStorage.getItem(CONSENT_KEY) !== "yes") return;
     var ids = getIds();
-    var path = location.pathname || "/";
-    path = path.slice(0, 512);
-    var payload = {
-      event_key: uuid(),
-      visitor_id: ids.visitor,
-      session_id: ids.session,
-      site: location.hostname === "app.ammirbuild.com" ? "app" : "website",
-      event_name: name,
-      page_path: path,
-      page_title: (document.title || "").slice(0, 160),
-      referrer_domain: referrerHost()
-    };
     var headers = { "content-type": "application/json" };
     var db = window.ammarSupabase;
     if (db && db.auth && typeof db.auth.getSession === "function") {
@@ -60,6 +50,16 @@
         if (token) headers.authorization = "Bearer " + token;
       } catch (_) {}
     }
+    var payload = {
+      event_key: uuid(),
+      visitor_id: ids.visitor,
+      session_id: ids.session,
+      site: location.hostname === "app.ammirbuild.com" ? "app" : "website",
+      event_name: name,
+      page_path: (location.pathname || "/").slice(0, 512),
+      page_title: (document.title || "").slice(0, 160),
+      referrer_domain: referrerHost()
+    };
     try {
       await fetch(ENDPOINT, {
         method: "POST",
@@ -73,20 +73,21 @@
   }
 
   function attachAuthEvents() {
+    if (authListenerAttached || location.hostname !== "app.ammirbuild.com") return;
     var attempts = 0;
     var timer = setInterval(function () {
       attempts++;
       var db = window.ammarSupabase;
       if (db && db.auth && typeof db.auth.onAuthStateChange === "function") {
         clearInterval(timer);
+        authListenerAttached = true;
         db.auth.onAuthStateChange(function (event, session) {
-          if (event === "SIGNED_IN" && session && session.user) sendEvent("login_success");
+          if (localStorage.getItem(CONSENT_KEY) === "yes" && event === "SIGNED_IN" && session && session.user) {
+            sendEvent("login_success");
+          }
         });
-        db.auth.getSession().then(function (r) {
-          if (r.data && r.data.session && r.data.session.user) sendEvent("login_success");
-        }).catch(function () {});
-      } else if (attempts > 80) clearInterval(timer);
-    }, 250);
+      } else if (attempts > 120) clearInterval(timer);
+    }, 500);
   }
 
   function addAnalyticsLink() {
@@ -101,24 +102,41 @@
     adminTab.insertAdjacentElement("afterend", link);
   }
 
-  function showConsent() {
-    if (localStorage.getItem(CONSENT_KEY) !== null) return;
+  function addPrivacyButton() {
+    if (document.getElementById("ammirPrivacySettings")) return;
+    var button = document.createElement("button");
+    button.id = "ammirPrivacySettings";
+    button.type = "button";
+    button.textContent = "إعدادات الخصوصية";
+    button.style.cssText = "position:fixed;z-index:99998;bottom:12px;right:12px;border:1px solid #a9c0b5;border-radius:20px;background:#fff;color:#174c3e;padding:7px 12px;font:12px Arial,sans-serif;box-shadow:0 3px 12px #0002";
+    button.addEventListener("click", function () { showConsent(true); });
+    document.body.appendChild(button);
+  }
+
+  function showConsent(force) {
+    if (!force && localStorage.getItem(CONSENT_KEY) !== null) return;
+    if (document.getElementById("ammirAnalyticsConsent")) return;
     var box = document.createElement("section");
+    box.id = "ammirAnalyticsConsent";
     box.setAttribute("role", "dialog");
     box.setAttribute("aria-label", "إعدادات الخصوصية والتحليلات");
-    box.style.cssText = "position:fixed;z-index:99999;bottom:14px;left:14px;right:14px;max-width:620px;margin:auto;background:#102f29;color:#fff;padding:16px 18px;border-radius:16px;box-shadow:0 12px 38px #0003;font:14px/1.75 Arial,sans-serif;direction:rtl";
+    box.style.cssText = "position:fixed;z-index:99999;bottom:58px;left:14px;right:14px;max-width:620px;margin:auto;background:#102f29;color:#fff;padding:16px 18px;border-radius:16px;box-shadow:0 12px 38px #0003;font:14px/1.75 Arial,sans-serif;direction:rtl";
     var text = document.createElement("p");
-    text.textContent = "هل تسمح لعَمِّر بقياس الزيارات لتحسين الموقع والتطبيق؟ نجمع مسار الصفحة ومصدر الزيارة ونوع الجهاز ومعرّفاً عشوائياً. عند تسجيل الدخول قد نربط الزيارة بحسابك. لا نجمع عنوان IP أو موقعك الدقيق، ويمكنك الرفض.";
+    text.textContent = "هل تسمح لعَمِّر بقياس الزيارات لتحسين الموقع والتطبيق؟ نجمع مسار الصفحة ومصدر الزيارة ونوع الجهاز ومعرّفاً عشوائياً. عند تسجيل الدخول قد نربط الزيارة بحسابك. لا نجمع عنوان IP أو موقعك الدقيق. يمكنك تغيير اختيارك لاحقاً من إعدادات الخصوصية.";
     text.style.margin = "0 0 12px";
     var actions = document.createElement("div");
     actions.style.cssText = "display:flex;gap:8px;flex-wrap:wrap";
     function choice(value) {
+      var previous = localStorage.getItem(CONSENT_KEY);
       localStorage.setItem(CONSENT_KEY, value);
       box.remove();
       if (value === "yes") {
         getIds();
-        sendEvent("page_view");
+        if (previous !== "yes") sendEvent("page_view");
         attachAuthEvents();
+      } else {
+        localStorage.removeItem(VISITOR_KEY);
+        sessionStorage.removeItem(SESSION_KEY);
       }
     }
     var accept = document.createElement("button");
@@ -135,11 +153,12 @@
   }
 
   function start() {
+    addPrivacyButton();
     var choice = localStorage.getItem(CONSENT_KEY);
     if (choice === "yes") {
       sendEvent("page_view");
       attachAuthEvents();
-    } else if (choice === null) showConsent();
+    } else if (choice === null) showConsent(false);
     var observer = new MutationObserver(addAnalyticsLink);
     observer.observe(document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ["hidden"] });
     addAnalyticsLink();
