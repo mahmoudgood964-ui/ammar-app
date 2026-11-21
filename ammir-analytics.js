@@ -9,6 +9,7 @@
   var SESSION_KEY = "ammir_analytics_session_v1";
   var ORIGINS = ["https://app.ammirbuild.com", "https://ammirbuild.com", "https://www.ammirbuild.com"];
   var authListenerAttached = false;
+  var lastTrackedPath = null;
 
   if (ORIGINS.indexOf(location.origin) < 0) return;
 
@@ -154,7 +155,30 @@
     document.body.appendChild(box);
   }
 
+  function installNavigationTracking() {
+    lastTrackedPath = location.pathname || "/";
+    function onNavigation() {
+      var nextPath = location.pathname || "/";
+      if (nextPath === lastTrackedPath) return;
+      lastTrackedPath = nextPath;
+      sendEvent("page_view");
+    }
+    ["pushState", "replaceState"].forEach(function (method) {
+      var original = history[method];
+      if (typeof original !== "function" || original.__ammirWrapped) return;
+      var wrapped = function () {
+        var result = original.apply(this, arguments);
+        onNavigation();
+        return result;
+      };
+      wrapped.__ammirWrapped = true;
+      history[method] = wrapped;
+    });
+    window.addEventListener("popstate", onNavigation);
+  }
+
   function start() {
+    installNavigationTracking();
     addPrivacyButton();
     var choice = localStorage.getItem(CONSENT_KEY);
     if (choice === "yes") {
