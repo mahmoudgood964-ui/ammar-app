@@ -108,7 +108,7 @@
     button.id = "ammirPrivacySettings";
     button.type = "button";
     button.textContent = "إعدادات الخصوصية";
-    button.style.cssText = "position:fixed;z-index:99998;bottom:12px;right:12px;border:1px solid #a9c0b5;border-radius:20px;background:#fff;color:#174c3e;padding:7px 12px;font:12px Arial,sans-serif;box-shadow:0 3px 12px #0002";
+    var mobileApp = location.hostname === "app.ammirbuild.com" && window.matchMedia("(max-width: 680px)").matches;\n    button.style.cssText = "position:fixed;z-index:99998;bottom:" + (mobileApp ? "calc(76px + env(safe-area-inset-bottom))" : "12px") + ";right:12px;border:1px solid #a9c0b5;border-radius:20px;background:#fff;color:#174c3e;padding:7px 12px;font:12px Arial,sans-serif;box-shadow:0 3px 12px #0002";
     button.addEventListener("click", function () { showConsent(true); });
     document.body.appendChild(button);
   }
@@ -120,7 +120,7 @@
     box.id = "ammirAnalyticsConsent";
     box.setAttribute("role", "dialog");
     box.setAttribute("aria-label", "إعدادات الخصوصية والتحليلات");
-    box.style.cssText = "position:fixed;z-index:99999;bottom:58px;left:14px;right:14px;max-width:620px;margin:auto;background:#102f29;color:#fff;padding:16px 18px;border-radius:16px;box-shadow:0 12px 38px #0003;font:14px/1.75 Arial,sans-serif;direction:rtl";
+    var mobileApp = location.hostname === "app.ammirbuild.com" && window.matchMedia("(max-width: 680px)").matches;\n    box.style.cssText = "position:fixed;z-index:99999;bottom:" + (mobileApp ? "calc(86px + env(safe-area-inset-bottom))" : "58px") + ";left:14px;right:14px;max-width:620px;margin:auto;background:#102f29;color:#fff;padding:16px 18px;border-radius:16px;box-shadow:0 12px 38px #0003;font:14px/1.75 Arial,sans-serif;direction:rtl";
     var text = document.createElement("p");
     text.textContent = "هل تسمح لعَمِّر بقياس الزيارات لتحسين الموقع والتطبيق؟ نجمع مسار الصفحة ومصدر الزيارة ونوع الجهاز ومعرّفاً عشوائياً. عند تسجيل الدخول قد نربط الزيارة بحسابك. لا نجمع عنوان IP أو موقعك الدقيق. يمكنك تغيير اختيارك لاحقاً من إعدادات الخصوصية.";
     text.style.margin = "0 0 12px";
