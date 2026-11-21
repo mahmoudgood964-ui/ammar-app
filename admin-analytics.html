@@ -46,7 +46,8 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{text-align:right;
     <div class="grid">
       <section class="card"><h2>أكثر الصفحات زيارة</h2><div id="pages" class="rows"></div></section>
       <section class="card"><h2>مصادر الزيارات</h2><div id="sources" class="rows"></div></section>
-      <section class="card"><h2>نوع الجهاز</h2><div id="devices" class="rows"></div></section>\n      <section class="card"><h2>الزيارات حسب الوجهة</h2><div id="sites" class="rows"></div></section>
+      <section class="card"><h2>نوع الجهاز</h2><div id="devices" class="rows"></div></section>
+      <section class="card"><h2>الزيارات حسب الوجهة</h2><div id="sites" class="rows"></div></section>
       <section class="card"><h2>الدول المتاحة بصورة تقريبية</h2><div id="countries" class="rows"></div><p class="note">قد لا تتوفر الدولة في بعض الطلبات. لا يتم جمع الموقع الدقيق أو عنوان IP.</p></section>
     </div>
     <section class="card"><h2>أحدث الزيارات والأحداث</h2><div style="overflow:auto"><table><thead><tr><th>الزائر</th><th>المصدر</th><th>الصفحة</th><th>الجهاز</th><th>الوقت</th></tr></thead><tbody id="recent"></tbody></table></div><p id="limitNote" class="note"></p></section>
@@ -82,7 +83,8 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{text-align:right;
     $("accounts").textContent=data.registered_accounts;
     renderBars("pages",data.top_pages);
     renderBars("sources",data.referrers);
-    renderBars("devices",data.devices);\n    renderBars("sites",(data.sites||[]).map(function(x){return {label:x.label==="app"?"التطبيق":x.label==="website"?"الموقع":x.label,value:x.value};}));
+    renderBars("devices",data.devices);
+    renderBars("sites",(data.sites||[]).map(function(x){return {label:x.label==="app"?"التطبيق":x.label==="website"?"الموقع":x.label,value:x.value};}));
     renderBars("countries",data.countries);
     var body=$("recent");body.textContent="";
     (data.recent||[]).forEach(function(item){
