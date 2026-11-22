@@ -1644,7 +1644,7 @@ async function saveProject(e){
  finally{busy(b,false);}
 }
 
-async function logout(){try{const r=await client.auth.signOut();if(r.error)throw r.error;recoveryMode=false;showAuth('تم تسجيل الخروج بأمان.','success');}catch(e){message($('appMessage'),'تعذر تسجيل الخروج: '+(e.message||'حدث خطأ غير متوقع.'),'error');}}
+async function logout(){try{const r=await client.auth.signOut({scope:'local'});if(r.error)throw r.error;recoveryMode=false;showAuth('تم تسجيل الخروج من هذا الجهاز بأمان.','success');}catch(e){message($('appMessage'),'تعذر تسجيل الخروج: '+(e.message||'حدث خطأ غير متوقع.'),'error');}}
 function clickApp(e){
  const vb=e.target.closest('[data-view]');if(vb){if(vb.dataset.view==='form')goForm(null);else activeView(vb.dataset.view);return;}
  const ab=e.target.closest('[data-action]');if(!ab)return;const action=ab.dataset.action;
@@ -1657,7 +1657,10 @@ async function installApp(){
  if(!deferredInstallPrompt){message($('appMessage'),'من قائمة المتصفح اختر "إضافة إلى الشاشة الرئيسية" لتثبيت عَمِّر.','info');return;}
  deferredInstallPrompt.prompt();await deferredInstallPrompt.userChoice;deferredInstallPrompt=null;$('installButton').hidden=true;
 }
-function init(){if(!window.supabase||typeof window.supabase.createClient!=='function'){message($('authMessage'),'تعذر تحميل مكتبة الاتصال. تحقق من الإنترنت ثم أعد تحميل الصفحة.','error');return;}try{client=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY,{auth:{autoRefreshToken:true,persistSession:true,detectSessionInUrl:true}});}catch(e){message($('authMessage'),'تعذر تهيئة خدمة الحسابات. أعد تحميل الصفحة أو تحقق من الاتصال.','error');return;}
+function init(){if(!window.supabase||typeof window.supabase.createClient!=='function'){message($('authMessage'),'تعذر تحميل مكتبة الاتصال. تحقق من الإنترنت ثم أعد تحميل الصفحة.','error');return;}try{const authStorageKey='sb-uutwijowzewmvvrzsaww-auth-token';
+  const storageProbe='__ammir_auth_storage_probe__';
+  window.localStorage.setItem(storageProbe,'1');window.localStorage.removeItem(storageProbe);
+  client=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY,{auth:{autoRefreshToken:true,persistSession:true,storage:window.localStorage,storageKey:authStorageKey,detectSessionInUrl:true}});}catch(e){message($('authMessage'),'تعذر تهيئة خدمة الحسابات. أعد تحميل الصفحة أو تحقق من الاتصال.','error');return;}
  client.auth.onAuthStateChange((event,session)=>{if(event==='PASSWORD_RECOVERY')showRecovery();else if(event==='SIGNED_OUT'){recoveryMode=false;showAuth('تم تسجيل الخروج.');}else if(event==='SIGNED_IN'&&session&&!recoveryMode)showApp(session.user);});
  $('loginForm').addEventListener('submit',login);$('signupForm').addEventListener('submit',signup);$('resetRequestForm').addEventListener('submit',resetRequest);$('newPasswordForm').addEventListener('submit',saveNewPassword);$('projectForm').addEventListener('submit',saveProject);$('projectSearch').addEventListener('input',renderProjects);
  $('cancelProjectButton').addEventListener('click',()=>{editingProjectId=null;$('projectForm').reset();activeView('projects');});
