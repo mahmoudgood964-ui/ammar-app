@@ -173,3 +173,7 @@ Exact head `ea9b0c52d0836129325ee18bdc8465bc1f377186` passed [push run #45503670
 A read-only HTTP check against `https://app.ammirbuild.com` returned HTTP 200 for the Arabic RTL application shell, `manifest.webmanifest`, `sw.js`, and all three manifest icon assets (`icon-192.png`, `icon-512.png`, `icon.svg`). The manifest parses as JSON and declares standalone display, root start URL/scope, Arabic RTL metadata, and the expected 192/512/SVG icons. The service worker is served successfully and contains the current `ammir-shell-v10-persistent-auth` cache identifier, navigation fallback, `skipWaiting`, and `clients.claim` handling.
 
 This is a static production smoke check only. It does not replace physical Android installation, real authentication/session transitions, private-file access checks, offline retry, or weak-network acceptance. No production data or settings were changed.
+
+## 6. Admin-session navigation regression checks
+
+The browser/static regression suite now also asserts that the revenue/admin navigation state is sourced from the server-side `is_admin` RPC, hidden for non-admin sessions, redirected to the market panel if a non-admin attempts to select an admin/revenue panel, and hidden when the session is cleared. These checks complement the existing server-side revenue dashboard guard; they do not replace acceptance with real administrator and non-administrator accounts.
