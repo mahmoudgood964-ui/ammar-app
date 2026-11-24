@@ -150,5 +150,9 @@ jobs:
         env:
           PGPASSWORD: postgres
         run: psql -h 127.0.0.1 -U postgres -d ammar_test -v ON_ERROR_STOP=1 -f tests/ammir-revenue-engine.sql
+      - name: Test concurrent AMMIR commission reductions
+        env:
+          PGPASSWORD: postgres
+        run: bash tests/ammir-revenue-concurrency.sh
       - name: Validate browser code and migration wiring
         run: node tests/check-ammar-app.mjs
