@@ -51,6 +51,11 @@ assert.equal(
   'CSV export must neutralize formula-like text beginning with @'
 );
 assert.equal(
+  revenueCsvSandbox.revenueCsvCell('  =SUM(A1:A2)', 'source_id'),
+  '"' + String.fromCharCode(39) + '  =SUM(A1:A2)"',
+  'CSV export must neutralize formulas preceded by whitespace'
+);
+assert.equal(
   revenueCsvSandbox.revenueCsvCell('-5.00', 'commission_amount'),
   '"-5.00"',
   'CSV export must preserve numeric values as numeric text'
