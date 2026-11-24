@@ -60,6 +60,16 @@ assert.equal(
   '"-5.00"',
   'CSV export must preserve numeric values as numeric text'
 );
+assert.equal(
+  revenueCsvSandbox.revenueCsvCell('-12.50', 'adjustment_delta'),
+  '"-12.50"',
+  'CSV export must preserve negative adjustment amounts as numeric text'
+);
+assert.equal(
+  revenueCsvSandbox.revenueCsvCell('-2.50', 'net_commission_amount'),
+  '"-2.50"',
+  'CSV export must preserve negative adjusted commission as numeric text'
+);
 assert.ok(
   moduleSource.includes("if(!isAdmin)throw new Error('ليست لديك صلاحية إدارة الإيرادات')"),
   'Revenue dashboard must enforce the admin guard before loading data'
