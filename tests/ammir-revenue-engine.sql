@@ -94,15 +94,38 @@ BEGIN
 END
 $test$;
 
--- Exercise the admin gate using a real authenticated non-admin fixture.
-INSERT INTO auth.users(id,email)
-VALUES ('aaaaaaaa-2424-4000-8000-000000000001','revenue-nonadmin@ammir.test')
+-- Create isolated CI-only payer, unrelated account, and administrator fixtures.
+INSERT INTO auth.users(id,email) VALUES
+('aaaaaaaa-2424-4000-8000-000000000001','revenue-payer@ammir.test'),
+('aaaaaaaa-2424-4000-8000-000000000002','revenue-unrelated@ammir.test'),
+('aaaaaaaa-2424-4000-8000-000000000003','revenue-admin@ammir.test')
 ON CONFLICT (id) DO NOTHING;
 
-INSERT INTO public.profiles(id,role)
-VALUES ('aaaaaaaa-2424-4000-8000-000000000001','client')
-ON CONFLICT (id) DO UPDATE SET role='client';
+INSERT INTO public.profiles(id,role) VALUES
+('aaaaaaaa-2424-4000-8000-000000000001','client'),
+('aaaaaaaa-2424-4000-8000-000000000002','client'),
+('aaaaaaaa-2424-4000-8000-000000000003','admin')
+ON CONFLICT (id) DO UPDATE SET role=EXCLUDED.role;
 
+INSERT INTO public.ammar_commission_ledger(
+  id,request_id,activity_type,source_type,source_id,gross_amount,currency,
+  rate_percent,commission_amount,payer_id,status
+) VALUES (
+  'aaaaaaaa-2424-4000-8000-000000000099',NULL,'market_materials',
+  'market_request','ci-revenue-adjustment-fixture',1000.00,'SDG',
+  5.00,50.00,'aaaaaaaa-2424-4000-8000-000000000001','due'
+);
+
+INSERT INTO public.ammar_commission_ledger(
+  id,request_id,activity_type,source_type,source_id,gross_amount,currency,
+  rate_percent,commission_amount,payer_id,status
+) VALUES (
+  'aaaaaaaa-2424-4000-8000-000000000098',NULL,'market_materials',
+  'market_request','ci-revenue-concurrency-fixture',1000.00,'SDG',
+  5.00,50.00,'aaaaaaaa-2424-4000-8000-000000000001','due'
+);
+
+-- Exercise the admin gate using a real authenticated non-admin fixture.
 SET ROLE authenticated;
 SELECT set_config('request.jwt.claim.sub','aaaaaaaa-2424-4000-8000-000000000001',false);
 
@@ -132,4 +155,124 @@ $test$;
 
 RESET ROLE;
 
-SELECT 'AMMIR REVENUE ENGINE MIGRATIONS AND AUTHORIZATION TESTS PASSED' AS result;
+-- Valid admin adjustments: partial refund, idempotent retry, full reversal and fee increase.
+RESET ROLE;
+SET ROLE authenticated;
+SELECT set_config('request.jwt.claim.sub','aaaaaaaa-2424-4000-8000-000000000003',false);
+
+SELECT public.ammar_record_commission_adjustment(
+  'aaaaaaaa-2424-4000-8000-000000000099','partial_refund',10.00,'SDG',
+  'CI partial refund test','ci-refund-0000001',NULL
+) AS adjustment_id \gset
+SELECT set_config('ammir.test.adjustment_id', :'adjustment_id', false);
+
+DO $test$
+DECLARE v_retry uuid; v_count integer;
+BEGIN
+  v_retry := public.ammar_record_commission_adjustment(
+    'aaaaaaaa-2424-4000-8000-000000000099','partial_refund',10.00,'SDG',
+    'CI partial refund test','ci-refund-0000001',NULL
+  );
+  IF v_retry::text <> current_setting('ammir.test.adjustment_id') THEN
+    RAISE EXCEPTION 'Idempotent retry returned a different adjustment ID';
+  END IF;
+  SELECT count(*) INTO v_count FROM public.ammar_commission_adjustments
+  WHERE idempotency_key='ci-refund-0000001';
+  IF v_count <> 1 THEN RAISE EXCEPTION 'Idempotent retry created duplicate rows'; END IF;
+END
+$test$;
+
+DO $test$
+DECLARE v_rejected boolean := false;
+BEGIN
+  BEGIN
+    PERFORM public.ammar_record_commission_adjustment(
+      'aaaaaaaa-2424-4000-8000-000000000099','partial_refund',11.00,'SDG',
+      'Changed payload retry','ci-refund-0000001',NULL
+    );
+  EXCEPTION WHEN OTHERS THEN v_rejected := true;
+  END;
+  IF NOT v_rejected THEN RAISE EXCEPTION 'Idempotency key accepted a different payload'; END IF;
+END
+$test$;
+
+DO $test$
+DECLARE v_rejected boolean := false;
+BEGIN
+  BEGIN
+    PERFORM public.ammar_record_commission_adjustment(
+      'aaaaaaaa-2424-4000-8000-000000000099','partial_refund',1.00,'EUR',
+      'Currency mismatch test','ci-currency-000001',NULL
+    );
+  EXCEPTION WHEN OTHERS THEN v_rejected := true;
+  END;
+  IF NOT v_rejected THEN RAISE EXCEPTION 'Currency mismatch was accepted'; END IF;
+END
+$test$;
+
+DO $test$
+DECLARE v_rejected boolean := false;
+BEGIN
+  BEGIN
+    PERFORM public.ammar_record_commission_adjustment(
+      'aaaaaaaa-2424-4000-8000-000000000099','partial_refund',41.00,'SDG',
+      'Over adjustment test','ci-overadjust-0001',NULL
+    );
+  EXCEPTION WHEN OTHERS THEN v_rejected := true;
+  END;
+  IF NOT v_rejected THEN RAISE EXCEPTION 'Over-adjustment was accepted'; END IF;
+END
+$test$;
+
+SELECT public.ammar_record_commission_adjustment(
+  'aaaaaaaa-2424-4000-8000-000000000099','full_reversal',40.00,'SDG',
+  'CI remaining balance reversal','ci-full-reversal-01',NULL
+);
+SELECT public.ammar_record_commission_adjustment(
+  'aaaaaaaa-2424-4000-8000-000000000099','fee_increase',5.00,'SDG',
+  'CI fee increase test','ci-fee-increase-01',NULL
+);
+
+-- Payer sees their rows; an unrelated authenticated account sees none.
+SELECT set_config('request.jwt.claim.sub','aaaaaaaa-2424-4000-8000-000000000001',false);
+DO $test$
+BEGIN
+  IF (SELECT count(*) FROM public.ammar_commission_adjustments) <> 3 THEN
+    RAISE EXCEPTION 'Payer cannot read all own commission adjustments';
+  END IF;
+END
+$test$;
+
+SELECT set_config('request.jwt.claim.sub','aaaaaaaa-2424-4000-8000-000000000002',false);
+DO $test$
+BEGIN
+  IF (SELECT count(*) FROM public.ammar_commission_adjustments) <> 0 THEN
+    RAISE EXCEPTION 'Unrelated account can read another payer commission adjustments';
+  END IF;
+END
+$test$;
+RESET ROLE;
+
+-- Append-only trigger must reject UPDATE and DELETE, even for the database owner.
+DO $test$
+DECLARE v_rejected boolean := false;
+BEGIN
+  BEGIN
+    UPDATE public.ammar_commission_adjustments
+    SET reason='Attempted mutation of immutable adjustment'
+    WHERE id=current_setting('ammir.test.adjustment_id')::uuid;
+  EXCEPTION WHEN OTHERS THEN v_rejected := true;
+  END;
+  IF NOT v_rejected THEN RAISE EXCEPTION 'Commission adjustment UPDATE was not blocked'; END IF;
+
+  v_rejected := false;
+  BEGIN
+    DELETE FROM public.ammar_commission_adjustments
+    WHERE id=current_setting('ammir.test.adjustment_id')::uuid;
+  EXCEPTION WHEN OTHERS THEN v_rejected := true;
+  END;
+  IF NOT v_rejected THEN RAISE EXCEPTION 'Commission adjustment DELETE was not blocked'; END IF;
+END
+$test$;
+
+SELECT 'AMMIR REVENUE ENGINE MIGRATIONS, AUTHORIZATION, ADJUSTMENT, RLS AND IMMUTABILITY TESTS PASSED' AS result;
