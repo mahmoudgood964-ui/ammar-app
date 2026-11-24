@@ -7,8 +7,8 @@
 
 - Repository: `mahmoudgood964-ui/ammar-app`; production branch: `main`.
 - Revenue implementation PR: #14, branch `feature/ammir-revenue-engine-v1`.
-- Latest code-and-test head verified for this pack: `208cce64edbc3cbd1d555cba0d486e92e6c2e262`.
-- Vercel preview for that code head: `https://ammar-g4qgekozx-mahmoudgood964-ui.vercel.app` (READY; preview only). A documentation-only refresh may advance the branch head without changing the tested application code.
+- Latest code-and-test head verified for this pack: `677fba2e2449a5bc56a40ebfdb1de2766b1cdfbb`.
+- The previously verified Vercel preview `https://ammar-g4qgekozx-mahmoudgood964-ui.vercel.app` was for the earlier application-code head `208cce64edbc3cbd1d555cba0d486e92e6c2e262` (READY; preview only). No Vercel deployment was found for the current test-only head `677fba2e2449a5bc56a40ebfdb1de2766b1cdfbb`; preview status for this head remains unverified.
 - Supabase production project: `uutwijowzewmvvrzsaww`, ACTIVE_HEALTHY, PostgreSQL 17.
 - Production migration history does not contain `20261124211500` or `20261124230000`.
 - No Supabase development branches exist; to avoid recurring compute charges, revenue migration tests now run in an ephemeral PostgreSQL 17 service container inside GitHub Actions instead of a paid Supabase branch.
@@ -18,7 +18,7 @@
 
 The workflow run associated with the previous PR head (`797705962acdb70db79826b6407ffc10c593a29f`) completed with failure. All preceding database, trust/admin, marketplace, messaging, storage, RLS, and private-RPC steps shown in that run completed successfully. The final static application check failed because it hard-coded the old Service Worker cache name `ammir-shell-v9-identity-first-load`, while both `main` and the feature branch already use `ammir-shell-v10-persistent-auth`.
 
-The test was corrected on this feature branch to assert a versioned AMMIR shell cache-name pattern rather than one obsolete literal. This is a test-maintenance correction, not a change to the Service Worker or its cache behaviour. A fresh green workflow run confirmed the correction: [GitHub Actions run #45489721782](https://github.com/mahmoudgood964-ui/ammar-app/actions/runs/45489721782), commit `d3a216036a129279cb7c9eb3377641280b182e5a` (SUCCESS). The expanded fee-decrease, invalid-input and same-key concurrency tests were then run on `34d3dbb9b1179d1bdbad03aa260fcb14d0168e2e`; both [push run #45492304272](https://github.com/mahmoudgood964-ui/ammar-app/actions/runs/45492304272) and [pull-request run #45492316397](https://github.com/mahmoudgood964-ui/ammar-app/actions/runs/45492316397) completed SUCCESS. Additional tests for blank/NULL inputs, original-ledger immutability and legacy payment-table fixture isolation were added. The latest code head `8c02a9e0cd83eb4788e0a5b5dca926857812d0fd` then passed both [push run #45493387107](https://github.com/mahmoudgood964-ui/ammar-app/actions/runs/45493387107) and [pull-request run #45493400405](https://github.com/mahmoudgood964-ui/ammar-app/actions/runs/45493400405), with all workflow steps green. The revenue CSV export was then hardened against spreadsheet-formula injection in untrusted text fields, including formulas preceded by whitespace; numeric amount columns remain numeric text. The current code head `208cce64edbc3cbd1d555cba0d486e92e6c2e262` passed [push run #45493781094](https://github.com/mahmoudgood964-ui/ammar-app/actions/runs/45493781094) and [pull-request run #45493795458](https://github.com/mahmoudgood964-ui/ammar-app/actions/runs/45493795458), with all workflow steps green.
+The test was corrected on this feature branch to assert a versioned AMMIR shell cache-name pattern rather than one obsolete literal. This is a test-maintenance correction, not a change to the Service Worker or its cache behaviour. A fresh green workflow run confirmed the correction: [GitHub Actions run #45489721782](https://github.com/mahmoudgood964-ui/ammar-app/actions/runs/45489721782), commit `d3a216036a129279cb7c9eb3377641280b182e5a` (SUCCESS). The expanded fee-decrease, invalid-input and same-key concurrency tests were then run on `34d3dbb9b1179d1bdbad03aa260fcb14d0168e2e`; both [push run #45492304272](https://github.com/mahmoudgood964-ui/ammar-app/actions/runs/45492304272) and [pull-request run #45492316397](https://github.com/mahmoudgood964-ui/ammar-app/actions/runs/45492316397) completed SUCCESS. Additional tests for blank/NULL inputs, original-ledger immutability and legacy payment-table fixture isolation were added. The latest code head `8c02a9e0cd83eb4788e0a5b5dca926857812d0fd` then passed both [push run #45493387107](https://github.com/mahmoudgood964-ui/ammar-app/actions/runs/45493387107) and [pull-request run #45493400405](https://github.com/mahmoudgood964-ui/ammar-app/actions/runs/45493400405), with all workflow steps green. The revenue CSV export was then hardened against spreadsheet-formula injection in untrusted text fields, including formulas preceded by whitespace; numeric amount columns remain numeric text. The application-code head `208cce64edbc3cbd1d555cba0d486e92e6c2e262` passed [push run #45493781094](https://github.com/mahmoudgood964-ui/ammar-app/actions/runs/45493781094) and [pull-request run #45493795458](https://github.com/mahmoudgood964-ui/ammar-app/actions/runs/45493795458), with all workflow steps green. Follow-up trigger regression coverage was added at `677fba2e2449a5bc56a40ebfdb1de2766b1cdfbb`; [push run #45495329660](https://github.com/mahmoudgood964-ui/ammar-app/actions/runs/45495329660) completed SUCCESS with all workflow steps green.
 
 ## 3. Release 0 — production acceptance checklist
 
@@ -94,13 +94,13 @@ The two migrations below are committed to the feature branch only. They must not
 ### Paid-ledger trigger protection
 
 - [x] Delivery commission row is created on the tested fully received delivery path (CI fixture). Partial-receipt commission behavior remains separately unverified.
-- [ ] Editing a non-paid delivery updates the corresponding non-paid ledger row as expected.
+- [x] Editing a non-paid delivery updates the corresponding non-paid ledger row as expected (CI fixture; gross and commission amounts asserted).
 - [x] Editing a paid delivery does not change paid gross amount, commission amount, rate, payer, or paid status (CI fixture; currency remains part of the unchanged ledger row but was not separately mutated).
-- [ ] Removing a delivery item does not rewrite a paid row's financial values.
+- [x] Removing a delivery item does not rewrite or void a paid row's financial values (CI fixture; amount, currency, rate, payer and paid status asserted).
 - [x] Delivery status leaving received states does not void a paid row (CI cancellation-path fixture).
 - [x] Service-award commission is created on the tested existing award-completion path (CI fixture).
 - [x] Repeated delivery/service-award trigger paths preserve the same paid ledger row (CI fixture).
-- [ ] Existing award-with-delivery duplicate prevention remains intact.
+- [x] Existing award-with-delivery duplicate prevention remains intact (CI fixture completes an award with an existing delivery and asserts no second service-award ledger entry).
 - [x] No production payment milestone, payment event, commission rate, or historical ledger row was modified during this work (production migration history and read-only checks; CI tests run only in disposable PostgreSQL).
 
 ### Required SQL evidence
@@ -127,8 +127,8 @@ For every case, record: fixture IDs, role/claims, SQL command or test name, expe
 
 | Gate | Current status | Evidence needed |
 |---|---|---|
-| PR #14 | Open / draft; mergeable at latest check; tested code head `208cce6` | CI green #45493781094 (push) and #45493795458 (PR); no review submissions or inline review threads were present at latest check; explicit release decision still required |
-| Vercel preview | READY for code head `208cce6` | Manual UI acceptance; preview is not production |
+| PR #14 | Open / draft; mergeable at latest check; latest test head `677fba2` | CI green #45495329660 (push) on `677fba2`; earlier app-code CI green #45493781094 and #45493795458; no review submissions or inline review threads at latest check; explicit release decision still required |
+| Vercel preview | READY only for earlier app-code head `208cce6`; no deployment found for test-only head `677fba2` | Confirm current preview/build state, then manual UI acceptance; preview is not production |
 | New SQL migrations | Both migrations applied and tested only in ephemeral GitHub Actions PostgreSQL 17; not applied to production | Review rollback and complete remaining trigger edge cases (non-paid delivery update, delivery-item removal, award-with-delivery duplicate guard); then explicit release decision |
 | P0 buyer/supplier/unrelated user | Not evidenced complete | Real consenting test accounts and evidence |
 | P0 admin/disputes | Not evidenced complete | Real admin test evidence |
