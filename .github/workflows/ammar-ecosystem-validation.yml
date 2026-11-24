@@ -138,5 +138,17 @@ jobs:
         run: |
           psql -h 127.0.0.1 -U postgres -d ammar_test -v ON_ERROR_STOP=1 -f tests/ammir-private-rpc-smoke.sql
           psql -h 127.0.0.1 -U postgres -d ammar_test -v ON_ERROR_STOP=1 -f tests/ammar-trust-admin.sql
+      - name: Apply AMMIR append-only commission adjustments migration
+        env:
+          PGPASSWORD: postgres
+        run: psql -h 127.0.0.1 -U postgres -d ammar_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261124211500_add_ammir_commission_adjustments.sql
+      - name: Protect paid AMMIR commission ledger rows
+        env:
+          PGPASSWORD: postgres
+        run: psql -h 127.0.0.1 -U postgres -d ammar_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261124230000_protect_paid_commission_ledger_rows.sql
+      - name: Test AMMIR revenue engine schema and authorization
+        env:
+          PGPASSWORD: postgres
+        run: psql -h 127.0.0.1 -U postgres -d ammar_test -v ON_ERROR_STOP=1 -f tests/ammir-revenue-engine.sql
       - name: Validate browser code and migration wiring
         run: node tests/check-ammar-app.mjs
