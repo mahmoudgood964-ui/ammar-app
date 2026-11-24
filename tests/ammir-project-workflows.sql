@@ -295,12 +295,46 @@ BEGIN
   IF to_regprocedure('app_private.ammir_sync_project_delivery_commission()') IS NOT NULL
      AND to_regprocedure('app_private.ammir_record_project_service_award_commission()') IS NOT NULL THEN
     INSERT INTO public.ammar_commission_rules(activity_type,rate_percent,payer_side,is_active,effective_from)
-    VALUES('engineering',5.00,'provider',true,now())
+    VALUES
+      ('engineering',5.00,'provider',true,now()),
+      ('market_materials',5.00,'provider',true,now())
     ON CONFLICT (activity_type) DO UPDATE
       SET rate_percent=EXCLUDED.rate_percent,
           payer_side=EXCLUDED.payer_side,
           is_active=true,
           effective_from=EXCLUDED.effective_from;
+
+    -- Partial-receipt regression: commission follows the quantity actually received,
+    -- not the full awarded/expected quantity.
+    UPDATE public.ammir_project_deliveries
+      SET status='partially_received'
+      WHERE id=v_delivery_a;
+
+    SELECT id INTO v_service_ledger_id
+    FROM public.ammar_commission_ledger
+    WHERE source_type='project_delivery'
+      AND source_id=v_delivery_a::text||':SDG'
+      AND gross_amount=330.00
+      AND commission_amount=16.50
+      AND status='due';
+
+    IF v_service_ledger_id IS NULL THEN
+      RAISE EXCEPTION 'Partial receipt did not create commission on received quantity only';
+    END IF;
+
+    UPDATE public.ammir_project_delivery_items
+      SET received_quantity=2,missing_quantity=2
+      WHERE id=v_delivery_item_a;
+
+    IF NOT EXISTS (
+      SELECT 1 FROM public.ammar_commission_ledger
+      WHERE id=v_service_ledger_id
+        AND gross_amount=220.00
+        AND commission_amount=11.00
+        AND status='due'
+    ) THEN
+      RAISE EXCEPTION 'Partial receipt quantity change did not synchronize the non-paid commission';
+    END IF;
 
     -- Delivery trigger: create a commission, settle it, then mutate the source.
     -- The paid ledger row must remain byte-for-byte stable through the upsert and void paths.
