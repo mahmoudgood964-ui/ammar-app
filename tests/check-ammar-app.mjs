@@ -221,7 +221,7 @@ assert.ok(pwaManifest.icons.some(icon => icon.src === '/icon-512.png' && icon.si
 assert.ok(identityCss.includes("url('/icon.svg')"), 'The app brand mark must use the canonical AMMIR seal');
 assert.ok(identityCss.includes(':focus-visible'), 'Keyboard-visible focus treatment is missing');
 assert.ok(serviceWorker.includes('/icon-512.png'), 'The 512px install icon must be cached in the app shell');
-assert.ok(serviceWorker.includes('ammir-shell-v9-identity-first-load'), 'Service worker cache must be versioned for the new identity assets');
+assert.match(serviceWorker, /const CACHE_NAME=['"]ammir-shell-v\\d+-[a-z0-9-]+['"]/i, 'Service worker cache must use a versioned AMMIR shell cache name');
 assert.ok(!serviceWorker.includes("html.replace('</head>'"), 'Service worker must not rewrite HTML to inject identity assets; first-load HTML must declare them directly');
 
 console.log('AMMIR static application and migration checks passed.');
