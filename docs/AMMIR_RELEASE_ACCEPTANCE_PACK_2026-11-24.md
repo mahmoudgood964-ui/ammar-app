@@ -86,7 +86,7 @@ The two migrations below are committed to the feature branch only. They must not
 - [x] Same idempotency key + same payload returns the same adjustment ID and creates one row (CI fixture).
 - [x] Same idempotency key + different payload is rejected (CI fixture).
 - [x] UPDATE and DELETE are rejected by the immutable trigger (CI fixture).
-- [x] Payer can read their own adjustment rows; unrelated payer cannot (CI fixture). Admin-read path is covered by policy/schema assertions; full UI/admin account acceptance remains open.
+- [x] Payer can read their own adjustment rows; unrelated payer cannot; administrator can read all rows under the authenticated RLS fixture (CI fixture). Full UI/admin account acceptance remains open.
 - [x] Concurrent reductions with distinct keys cannot reduce net commission below zero (two-session CI test).
 - [x] Concurrent replay with the same key produces one logical adjustment (two-session CI test; both calls succeed and exactly one row is recorded).
 - [x] Original ledger fixture gross amount, currency, rate, commission amount, payer and status remain unchanged after adjustments; legacy payment milestone/event fixtures remain empty (CI assertion).
@@ -102,11 +102,11 @@ The two migrations below are committed to the feature branch only. They must not
 - [x] Client-side summary rejects adjustment/ledger currency mismatches defensively.
 - [x] CI verifies partial refund, fee decrease, fee increase aggregation, net arithmetic, original-value preservation, currency mismatch rejection, and negative numeric CSV formatting.
 - [x] CI verifies adjustment loading across paginated result sets and 200-ledger-ID chunks (mock reproduces exact total-count semantics; all pages/chunks asserted).
-- [ ] Verify the adjusted dashboard on a Vercel preview for the exact tested head and complete manual admin UI acceptance.
+- [ ] Verify the adjusted dashboard on a Vercel preview for the exact tested application/test head and complete manual admin UI acceptance. The available READY preview serves the adjusted revenue UI code but was built from an earlier app commit; no preview exists for the latest branch head.
 
 ### Paid-ledger trigger protection
 
-- [x] Delivery commission row is created on the tested fully received delivery path (CI fixture). Partial-receipt commission behavior remains separately unverified.
+- [x] Delivery commission row is created on fully received and clean partial-receipt paths; the partial-receipt basis is limited to received quantity, and a changed received quantity synchronizes the unpaid row (CI fixture). Missing/damaged quantities remain exception cases.
 - [x] Editing a non-paid delivery updates the corresponding non-paid ledger row as expected (CI fixture; gross and commission amounts asserted).
 - [x] Editing a paid delivery does not change paid gross amount, commission amount, rate, payer, or paid status (CI fixture; currency remains part of the unchanged ledger row but was not separately mutated).
 - [x] Removing a delivery item does not rewrite or void a paid row's financial values (CI fixture; amount, currency, rate, payer and paid status asserted).
@@ -140,8 +140,8 @@ For every case, record: fixture IDs, role/claims, SQL command or test name, expe
 
 | Gate | Current status | Evidence needed |
 |---|---|---|
-| PR #14 | Open / draft; latest head `e9ccd0e`; not merged | PR CI #45497228884 and push CI #45497243476 green on exact head; no review submissions or inline review threads; explicit release decision still required |
-| Vercel preview | No deployment found for exact tested head `e9ccd0e` | Obtain preview for exact head, then manual admin UI acceptance; preview is not production |
+| PR #14 | Open / draft; latest head `143b5b2`; not merged | Latest CI for this head is running; earlier feature heads passed. No merge or production migration/deployment has been authorized. |
+| Vercel preview | READY preview exists at `https://ammar-4na89ynyy-mahmoudgood964-ui.vercel.app`; its deployed JavaScript contains the adjusted revenue dashboard, adjustment history, CSV export, and admin guard. It is not built from the latest branch head. | Obtain preview for the exact latest head after deployment quota allows, then complete manual admin UI acceptance; preview is not production |
 | New SQL migrations | Both migrations applied and tested only in ephemeral GitHub Actions PostgreSQL 17; not applied to production | Review rollback and remaining edge cases; then explicit release decision |
 | P0 buyer/supplier/unrelated user | Not evidenced complete | Real consenting test accounts and evidence |
 | P0 admin/disputes | Not evidenced complete | Real admin test evidence |
