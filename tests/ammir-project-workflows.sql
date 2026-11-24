@@ -305,7 +305,11 @@ BEGIN
           effective_from=EXCLUDED.effective_from;
 
     -- Partial-receipt regression: commission follows the quantity actually received,
-    -- not the full awarded/expected quantity.
+    -- not the full awarded/expected quantity. A clean partial receipt has an outstanding
+    -- balance but no missing/damaged quantity; those exceptions use the exception status.
+    UPDATE public.ammir_project_delivery_items
+      SET received_quantity=3,missing_quantity=0
+      WHERE id=v_delivery_item_a;
     UPDATE public.ammir_project_deliveries
       SET status='partially_received'
       WHERE id=v_delivery_a;
@@ -323,7 +327,7 @@ BEGIN
     END IF;
 
     UPDATE public.ammir_project_delivery_items
-      SET received_quantity=2,missing_quantity=2
+      SET received_quantity=2,missing_quantity=0
       WHERE id=v_delivery_item_a;
 
     IF NOT EXISTS (
