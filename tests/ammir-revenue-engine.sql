@@ -302,6 +302,26 @@ BEGIN
   v_rejected := false;
   BEGIN
     PERFORM public.ammar_record_commission_adjustment(
+      'aaaaaaaa-2424-4000-8000-000000000099','partial_refund',1,'SDG',
+      'Whitespace idempotency key test','            ',NULL
+    );
+  EXCEPTION WHEN OTHERS THEN v_rejected := true;
+  END;
+  IF NOT v_rejected THEN RAISE EXCEPTION 'Whitespace-only idempotency key was accepted'; END IF;
+
+  v_rejected := false;
+  BEGIN
+    PERFORM public.ammar_record_commission_adjustment(
+      'aaaaaaaa-2424-4000-8000-000000000099','partial_refund',1,'SDG',
+      'Padded idempotency key test',' ci-padded-key-01 ',NULL
+    );
+  EXCEPTION WHEN OTHERS THEN v_rejected := true;
+  END;
+  IF NOT v_rejected THEN RAISE EXCEPTION 'Whitespace-padded idempotency key was accepted'; END IF;
+
+  v_rejected := false;
+  BEGIN
+    PERFORM public.ammar_record_commission_adjustment(
       'aaaaaaaa-2424-4000-8000-000000000099'::uuid,'partial_refund',1,'SDG',
       '          ','ci-blank-reason-001',NULL
     );
@@ -318,6 +338,16 @@ BEGIN
   EXCEPTION WHEN OTHERS THEN v_rejected := true;
   END;
   IF NOT v_rejected THEN RAISE EXCEPTION 'Blank currency was accepted'; END IF;
+
+  v_rejected := false;
+  BEGIN
+    PERFORM public.ammar_record_commission_adjustment(
+      'aaaaaaaa-2424-4000-8000-000000000099'::uuid,'partial_refund',1,' SDG',
+      'Padded currency rejection test','ci-padded-currency-01',NULL
+    );
+  EXCEPTION WHEN OTHERS THEN v_rejected := true;
+  END;
+  IF NOT v_rejected THEN RAISE EXCEPTION 'Whitespace-padded currency was accepted'; END IF;
 
   v_rejected := false;
   BEGIN
