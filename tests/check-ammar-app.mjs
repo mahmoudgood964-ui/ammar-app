@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 
 const html = fs.readFileSync('index.html', 'utf8');
 const moduleSource = fs.readFileSync('ammar-marketplace.js', 'utf8');
+const commerceModuleSource = fs.readFileSync('ammir-commerce-os.js', 'utf8');
 const serviceWorker = fs.readFileSync('sw.js', 'utf8');
 const migration = fs.readFileSync('supabase/migrations/202611120006_ammar_marketplace_messaging.sql', 'utf8');
 const messagingPlus = fs.readFileSync('supabase/migrations/202611120007_ammar_messaging_plus.sql', 'utf8');
@@ -31,6 +32,7 @@ inlineScripts.forEach((match, index) => {
   new vm.Script(match[1], { filename: 'index.html:inline-script-' + (index + 1) });
 });
 new vm.Script(moduleSource, { filename: 'ammar-marketplace.js' });
+new vm.Script(commerceModuleSource, { filename: 'ammir-commerce-os.js' });
 
 assert.match(html, /window\.ammarSupabase\s*=\s*client/, 'Expose the existing authenticated Supabase client');
 assert.match(html, /<script src="\/ammar-marketplace\.js"><\/script>/, 'Load the ecosystem browser module');
@@ -221,7 +223,9 @@ assert.ok(pwaManifest.icons.some(icon => icon.src === '/icon-512.png' && icon.si
 assert.ok(identityCss.includes("url('/icon.svg')"), 'The app brand mark must use the canonical AMMIR seal');
 assert.ok(identityCss.includes(':focus-visible'), 'Keyboard-visible focus treatment is missing');
 assert.ok(serviceWorker.includes('/icon-512.png'), 'The 512px install icon must be cached in the app shell');
-assert.ok(serviceWorker.includes('ammir-shell-v9-identity-first-load'), 'Service worker cache must be versioned for the new identity assets');
+assert.ok(serviceWorker.includes('ammir-shell-v11-commerce-os'), 'Service worker cache must be versioned for the Commerce OS shell');
+assert.ok(serviceWorker.includes("'/ammir-commerce-os.js'"), 'Commerce OS module must be precached for offline app-shell use');
+assert.ok(serviceWorker.includes("'/ammir-analytics.js'"), 'Analytics module must be precached for offline app-shell use');
 assert.ok(!serviceWorker.includes("html.replace('</head>'"), 'Service worker must not rewrite HTML to inject identity assets; first-load HTML must declare them directly');
 
 console.log('AMMIR static application and migration checks passed.');
