@@ -42,6 +42,18 @@ BEGIN
     RAISE EXCEPTION 'Payer/admin read policy is missing';
   END IF;
 
+  IF has_table_privilege('anon',v_table_oid,'SELECT')
+     OR has_table_privilege('anon',v_table_oid,'INSERT')
+     OR has_table_privilege('authenticated',v_table_oid,'INSERT')
+     OR has_table_privilege('authenticated',v_table_oid,'UPDATE')
+     OR has_table_privilege('authenticated',v_table_oid,'DELETE') THEN
+    RAISE EXCEPTION 'Adjustment table grants exceed the intended read-only access model';
+  END IF;
+
+  IF NOT has_table_privilege('authenticated',v_table_oid,'SELECT') THEN
+    RAISE EXCEPTION 'Authenticated role must have SELECT for payer/admin RLS reads';
+  END IF;
+
   SELECT p.oid INTO v_rpc_oid
   FROM pg_proc p
   JOIN pg_namespace n ON n.oid=p.pronamespace
@@ -56,6 +68,15 @@ BEGIN
 
   IF NOT (SELECT prosecdef FROM pg_proc WHERE oid=v_rpc_oid) THEN
     RAISE EXCEPTION 'Commission adjustment RPC must be SECURITY DEFINER';
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_proc p
+    WHERE p.oid=v_rpc_oid
+      AND coalesce(array_to_string(p.proconfig,','),'') LIKE '%search_path=%'
+      AND array_to_string(p.proconfig,',') LIKE '%search_path=%'
+  ) THEN
+    RAISE EXCEPTION 'Commission adjustment RPC must pin its search_path';
   END IF;
 
   IF has_function_privilege('anon',v_rpc_oid,'EXECUTE') THEN
