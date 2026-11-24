@@ -304,6 +304,8 @@ BEGIN
 
     -- Delivery trigger: create a commission, settle it, then mutate the source.
     -- The paid ledger row must remain byte-for-byte stable through the upsert and void paths.
+    UPDATE public.ammir_project_deliveries SET status='exception'
+      WHERE id=v_delivery_b;
     UPDATE public.ammir_project_deliveries
       SET status='received',received_at=now(),received_by=v_owner
       WHERE id=v_delivery_b;
