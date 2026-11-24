@@ -319,12 +319,30 @@ BEGIN
       RAISE EXCEPTION 'Delivery commission trigger did not create its ledger row';
     END IF;
 
+    -- A non-paid source edit must synchronize the still-open commission row.
+    UPDATE public.ammir_project_delivery_items
+      SET received_quantity=4,missing_quantity=2
+      WHERE id=v_delivery_item_b;
+
+    IF NOT EXISTS (
+      SELECT 1 FROM public.ammar_commission_ledger
+      WHERE id=v_service_ledger_id AND status <> 'paid'
+        AND gross_amount=480.00 AND commission_amount=24.00
+    ) THEN
+      RAISE EXCEPTION 'Non-paid delivery edit did not synchronize the commission ledger';
+    END IF;
+
+    -- Snapshot the synchronized values, then settle the row.
+    SELECT gross_amount,rate_percent,commission_amount,payer_id
+      INTO v_before_gross,v_before_rate,v_before_commission,v_before_payer
+    FROM public.ammar_commission_ledger WHERE id=v_service_ledger_id;
+
     UPDATE public.ammar_commission_ledger
       SET status='paid',settled_at=now()
       WHERE id=v_service_ledger_id;
 
     UPDATE public.ammir_project_delivery_items
-      SET received_quantity=4,missing_quantity=2
+      SET received_quantity=3,missing_quantity=3
       WHERE id=v_delivery_item_b;
 
     IF NOT EXISTS (
@@ -336,6 +354,18 @@ BEGIN
       RAISE EXCEPTION 'Paid delivery commission was changed by a source-trigger upsert';
     END IF;
 
+    -- Removing a delivery line after settlement must not rewrite or void its paid row.
+    DELETE FROM public.ammir_project_delivery_items WHERE id=v_delivery_item_b;
+    IF NOT EXISTS (
+      SELECT 1 FROM public.ammar_commission_ledger
+      WHERE id=v_service_ledger_id AND status='paid'
+        AND gross_amount=v_before_gross AND currency='SDG'
+        AND rate_percent=v_before_rate AND commission_amount=v_before_commission
+        AND payer_id=v_before_payer
+    ) THEN
+      RAISE EXCEPTION 'Removing a delivery item rewrote a paid commission row';
+    END IF;
+
     UPDATE public.ammir_project_deliveries SET status='cancelled' WHERE id=v_delivery_b;
     IF NOT EXISTS (
       SELECT 1 FROM public.ammar_commission_ledger
@@ -343,6 +373,23 @@ BEGIN
         AND gross_amount=v_before_gross AND commission_amount=v_before_commission
     ) THEN
       RAISE EXCEPTION 'Paid delivery commission was voided or rewritten by the delivery status trigger';
+    END IF;
+
+    -- Service-award trigger: an award already fulfilled through delivery must not
+    -- also create a second service-award commission entry.
+    UPDATE public.ammir_project_awards
+      SET status='accepted',accepted_at=now()
+      WHERE id=v_award_b;
+    UPDATE public.ammir_project_awards
+      SET status='completed'
+      WHERE id=v_award_b;
+
+    IF EXISTS (
+      SELECT 1 FROM public.ammar_commission_ledger
+      WHERE source_type='project_service_award'
+        AND source_id LIKE v_award_b::text || ':%'
+    ) THEN
+      RAISE EXCEPTION 'Award with an existing delivery created a duplicate service-award commission';
     END IF;
 
     -- Service-award trigger: use a separate RFQ so the existing split awards remain intact.
