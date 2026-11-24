@@ -435,8 +435,8 @@
       gross_amount:'',currency:row.currency,rate_percent:'',commission_amount:'',payer_id:'',status:'',
       reason:row.reason,source_reference:row.source_reference,recorded_at:'',settled_at:'',created_at:row.created_at
     }));
-    const csv=[columns.join(','),...ledgerRows.concat(adjustmentRows).map(row=>columns.map(key=>revenueCsvCell(row[key],key)).join(','))].join('\\r\\n');
-    const blob=new Blob(['\\uFEFF'+csv],{type:'text/csv;charset=utf-8;'});
+    const csv=[columns.join(','),...ledgerRows.concat(adjustmentRows).map(row=>columns.map(key=>revenueCsvCell(row[key],key)).join(','))].join('\r\n');
+    const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8;'});
     const url=URL.createObjectURL(blob),link=document.createElement('a');
     link.href=url;link.download='ammir-revenue-ledger-and-adjustments.csv';document.body.appendChild(link);link.click();link.remove();URL.revokeObjectURL(url);
   }
