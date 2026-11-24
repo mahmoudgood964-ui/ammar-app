@@ -224,6 +224,62 @@ BEGIN
 END
 $test$;
 
+-- Reject invalid amounts, reasons, and idempotency keys before writing any row.
+DO $test$
+DECLARE v_rejected boolean;
+BEGIN
+  v_rejected := false;
+  BEGIN
+    PERFORM public.ammar_record_commission_adjustment(
+      'aaaaaaaa-2424-4000-8000-000000000099','partial_refund',0,'SDG',
+      'Zero amount rejection test','ci-zero-amount-0001',NULL
+    );
+  EXCEPTION WHEN OTHERS THEN v_rejected := true;
+  END;
+  IF NOT v_rejected THEN RAISE EXCEPTION 'Zero adjustment amount was accepted'; END IF;
+
+  v_rejected := false;
+  BEGIN
+    PERFORM public.ammar_record_commission_adjustment(
+      'aaaaaaaa-2424-4000-8000-000000000099','partial_refund',-1,'SDG',
+      'Negative amount rejection test','ci-negative-amount-01',NULL
+    );
+  EXCEPTION WHEN OTHERS THEN v_rejected := true;
+  END;
+  IF NOT v_rejected THEN RAISE EXCEPTION 'Negative adjustment amount was accepted'; END IF;
+
+  v_rejected := false;
+  BEGIN
+    PERFORM public.ammar_record_commission_adjustment(
+      'aaaaaaaa-2424-4000-8000-000000000099','partial_refund',1.234,'SDG',
+      'Precision rejection test','ci-precision-amount-01',NULL
+    );
+  EXCEPTION WHEN OTHERS THEN v_rejected := true;
+  END;
+  IF NOT v_rejected THEN RAISE EXCEPTION 'Adjustment with more than two decimal places was accepted'; END IF;
+
+  v_rejected := false;
+  BEGIN
+    PERFORM public.ammar_record_commission_adjustment(
+      'aaaaaaaa-2424-4000-8000-000000000099','partial_refund',1,'SDG',
+      'Too short','ci-short-reason-0001',NULL
+    );
+  EXCEPTION WHEN OTHERS THEN v_rejected := true;
+  END;
+  IF NOT v_rejected THEN RAISE EXCEPTION 'Short adjustment reason was accepted'; END IF;
+
+  v_rejected := false;
+  BEGIN
+    PERFORM public.ammar_record_commission_adjustment(
+      'aaaaaaaa-2424-4000-8000-000000000099','partial_refund',1,'SDG',
+      'Short idempotency key test','short-key',NULL
+    );
+  EXCEPTION WHEN OTHERS THEN v_rejected := true;
+  END;
+  IF NOT v_rejected THEN RAISE EXCEPTION 'Short idempotency key was accepted'; END IF;
+END
+$test$;
+
 SELECT public.ammar_record_commission_adjustment(
   'aaaaaaaa-2424-4000-8000-000000000099','full_reversal',40.00,'SDG',
   'CI remaining balance reversal','ci-full-reversal-01',NULL
@@ -232,12 +288,29 @@ SELECT public.ammar_record_commission_adjustment(
   'aaaaaaaa-2424-4000-8000-000000000099','fee_increase',5.00,'SDG',
   'CI fee increase test','ci-fee-increase-01',NULL
 );
+SELECT public.ammar_record_commission_adjustment(
+  'aaaaaaaa-2424-4000-8000-000000000099','fee_decrease',2.00,'SDG',
+  'CI fee decrease test','ci-fee-decrease-01',NULL
+);
+
+DO $test$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM public.ammar_commission_adjustments
+    WHERE idempotency_key='ci-fee-increase-01' AND amount_delta=5.00
+  ) THEN RAISE EXCEPTION 'Fee increase did not create a positive adjustment'; END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM public.ammar_commission_adjustments
+    WHERE idempotency_key='ci-fee-decrease-01' AND amount_delta=-2.00
+  ) THEN RAISE EXCEPTION 'Fee decrease did not create a negative adjustment'; END IF;
+END
+$test$;
 
 -- Payer sees their rows; an unrelated authenticated account sees none.
 SELECT set_config('request.jwt.claim.sub','aaaaaaaa-2424-4000-8000-000000000001',false);
 DO $test$
 BEGIN
-  IF (SELECT count(*) FROM public.ammar_commission_adjustments) <> 3 THEN
+  IF (SELECT count(*) FROM public.ammar_commission_adjustments) <> 4 THEN
     RAISE EXCEPTION 'Payer cannot read all own commission adjustments';
   END IF;
 END
