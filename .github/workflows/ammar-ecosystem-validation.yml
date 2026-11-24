@@ -146,6 +146,10 @@ jobs:
         env:
           PGPASSWORD: postgres
         run: psql -h 127.0.0.1 -U postgres -d ammar_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261124230000_protect_paid_commission_ledger_rows.sql
+      - name: Re-run project workflows against paid commission triggers
+        env:
+          PGPASSWORD: postgres
+        run: psql -h 127.0.0.1 -U postgres -d ammar_test -v ON_ERROR_STOP=1 -f tests/ammir-project-workflows.sql
       - name: Test AMMIR revenue engine schema and authorization
         env:
           PGPASSWORD: postgres
