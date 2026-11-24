@@ -414,6 +414,15 @@ BEGIN
   END IF;
 END
 $test$;
+
+SELECT set_config('request.jwt.claim.sub','aaaaaaaa-2424-4000-8000-000000000003',false);
+DO $test$
+BEGIN
+  IF (SELECT count(*) FROM public.ammar_commission_adjustments) <> 4 THEN
+    RAISE EXCEPTION 'Administrator cannot read all commission adjustment rows';
+  END IF;
+END
+$test$;
 RESET ROLE;
 
 -- Append-only trigger must reject UPDATE and DELETE, even for the database owner.
