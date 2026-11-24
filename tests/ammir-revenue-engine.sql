@@ -88,14 +88,8 @@ BEGIN
     RAISE EXCEPTION 'Service-award commission upsert does not protect paid ledger rows';
   END IF;
 
-  IF NOT has_function_privilege('anon',(
-    SELECT p.oid FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
-    WHERE n.nspname='app_private' AND p.proname='ammir_sync_project_delivery_commission'
-  ),'EXECUTE') THEN
-    -- Trigger functions should remain unavailable for direct anonymous invocation.
-    NULL;
-  ELSE
-    RAISE EXCEPTION 'Anonymous role can directly execute delivery commission trigger function';
+  IF has_schema_privilege('anon','app_private','USAGE') THEN
+    RAISE EXCEPTION 'Anonymous role must not access the internal app_private schema';
   END IF;
 END
 $test$;
