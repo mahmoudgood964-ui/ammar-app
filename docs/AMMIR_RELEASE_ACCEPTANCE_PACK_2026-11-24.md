@@ -18,7 +18,7 @@
 
 The workflow run associated with the previous PR head (`797705962acdb70db79826b6407ffc10c593a29f`) completed with failure. All preceding database, trust/admin, marketplace, messaging, storage, RLS, and private-RPC steps shown in that run completed successfully. The final static application check failed because it hard-coded the old Service Worker cache name `ammir-shell-v9-identity-first-load`, while both `main` and the feature branch already use `ammir-shell-v10-persistent-auth`.
 
-The test was corrected on this feature branch to assert a versioned AMMIR shell cache-name pattern rather than one obsolete literal. This is a test-maintenance correction, not a change to the Service Worker or its cache behaviour. A fresh green workflow run is still required to confirm the correction.
+The test was corrected on this feature branch to assert a versioned AMMIR shell cache-name pattern rather than one obsolete literal. This is a test-maintenance correction, not a change to the Service Worker or its cache behaviour. A fresh green workflow run confirmed the correction: [GitHub Actions run #45489721782](https://github.com/mahmoudgood964-ui/ammar-app/actions/runs/45489721782), commit `d3a216036a129279cb7c9eb3377641280b182e5a` (SUCCESS).
 
 ## 3. Release 0 — production acceptance checklist
 
@@ -75,31 +75,31 @@ The two migrations below are committed to the feature branch only. They must not
 ### Commission adjustments RPC and table
 
 - [ ] Anonymous caller cannot execute the RPC.
-- [ ] Authenticated non-admin cannot execute the RPC.
-- [ ] Admin can create a valid partial refund; delta is negative.
+- [x] Authenticated non-admin cannot execute the RPC (CI fixture).
+- [x] Admin can create a valid partial refund; delta is negative (CI fixture).
 - [ ] Admin can create a valid fee decrease; delta is negative.
 - [ ] Admin can create a valid fee increase; delta is positive.
-- [ ] Full reversal must equal the remaining balance after prior adjustments.
-- [ ] Reduction exceeding remaining balance is rejected.
-- [ ] Currency mismatch is rejected.
+- [x] Full reversal equals the remaining balance after prior adjustments (CI fixture).
+- [x] Reduction exceeding remaining balance is rejected (CI fixture).
+- [x] Currency mismatch is rejected (CI fixture).
 - [ ] Missing/short reason, malformed key, zero/negative amount, and >2-decimal amount are rejected.
-- [ ] Same idempotency key + same payload returns the same adjustment ID and creates one row.
-- [ ] Same idempotency key + different payload is rejected.
-- [ ] UPDATE and DELETE are rejected by the immutable trigger.
-- [ ] Payer can read their own adjustment rows; unrelated payer cannot; admin can read all.
-- [ ] Concurrent reductions with distinct keys cannot reduce net commission below zero.
+- [x] Same idempotency key + same payload returns the same adjustment ID and creates one row (CI fixture).
+- [x] Same idempotency key + different payload is rejected (CI fixture).
+- [x] UPDATE and DELETE are rejected by the immutable trigger (CI fixture).
+- [x] Payer can read their own adjustment rows; unrelated payer cannot (CI fixture). Admin-read path is covered by policy/schema assertions; full UI/admin account acceptance remains open.
+- [x] Concurrent reductions with distinct keys cannot reduce net commission below zero (two-session CI test).
 - [ ] Concurrent replay with the same key produces one logical adjustment.
 - [ ] Original ledger amount/status and payment milestone/event rows remain unchanged.
 
 ### Paid-ledger trigger protection
 
-- [ ] Delivery commission row is created correctly for received/partially received delivery.
+- [x] Delivery commission row is created on the tested fully received delivery path (CI fixture). Partial-receipt commission behavior remains separately unverified.
 - [ ] Editing a non-paid delivery updates the corresponding non-paid ledger row as expected.
-- [ ] Editing a paid delivery does not change paid gross amount, commission amount, rate, currency, payer, or paid status.
+- [x] Editing a paid delivery does not change paid gross amount, commission amount, rate, payer, or paid status (CI fixture; currency remains part of the unchanged ledger row but was not separately mutated).
 - [ ] Removing a delivery item does not rewrite a paid row's financial values.
-- [ ] Delivery status leaving received states does not void a paid row.
-- [ ] Service-award commission is created only on the existing supported award-completion path.
-- [ ] Repeated trigger execution is idempotent and does not duplicate ledger rows.
+- [x] Delivery status leaving received states does not void a paid row (CI cancellation-path fixture).
+- [x] Service-award commission is created on the tested existing award-completion path (CI fixture).
+- [x] Repeated delivery/service-award trigger paths preserve the same paid ledger row (CI fixture).
 - [ ] Existing award-with-delivery duplicate prevention remains intact.
 - [ ] No payment milestone, payment event, commission rate, or historical ledger row is modified.
 
@@ -127,9 +127,9 @@ For every case, record: fixture IDs, role/claims, SQL command or test name, expe
 
 | Gate | Current status | Evidence needed |
 |---|---|---|
-| PR #14 | Open / draft at pack creation | Fresh CI green, review, merge decision |
-| Vercel preview | READY for feature head | Manual UI acceptance; preview is not production |
-| New SQL migrations | Not applied to production | Safe-database SQL matrix and rollback review |
+| PR #14 | Open / draft; mergeable at latest check | CI green #45489721782; code review and explicit release decision still required |
+| Vercel preview | READY for head `d3a2160` | Manual UI acceptance; preview is not production |
+| New SQL migrations | Both migrations applied and tested only in ephemeral GitHub Actions PostgreSQL 17; not applied to production | Complete remaining negative-input/fee-decrease tests, review rollback, then explicit release decision |
 | P0 buyer/supplier/unrelated user | Not evidenced complete | Real consenting test accounts and evidence |
 | P0 admin/disputes | Not evidenced complete | Real admin test evidence |
 | P0 Android/weak network | Not evidenced complete | Physical device test record |
