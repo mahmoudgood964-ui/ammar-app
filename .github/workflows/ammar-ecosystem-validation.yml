@@ -6,7 +6,6 @@ on:
       - main
       - feature/ammar-market-messaging
       - launch/ammir-trust-hardening
-      - feature/ammir-revenue-engine-v1
       - fix/ammir-android-pwa-install
   pull_request:
     branches:
