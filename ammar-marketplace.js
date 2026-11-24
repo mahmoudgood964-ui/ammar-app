@@ -1111,9 +1111,27 @@ function providerTypeLabel(type){
   async function agreementsHtml(){
     const [a,l]=await Promise.all([
       db.from('ammar_agreements').select('*').order('created_at',{ascending:false}).limit(100),
-      db.from('ammar_commission_ledger').select('gross_amount,currency,commission_amount,status,recorded_at').eq('payer_id',user.id).order('recorded_at',{ascending:false}).limit(30)
+      db.from('ammar_commission_ledger').select('id,activity_type,source_type,source_id,gross_amount,currency,rate_percent,commission_amount,status,recorded_at,settled_at').eq('payer_id',user.id).order('recorded_at',{ascending:false}).limit(500)
     ]);
     if(a.error)throw a.error;if(l.error)throw l.error;
+    const ledgerRows=l.data||[];
+    const ledgerIds=ledgerRows.map(x=>x.id);
+    let adjustmentRows=[];
+    if(ledgerIds.length){
+      const adjustments=await db.from('ammar_commission_adjustments').select('id,ledger_id,adjustment_kind,amount_delta,currency,reason,source_reference,created_at').in('ledger_id',ledgerIds).order('created_at',{ascending:false}).limit(1000);
+      if(adjustments.error)throw adjustments.error;
+      adjustmentRows=adjustments.data||[];
+    }
+    const adjustmentTotals=new Map();
+    adjustmentRows.forEach(x=>adjustmentTotals.set(x.ledger_id,(adjustmentTotals.get(x.ledger_id)||0)+Number(x.amount_delta||0)));
+    const statementTotals=new Map();
+    ledgerRows.forEach(x=>{
+      const currency=String(x.currency||'');
+      const m=statementTotals.get(currency)||{count:0,gross:0,base:0,adjustments:0,net:0};
+      const delta=adjustmentTotals.get(x.id)||0;
+      m.count++;m.gross+=Number(x.gross_amount||0);m.base+=Number(x.commission_amount||0);m.adjustments+=delta;m.net+=Number(x.commission_amount||0)+delta;
+      statementTotals.set(currency,m);
+    });
     const agreements=(a.data||[]).map(x=>`
       <article class="eco-card">
         <h3>${esc(x.title)}</h3>
@@ -1125,8 +1143,17 @@ function providerTypeLabel(type){
           <button class="btn light" type="button" data-eco-agreement-chat="${esc(x.id)}" data-other="${esc(x.client_id===user.id?x.provider_id:x.client_id)}">مراسلة حول الاتفاق</button>
         </div>
       </article>`).join('');
-    const ledger=(l.data||[]).map(x=>`<div class="eco-row"><div>${money(x.gross_amount,x.currency)} · عمولة ${money(x.commission_amount,x.currency)}</div><span class="eco-pill">${esc(x.status)}</span></div>`).join('');
-    return `<section class="eco-card eco-subsection"><h3>الاتفاقات</h3><div class="eco-grid">${agreements||'<div class="eco-empty">لا توجد اتفاقات موثقة.</div>'}</div></section><section class="eco-card"><h3>سجل العمولات المستحقة</h3>${ledger||'<p class="muted">لا توجد عمولات مسجلة لهذا الحساب.</p>'}</section><div class="eco-note">العمولات هنا سجلات محاسبية فقط؛ لا ينفذ عَمِّر تحصيلاً أو حيازة أموال أو تحويلات بنكية.</div>`;
+    const ledger=ledgerRows.map(x=>{
+      const delta=adjustmentTotals.get(x.id)||0;
+      const net=Number(x.commission_amount||0)+delta;
+      return `<div class="eco-row"><div><strong>${money(x.gross_amount,x.currency)}</strong> · عمولة أصلية ${money(x.commission_amount,x.currency)} · التعديلات ${money(delta,x.currency)} · الصافي ${money(net,x.currency)}<div class="muted">${esc(x.activity_type)} · ${esc(x.source_type)}:${esc(x.source_id)} · ${esc(new Date(x.recorded_at).toLocaleDateString('ar'))}</div></div><span class="eco-pill">${esc(x.status)}</span></div>`;
+    }).join('');
+    const totals=[...statementTotals.entries()].map(([currency,m])=>`<article class="eco-card"><strong>${esc(currency)}</strong><p>عدد السجلات: ${m.count}</p><p>إجمالي أساس المعاملات: ${money(m.gross,currency)}</p><p>العمولة الأصلية: ${money(m.base,currency)}</p><p>صافي التعديلات: ${money(m.adjustments,currency)}</p><p><strong>صافي العمولة المسجلة: ${money(m.net,currency)}</strong></p></article>`).join('');
+    const statementCsvRows=ledgerRows.map(x=>{const delta=adjustmentTotals.get(x.id)||0;return [x.id,x.recorded_at,x.activity_type,x.source_type,x.source_id,x.gross_amount,x.currency,x.rate_percent,x.commission_amount,delta,Number(x.commission_amount||0)+delta,x.status,x.settled_at];});
+    const statementCsv=[['ledger_id','recorded_at','activity_type','source_type','source_id','gross_amount','currency','rate_percent','original_commission','adjustment_delta','net_commission','ledger_status','settled_at'],...statementCsvRows].map(row=>row.map(v=>{const s=String(v??'');return /[",\\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s;}).join(',')).join('\\r\\n');
+    const statementExport=`<button class="btn light" type="button" data-statement-export="${encodeURIComponent(statementCsv)}">تنزيل كشف CSV</button>`;
+    const adjustmentsHtml=adjustmentRows.map(x=>`<div class="eco-row"><div>${esc(x.adjustment_kind)} · ${money(x.amount_delta,x.currency)}<div class="muted">${esc(x.reason)} · ${esc(new Date(x.created_at).toLocaleDateString('ar'))}</div></div><span class="eco-pill">تعديل مسجل</span></div>`).join('');
+    return `<section class="eco-card eco-subsection"><h3>الاتفاقات</h3><div class="eco-grid">${agreements||'<div class="eco-empty">لا توجد اتفاقات موثقة.</div>'}</div></section><section class="eco-card eco-subsection"><h3>كشف حساب العمولات</h3><p class="muted">كشف قراءة فقط للفترة المتاحة في السجلات المحمّلة (حتى 500 قيد). يفصل بين قيمة المعاملات والعمولة الأصلية والتعديلات وصافي العمولة.</p><div class="eco-actions">${statementExport}</div><div class="eco-grid">${totals||'<div class="eco-empty">لا توجد قيود عمولات لهذا الحساب.</div>'}</div><h4>تفاصيل القيود</h4>${ledger||'<p class="muted">لا توجد عمولات مسجلة لهذا الحساب.</p>'}<h4>سجل التعديلات</h4>${adjustmentsHtml||'<p class="muted">لا توجد تعديلات مسجلة.</p>'}</section><div class="eco-note">هذا كشف محاسبي للعمولات المسجلة وليس فاتورة ضريبية أو إثبات تحصيل نقدي أو تسوية بنكية. حالة «مدفوع» تعكس حالة دفتر عَمِّر فقط؛ ولا يجوز اعتبارها مطابقة بنكية دون مستند من جهة الدفع.</div>`;
   }
 
   async function startConversation(other,context,contextId,subject){
@@ -1164,6 +1191,12 @@ function providerTypeLabel(type){
   async function click(e){
     const t=e.target.closest('[data-eco-tab]');if(t){chooseTab(t.dataset.ecoTab);return;}
     if(e.target.closest('[data-revenue-export]')){exportRevenueCsv();return;}
+    const statementExportButton=e.target.closest('[data-statement-export]');
+    if(statementExportButton){
+      const csv=decodeURIComponent(statementExportButton.dataset.statementExport||'');
+      const blob=new Blob(['\\uFEFF',csv],{type:'text/csv;charset=utf-8;'});
+      const url=URL.createObjectURL(blob);const link=document.createElement('a');link.href=url;link.download='ammir-commission-statement.csv';document.body.appendChild(link);link.click();link.remove();URL.revokeObjectURL(url);return;
+    }
     const adminButton=e.target.closest('[data-admin-review]');
     if(adminButton){handleAdminClick(adminButton).catch(err=>tell('تعذر حفظ قرار التحقق: '+(err.message||'خطأ'),'error'));return;}
     const b=e.target.closest('[data-eco-provider-chat],[data-eco-action],[data-eco-buy],[data-eco-contact],[data-eco-toggle-product],[data-eco-open-chat],[data-eco-accept-quote],[data-eco-submit-quote],[data-eco-advance],[data-eco-order-chat],[data-eco-create-agreement],[data-eco-service-offer],[data-eco-accept-service],[data-eco-service-chat],[data-eco-service-agreement],[data-eco-complete-service],[data-eco-accept-agreement],[data-eco-submit-review],[data-eco-quote-chat],[data-eco-agreement-chat],[data-eco-reply],[data-eco-clear-reply],[data-eco-pin],[data-eco-unpin],[data-eco-report],[data-eco-forward],[data-eco-archive],[data-eco-block],[data-eco-presence-toggle],[data-eco-location],[data-eco-to-task],[data-eco-to-change],[data-eco-unblock]');
