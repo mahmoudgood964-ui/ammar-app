@@ -74,6 +74,23 @@ assert.ok(
   moduleSource.includes("if(!isAdmin)throw new Error('ليست لديك صلاحية إدارة الإيرادات')"),
   'Revenue dashboard must enforce the admin guard before loading data'
 );
+
+assert.ok(
+  moduleSource.includes("const result=await db.rpc('is_admin')"),
+  'Admin UI privilege state must come from the server-side is_admin RPC'
+);
+assert.ok(
+  moduleSource.includes("const revenueTab=$('ecoRevenueTab');if(revenueTab)revenueTab.hidden=!isAdmin;"),
+  'Revenue navigation must be hidden for non-admin sessions'
+);
+assert.ok(
+  moduleSource.includes("if(!isAdmin&&['admin','revenue'].includes(tab))tab='market';"),
+  'Non-admin sessions must be redirected away from admin and revenue panels'
+);
+assert.ok(
+  moduleSource.includes("if($('ecoRevenueTab'))$('ecoRevenueTab').hidden=true;"),
+  'Revenue navigation must be hidden when the session is cleared'
+);
 const summarizedRevenue = revenueCsvSandbox.revenueAdjustmentSummary(
   [
     {id:'ledger-a',currency:'SDG',commission_amount:50.00,status:'due'},
