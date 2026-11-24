@@ -82,7 +82,7 @@ The two migrations below are committed to the feature branch only. They must not
 - [x] Full reversal equals the remaining balance after prior adjustments (CI fixture).
 - [x] Reduction exceeding remaining balance is rejected (CI fixture).
 - [x] Currency mismatch is rejected (CI fixture).
-- [x] Short/blank/NULL reason, short/NULL idempotency key, blank currency, NULL/zero/negative amount, and >2-decimal amount are rejected (CI fixtures). Malformed non-short key formats are not separately constrained or tested.
+- [x] Short/blank/NULL reason, short/NULL/whitespace-only/whitespace-padded idempotency key, blank/whitespace-padded currency, NULL/zero/negative amount, and >2-decimal amount are rejected (CI fixtures). Other unusual control-character content in identifiers is not separately tested.
 - [x] Same idempotency key + same payload returns the same adjustment ID and creates one row (CI fixture).
 - [x] Same idempotency key + different payload is rejected (CI fixture).
 - [x] UPDATE and DELETE are rejected by the immutable trigger (CI fixture).
@@ -183,3 +183,7 @@ The browser/static regression suite now also asserts that the revenue/admin navi
 The browser/static checks now assert that the admin state is populated by the existing server-side `db.rpc('is_admin')` call, the revenue tab is hidden for non-admin sessions, non-admin attempts to open admin/revenue panels are redirected to the market panel, and revenue navigation is hidden after session clear. An initial test-only assertion used the wrong source-code spelling and failed; the assertion was corrected to match the actual `db.rpc('is_admin').then(result=>` implementation. No application authorization logic was changed by that correction.
 
 Exact code/test head `143b5b2f6c508b600c8d617ff6a01a845d9b8dbe` passed [push run #45513590620](https://github.com/mahmoudgood964-ui/ammar-app/actions/runs/45513590620) and [pull-request run #45513597608](https://github.com/mahmoudgood964-ui/ammar-app/actions/runs/45513597608), both SUCCESS (39/39 steps in the push run). The subsequent acceptance-pack documentation update is at `973892f1d7a351ce7b1e14b7b6d7f53490122597`; its CI runs are tracked separately.
+
+## 9. Adjustment identifier normalization regression
+
+The adjustment migration now requires currency and idempotency-key values to be trimmed: leading/trailing whitespace is rejected by the table constraints and RPC validation, and whitespace-only keys are rejected. Regression fixtures cover whitespace-only keys, padded keys, and padded currency. Both [push run #45513929070](https://github.com/mahmoudgood964-ui/ammar-app/actions/runs/45513929070) and [pull-request run #45513932877](https://github.com/mahmoudgood964-ui/ammar-app/actions/runs/45513932877) passed SUCCESS on exact code/test head `3e05e24f32ab2de47413acfb3d907b329a5fb4f6`. This migration remains feature-branch-only.
