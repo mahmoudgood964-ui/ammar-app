@@ -11,7 +11,7 @@
 - Vercel preview for that head: `https://ammar-eyhmm5upm-mahmoudgood964-ui.vercel.app` (READY; preview only).
 - Supabase production project: `uutwijowzewmvvrzsaww`, ACTIVE_HEALTHY, PostgreSQL 17.
 - Production migration history does not contain `20261124211500` or `20261124230000`.
-- No Supabase development branches exist at the time of this check.
+- No Supabase development branches exist; to avoid recurring compute charges, revenue migration tests now run in an ephemeral PostgreSQL 17 service container inside GitHub Actions instead of a paid Supabase branch.
 - Production schema/data were not changed during this work.
 
 ## 2. CI failure and correction
