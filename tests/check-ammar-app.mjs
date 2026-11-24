@@ -265,9 +265,11 @@ assert.ok(commerceModuleSource.includes('auth.getSession'), 'Commerce OS must re
 
 
 // Supplier performance must be based only on manager-confirmed completed deliveries and current verified providers.
-assert.ok(moduleSource.includes(".eq('status','received').not('received_at','is',null)"), 'Supplier metrics must include only reconciled, completed deliveries');
-assert.ok(moduleSource.includes("'id,supplier_user_id,status,scheduled_at,received_at'"), 'Supplier metrics must use the delivery owner and persisted schedule/receipt timestamps');
-assert.ok(moduleSource.includes("x.status==='active'&&x.is_verified"), 'Supplier metrics must exclude inactive or unverified providers');
+assert.ok(moduleSource.includes(".eq('supplier_user_id',user.id).eq('status','received').not('received_at','is',null)"), 'Supplier metrics must be scoped to the authenticated supplier and reconciled completed deliveries');
+assert.ok(moduleSource.includes("'id,status,scheduled_at,received_at'"), 'Supplier metrics must use persisted schedule and receipt timestamps only');
+assert.ok(moduleSource.includes("p.status==='active'&&p.is_verified"), 'Supplier metrics must be limited to active, verified supplier accounts');
 assert.ok(moduleSource.includes('new Date(x.received_at).toISOString().slice(0,10)<=x.scheduled_at'), 'On-time delivery must compare the confirmed receipt date with the scheduled date');
-assert.ok(moduleSource.includes('لا نصدر درجات أو ترتيباً للموردين'), 'No supplier score or ranking may be invented when completed transactions are absent');
-assert.ok(moduleSource.includes('آخر 500 سجل تسليم مكتمل'), 'Supplier performance sample size and bounded history must be disclosed');
+assert.ok(moduleSource.includes('لا نصدر تقييماً أو ترتيباً دون بيانات حقيقية'), 'No supplier score or ranking may be invented when completed transactions are absent');
+assert.ok(moduleSource.includes('آخر 500 تسليم مكتمل'), 'Supplier performance sample size and bounded history must be disclosed');
+
+assert.ok(moduleSource.includes('async function supplierHtml()') && moduleSource.includes('panel.innerHTML=await supplierHtml()'), 'Supplier performance query must complete before rendering the supplier page');
