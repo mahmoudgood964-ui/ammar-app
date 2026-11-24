@@ -151,3 +151,13 @@ For every case, record: fixture IDs, role/claims, SQL command or test name, expe
 | P2–P5 | Not implemented as full releases | Pilot/partner/compliance gates above |
 
 **Production safety rule:** do not merge/deploy financial code or apply either migration until CI is green, the safe-database matrix passes, rollback is reviewed, and the owner explicitly approves the release. Preserve existing payment milestone logic and all historical financial data.
+
+## 5. Follow-up regression evidence — partial receipts and table grants
+
+The delivery workflow regression suite now explicitly covers a clean partial receipt: a delivery has an outstanding quantity but no missing/damaged quantity, the commission basis is limited to the received quantity, and a subsequent received-quantity change synchronizes the still-unpaid ledger row. The test intentionally respects the delivery state guard; missing or damaged quantities remain exception cases rather than being mislabeled as a clean partial receipt.
+
+The revenue-engine SQL assertions now also verify the adjustment table's least-privilege grants (authenticated read only, no anonymous read, no direct authenticated insert/update/delete) and require the SECURITY DEFINER adjustment RPC to pin its search path. These are test-only additions; no production grant, policy, or function was changed.
+
+Exact head `d40825c9827826067c3d83f4a769f28f25514327` passed [push run #45503249823](https://github.com/mahmoudgood964-ui/ammar-app/actions/runs/45503249823) and [pull-request run #45503260402](https://github.com/mahmoudgood964-ui/ammar-app/actions/runs/45503260402), both SUCCESS. The partial-receipt correction head `3dfe6fbd7a990234a0c201bec9dc20bbd209d22b` also passed [push run #45502800544](https://github.com/mahmoudgood964-ui/ammar-app/actions/runs/45502800544) and [pull-request run #45502811222](https://github.com/mahmoudgood964-ui/ammar-app/actions/runs/45502811222), both SUCCESS.
+
+A Vercel preview was requested for exact head `d40825c`, but the Vercel API again returned HTTP 402 `api-deployments-free-per-day` with a 24-hour retry window. No billing, plan, project, or production settings were changed. The feature remains unmerged and its migrations remain unapplied to production.
