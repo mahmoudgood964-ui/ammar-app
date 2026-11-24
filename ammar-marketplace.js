@@ -196,7 +196,7 @@
       await Promise.all([loadProducts(),loadProjects()]);
       panel.innerHTML=marketHtml();bindMarketFilters();
     }else if(tab==='supplier'){
-      await loadProfiles();await loadMyProducts();panel.innerHTML=supplierHtml();
+      await loadProfiles();await loadMyProducts();panel.innerHTML=await supplierHtml();
     }else if(tab==='orders'){
       await loadProfiles();panel.innerHTML=await ordersHtml();
     }else if(tab==='messages'){
@@ -318,8 +318,8 @@
         .select('id,entity_type,entity_id,business_name_snapshot,decision,reason,evidence_reference,actor_id,created_at')
         .order('created_at',{ascending:false}).limit(20),
       db.from('ammar_commission_rules').select('activity_type,rate_percent,payer_side,is_active,effective_from').order('activity_type'),
-      db.from('ammar_commission_ledger').select('id,activity_type,source_type,source_id,gross_amount,currency,rate_percent,commission_amount,payer_id,status,recorded_at,settled_at').order('recorded_at',{ascending:false}).limit(100)
-    ]);
+      db.from('ammar_commission_ledger').select('id,activity_type,source_type,source_id,gross_amount,currency,rate_percent,commission_amount,payer_id,status,recorded_at,settled_at').order('recorded_at',{ascending:false}).limit(100),
+      ]);
     for(const x of [s,p,r,d,e,c,l])if(x.error)throw x.error;
     const suppliers=s.data||[],providers=p.data||[],reports=r.data||[],disputes=d.data||[],events=e.data||[],commissionRules=c.data||[],commissionLedger=l.data||[];
     const activeCommissionRules=commissionRules.filter(x=>x.is_active);
@@ -542,7 +542,7 @@
     search?.addEventListener('input',apply);area?.addEventListener('change',apply);
   }
 
-  function supplierHtml(){
+  async function supplierHtml(){
     const p=supplier;
     const profile=`<section class="eco-card eco-subsection"><h3>${p?'تحديث ملف نشاطك التجاري':'إنشاء حساب مورد'}</h3>
       <form id="ecoSupplierForm" class="eco-form">
@@ -572,6 +572,17 @@
       </form>${p?`<div class="eco-meta"><span class="eco-pill">حالة الحساب: ${esc(p.status)}</span><span class="eco-pill">${p.is_verified?'تم التحقق':'لم يتم التحقق بعد'}</span></div>`:''}
     </section>`;
     if(!p)return profile+'<div class="eco-note">بعد إنشاء الحساب يمكنك إضافة منتجاتك وإدارة طلبات الشراء. شارة التحقق تمنحها إدارة عَمِّر فقط.</div>';
+    let performance='';
+    if(p.status==='active'&&p.is_verified){
+      const result=await db.from('ammir_project_deliveries').select('id,status,scheduled_at,received_at').eq('supplier_user_id',user.id).eq('status','received').not('received_at','is',null).order('received_at',{ascending:false}).limit(500);
+      if(result.error)throw result.error;
+      const deliveries=result.data||[],scheduled=deliveries.filter(x=>x.scheduled_at);
+      const onTime=scheduled.filter(x=>new Date(x.received_at).toISOString().slice(0,10)<=x.scheduled_at).length;
+      const rate=scheduled.length?Math.round(onTime/scheduled.length*100):null;
+      performance=`<section class="eco-card eco-subsection"><h3>أدائي كمورد في عَمِّر</h3><div class="eco-note">هذه بيانات حسابك أنت فقط، وتُحتسب من آخر 500 تسليم مكتمل أكّد مدير المشروع استلامه. لا تدخل عروض الأسعار أو التسليمات الجزئية أو الاستثناءات أو الإلغاءات. الالتزام بالموعد يُحسب فقط للتسليمات التي لها موعد مجدول.</div><div class="eco-grid"><article class="eco-card"><span class="eco-meta">تسليمات مكتملة ومؤكدة</span><h2>${deliveries.length}</h2></article><article class="eco-card"><span class="eco-meta">الالتزام بالموعد</span><h2>${rate===null?'بيانات غير كافية':rate+'%'}</h2><p>${rate===null?'لا توجد مواعيد مكتملة قابلة للقياس':onTime+' من '+scheduled.length+' تسليمات في الموعد أو قبله'}</p></article></div>${deliveries.length===0?'<div class="eco-empty">لا توجد معاملات مكتملة مؤكدة في حسابك بعد؛ لا نصدر تقييماً أو ترتيباً دون بيانات حقيقية.</div>':''}</section>`;
+    }else{
+      performance='<div class="eco-note">تظهر مؤشرات الأداء بعد اعتماد حساب المورد وتفعيله.</div>';
+    }
     const add=`<section class="eco-card eco-subsection"><h3>إضافة منتج جديد</h3>
       <form id="ecoProductForm" class="eco-form">
         <div><label>اسم المنتج *</label><input name="title" required maxlength="180"></div>
@@ -596,7 +607,7 @@
         <div class="wide"><button class="btn primary" type="submit">نشر المنتج في السوق</button></div>
       </form></section>`;
     const own=myProducts.length?myProducts.map(x=>`<div class="eco-row"><div><strong>${esc(x.title)}</strong><div class="muted">${money(x.price,x.currency)} / ${esc(x.unit)} · ${esc(x.availability)}</div></div><button class="btn ${x.is_active?'quiet':'light'}" type="button" data-eco-toggle-product="${esc(x.id)}" data-active="${x.is_active?'true':'false'}">${x.is_active?'إيقاف العرض':'إعادة النشر'}</button></div>`).join(''):'<div class="eco-empty">لم تضف منتجات بعد.</div>';
-    return profile+'<div class="eco-note"><strong>سياسة العمولة:</strong> عمولة عَمِّر المعتمدة 5% على المورد عند اكتمال المعاملة وفق شروطها؛ لا تُحمّل على العميل، ولا تعني أن المنصة تستلم الأموال أو تحتفظ بها.</div>'+add+`<section class="eco-card"><h3>منتجاتي</h3>${own}</section>`;
+    return profile+'<div class="eco-note"><strong>سياسة العمولة:</strong> عمولة عَمِّر المعتمدة 5% على المورد عند اكتمال المعاملة وفق شروطها؛ لا تُحمّل على العميل، ولا تعني أن المنصة تستلم الأموال أو تحتفظ بها.</div>'+performance+add+`<section class="eco-card"><h3>منتجاتي</h3>${own}</section>`;
   }
 
   async function ordersHtml(){
