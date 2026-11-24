@@ -349,10 +349,16 @@
     `;
   }
 
+  function revenueCsvCell(value,key){
+    let raw=String(value??'');
+    if(!['gross_amount','rate_percent','commission_amount'].includes(key)&&/^[\\s]*[=+\\-@]/.test(raw))raw="'"+raw;
+    return '"'+raw.replace(/"/g,'""')+'"';
+  }
+
   function exportRevenueCsv(){
     if(!isAdmin)return;
     const columns=['id','activity_type','source_type','source_id','gross_amount','currency','rate_percent','commission_amount','payer_id','status','recorded_at','settled_at'];
-    const csv=[columns.join(','),...revenueRows.map(row=>columns.map(key=>'"'+String(row[key]??'').replace(/"/g,'""')+'"').join(','))].join('\r\n');
+    const csv=[columns.join(','),...revenueRows.map(row=>columns.map(key=>revenueCsvCell(row[key],key)).join(','))].join('\r\n');
     const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8;'});
     const url=URL.createObjectURL(blob),link=document.createElement('a');
     link.href=url;link.download='ammir-revenue-ledger.csv';document.body.appendChild(link);link.click();link.remove();URL.revokeObjectURL(url);
