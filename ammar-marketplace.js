@@ -14,7 +14,7 @@
 
   let db=null,user=null,supplier=null,provider=null,products=[],myProducts=[],projects=[],serviceProviders=[];
   let tab='market',activeConversation=null,messageChannel=null,refreshTimer=null,presenceTimer=null,mounted=false;
-  let replyToMessageId=null,availableConversations=[],showLastSeen=true,isAdmin=false;
+  let replyToMessageId=null,availableConversations=[],showLastSeen=true,isAdmin=false,revenueRows=[];
 
   function styles(){
     if($('ammarEcosystemStyles'))return;
@@ -101,6 +101,7 @@
           <button class="eco-tab" type="button" data-eco-tab="agreements">الاتفاقات</button>
           <button class="eco-tab" type="button" data-eco-tab="partners">دليل الجهات</button>
           <button id="ecoAdminTab" class="eco-tab" type="button" data-eco-tab="admin" hidden>إدارة عَمِّر</button>
+          <button id="ecoRevenueTab" class="eco-tab" type="button" data-eco-tab="revenue" hidden>الإيرادات</button>
         </div>
         <div id="ecoNotice" class="message" role="status" aria-live="polite"></div>
         <div id="ecoPanel"><div class="eco-empty">جارٍ تحميل سوق عَمِّر...</div></div>
@@ -210,6 +211,9 @@
     }else if(tab==='admin'){
       if(!isAdmin)throw new Error('ليست لديك صلاحية إدارة عَمِّر');
       panel.innerHTML=await adminDashboardHtml();
+    }else if(tab==='revenue'){
+      if(!isAdmin)throw new Error('ليست لديك صلاحية إدارة الإيرادات');
+      panel.innerHTML=await revenueDashboardHtml();
     }
   }
 
@@ -299,6 +303,59 @@
     const q=($('ecoPartnerSearch')?.value||'').trim().toLowerCase(),type=$('ecoPartnerType')?.value||'all';
     const rows=allPartnerLeads.filter(p=>(type==='all'||p.type===type)&&[p.name,p.scope,p.contact].join(' ').toLowerCase().includes(q));
     grid.innerHTML=partnerCards(rows);
+  }
+
+  async function revenueDashboardHtml(){
+    if(!isAdmin)throw new Error('صلاحية إدارة الإيرادات مطلوبة');
+    const [ledger,rules]=await Promise.all([
+      db.from('ammar_commission_ledger')
+        .select('id,activity_type,source_type,source_id,gross_amount,currency,rate_percent,commission_amount,payer_id,status,recorded_at,settled_at',{count:'exact'})
+        .order('recorded_at',{ascending:false}).limit(2000),
+      db.from('ammar_commission_rules')
+        .select('activity_type,rate_percent,payer_side,is_active,effective_from')
+        .order('activity_type')
+    ]);
+    if(ledger.error)throw ledger.error;
+    if(rules.error)throw rules.error;
+    revenueRows=ledger.data||[];
+    const rulesRows=rules.data||[];
+    const fmt=(value,currency)=>new Intl.NumberFormat('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}).format(Number(value||0))+' '+esc(currency||'SDG');
+    const sum=(rows,key)=>rows.reduce((n,x)=>n+Number(x[key]||0),0);
+    const currencies=[...new Set(revenueRows.map(x=>x.currency||'SDG'))];
+    const statuses=['due','recorded','paid','refunded','void'];
+    const statusLabels={due:'مستحق',recorded:'مسجل',paid:'مدفوع/مسوّى',refunded:'مسترد',void:'ملغى'};
+    const activityLabels={market_materials:'توريد مواد البناء',contracting:'المقاولات',maintenance:'الصيانة',engineering:'الهندسة',other:'خدمات أخرى'};
+    const metrics=currencies.map(currency=>{
+      const rows=revenueRows.filter(x=>(x.currency||'SDG')===currency);
+      return {currency,gmv:sum(rows,'gross_amount'),earned:sum(rows.filter(x=>!['void','refunded'].includes(x.status)),'commission_amount'),paid:sum(rows.filter(x=>x.status==='paid'),'commission_amount'),due:sum(rows.filter(x=>x.status==='due'||x.status==='recorded'),'commission_amount'),count:rows.length};
+    });
+    const statusCards=statuses.map(status=>{
+      const rows=revenueRows.filter(x=>x.status===status);
+      return '<article class="eco-card"><span class="eco-meta">'+statusLabels[status]+'</span><h2>'+rows.length+'</h2><p>عدد السجلات ضمن البيانات المحمّلة</p></article>';
+    }).join('');
+    const rulesHtml=rulesRows.map(x=>'<article class="eco-card"><strong>'+esc(activityLabels[x.activity_type]||x.activity_type)+'</strong><div class="eco-price">'+Number(x.rate_percent).toFixed(2)+'%</div><p>الطرف الدافع: '+(x.payer_side==='customer'?'العميل':'المورد / مقدم الخدمة')+'</p><span class="eco-pill">'+(x.is_active?'مفعّلة':'غير مفعّلة')+'</span></article>').join('');
+    const rowsHtml=revenueRows.slice(0,100).map(x=>'<tr><td>'+esc(new Date(x.recorded_at).toLocaleString('ar'))+'</td><td>'+esc(activityLabels[x.activity_type]||x.activity_type)+'</td><td>'+esc(x.source_type)+' · '+esc(String(x.source_id||'').slice(0,12))+'</td><td>'+fmt(x.gross_amount,x.currency)+'</td><td>'+Number(x.rate_percent||0).toFixed(2)+'%</td><td><strong>'+fmt(x.commission_amount,x.currency)+'</strong></td><td>'+esc(statusLabels[x.status]||x.status)+'</td></tr>').join('');
+    return `
+      <div class="eco-note"><strong>محرك الإيرادات — قراءة إدارية فقط.</strong> يعرض هذا الإصدار السجل الحالي للعمولات من دفتر عَمِّر الموجود. قيمة المعاملات ليست إيراد عَمِّر؛ الإيراد هو مبلغ العمولة المسجل. لا توجد هنا بعد تسوية آلية مع البنوك أو بوابات الدفع، ولا تُعتبر حالة "مدفوع/مسوّى" إثباتاً بنكياً مستقلاً.</div>
+      <div class="eco-header"><div><h2>محرك الإيرادات</h2><p>ملخص دفتر العمولات الحالي، قواعد الرسوم، وحركة السجلات.</p></div><div class="eco-actions"><button class="btn light" type="button" data-revenue-export>تصدير CSV</button><button class="btn quiet" type="button" data-eco-action="refresh">تحديث</button></div></div>
+      <div class="eco-note">تم تحميل ${revenueRows.length} من أصل ${ledger.count??revenueRows.length} سجل كحد أقصى 2,000 سجل. الأرقام أدناه مبنية على السجلات المحمّلة فقط، وليست كشفاً مالياً مدققاً.</div>
+      <section class="eco-subsection"><h3>ملخص حسب العملة</h3>
+        <div class="eco-grid">${metrics.length?metrics.map(m=>'<article class="eco-card"><strong>'+esc(m.currency)+'</strong><div class="eco-meta"><span class="eco-pill">السجلات: '+m.count+'</span></div><p>قيمة المعاملات المسجلة (GMV basis): <strong>'+fmt(m.gmv,m.currency)+'</strong></p><p>العمولات غير الملغاة/غير المستردة: <strong>'+fmt(m.earned,m.currency)+'</strong></p><p>المسوّى وفق حالة الدفتر: <strong>'+fmt(m.paid,m.currency)+'</strong></p><p>المستحق أو المسجل: <strong>'+fmt(m.due,m.currency)+'</strong></p></article>').join(''):'<div class="eco-empty">لا توجد سجلات عمولات بعد.</div>'}</div>
+      </section>
+      <section class="eco-subsection"><h3>حالات دفتر العمولات</h3><div class="eco-grid">${statusCards}</div></section>
+      <section class="eco-subsection"><h3>قواعد العمولة الحالية</h3><div class="eco-grid">${rulesHtml||'<div class="eco-empty">لا توجد قواعد.</div>'}</div><p class="hint">القواعد المعروضة إعدادات قائمة حالياً، وليست توصية بتطبيق النسبة نفسها على النقل أو التمويل أو الإعلانات أو الاشتراكات.</p></section>
+      <section class="eco-subsection"><h3>أحدث السجلات (حتى 100)</h3><div style="overflow:auto"><table style="width:100%;border-collapse:collapse;min-width:760px;font-size:12px"><thead><tr><th>التاريخ</th><th>النشاط</th><th>المصدر</th><th>قيمة الصفقة</th><th>النسبة</th><th>العمولة</th><th>الحالة</th></tr></thead><tbody>${rowsHtml||'<tr><td colspan="7">لا توجد سجلات</td></tr>'}</tbody></table></div></section>
+      <div class="eco-note">الخطوة التالية قبل إضافة رسوم جديدة: توحيد مرجع المصدر، ودعم عكس الرسوم والاسترداد الجزئي، وإنشاء كشوف دورية للموردين، ثم مطابقة الدفتر مع تقارير مزود الدفع. لا تعدّل هذه اللوحة قواعد العمولة أو القيود المالية.</div>
+    `;
+  }
+
+  function exportRevenueCsv(){
+    if(!isAdmin)return;
+    const columns=['id','activity_type','source_type','source_id','gross_amount','currency','rate_percent','commission_amount','payer_id','status','recorded_at','settled_at'];
+    const csv=[columns.join(','),...revenueRows.map(row=>columns.map(key=>'"'+String(row[key]??'').replace(/"/g,'""')+'"').join(','))].join('\\r\\n');
+    const blob=new Blob(['\\uFEFF'+csv],{type:'text/csv;charset=utf-8;'});
+    const url=URL.createObjectURL(blob),link=document.createElement('a');
+    link.href=url;link.download='ammir-revenue-ledger.csv';document.body.appendChild(link);link.click();link.remove();URL.revokeObjectURL(url);
   }
 
   async function adminDashboardHtml(){
@@ -1023,6 +1080,7 @@ function providerTypeLabel(type){
 
   async function click(e){
     const t=e.target.closest('[data-eco-tab]');if(t){chooseTab(t.dataset.ecoTab);return;}
+    if(e.target.closest('[data-revenue-export]')){exportRevenueCsv();return;}
     const adminButton=e.target.closest('[data-admin-review]');
     if(adminButton){handleAdminClick(adminButton).catch(err=>tell('تعذر حفظ قرار التحقق: '+(err.message||'خطأ'),'error'));return;}
     const b=e.target.closest('[data-eco-provider-chat],[data-eco-action],[data-eco-buy],[data-eco-contact],[data-eco-toggle-product],[data-eco-open-chat],[data-eco-accept-quote],[data-eco-submit-quote],[data-eco-advance],[data-eco-order-chat],[data-eco-create-agreement],[data-eco-service-offer],[data-eco-accept-service],[data-eco-service-chat],[data-eco-service-agreement],[data-eco-complete-service],[data-eco-accept-agreement],[data-eco-submit-review],[data-eco-quote-chat],[data-eco-agreement-chat],[data-eco-reply],[data-eco-clear-reply],[data-eco-pin],[data-eco-unpin],[data-eco-report],[data-eco-forward],[data-eco-archive],[data-eco-block],[data-eco-presence-toggle],[data-eco-location],[data-eco-to-task],[data-eco-to-change],[data-eco-unblock]');
@@ -1274,7 +1332,8 @@ function providerTypeLabel(type){
       db.rpc('is_admin').then(result=>{
         isAdmin=!result.error&&result.data===true;
         const adminTab=$('ecoAdminTab');if(adminTab)adminTab.hidden=!isAdmin;
-        if(!isAdmin&&tab==='admin')tab='market';
+        const revenueTab=$('ecoRevenueTab');if(revenueTab)revenueTab.hidden=!isAdmin;
+        if(!isAdmin&&['admin','revenue'].includes(tab))tab='market';
       })
     ]).then(()=>render()).catch(err=>{
       const p=$('ecoPanel');
@@ -1294,6 +1353,7 @@ function providerTypeLabel(type){
       else{
         user=null;activeConversation=null;isAdmin=false;
         if($('ecoAdminTab'))$('ecoAdminTab').hidden=true;
+        if($('ecoRevenueTab'))$('ecoRevenueTab').hidden=true;
         if(refreshTimer)clearInterval(refreshTimer);
         if(presenceTimer)clearInterval(presenceTimer);
         if(messageChannel)db.removeChannel(messageChannel).catch(()=>{});
