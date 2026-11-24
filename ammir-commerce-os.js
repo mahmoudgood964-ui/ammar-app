@@ -1,9 +1,9 @@
 (function(){
 'use strict';
 const esc=v=>String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const money=(v,c)=>Number.isFinite(Number(v))?new Intl.NumberFormat('en-US',{maximumFractionDigits:2}).format(Number(v))+' '+esc(c||''):'غير مسجل';
+const money=(v,c)=>v==null||v===''?'غير مسجل':Number.isFinite(Number(v))?new Intl.NumberFormat('en-US',{maximumFractionDigits:2}).format(Number(v))+' '+esc(c||''):'غير مسجل';
 const date=v=>v?new Date(v).toLocaleDateString('ar',{year:'numeric',month:'short',day:'numeric'}):'غير محدد';
-const status=v=>({pending:'قيد الانتظار',submitted:'مرسل',quoted:'وصل عرض',accepted:'مقبول',awarded:'تمت الترسية',issued:'صدر',dispatched:'تم الإرسال',in_transit:'في الطريق',delivered:'تم التسليم',received:'تم الاستلام',completed:'مكتمل',cancelled:'ملغي',rejected:'مرفوض',open:'مفتوح',draft:'مسودة'})[v]||v||'غير محدد';
+const status=v=>({pending:'قيد الانتظار',submitted:'مرسل',quoted:'وصل عرض',accepted:'مقبول',awarded:'تمت الترسية',issued:'صدر',dispatched:'تم الإرسال',in_transit:'في الطريق',delivered:'تم التسليم',received:'تم الاستلام',completed:'مكتمل',cancelled:'ملغي',rejected:'مرفوض',open:'مفتوح',draft:'مسودة'})[v]||esc(v)||'غير محدد';
 let db=null,user=null,root=null,active='overview',busy=false,authBound=false;
 const modules=[
 ['الشبكة التجارية','المصانع والموردون والمقاولون والمشروعات','جزئي','السوق والموردون والمنتجات والخدمات والمشروعات موجودة؛ توحيد ملف المصنع والربط المؤسسي ما زال مطلوباً.'],
