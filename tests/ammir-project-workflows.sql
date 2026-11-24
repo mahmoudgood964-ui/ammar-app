@@ -295,7 +295,12 @@ BEGIN
   IF to_regprocedure('app_private.ammir_sync_project_delivery_commission()') IS NOT NULL
      AND to_regprocedure('app_private.ammir_record_project_service_award_commission()') IS NOT NULL THEN
     INSERT INTO public.ammar_commission_rules(activity_type,rate_percent,payer_side,is_active,effective_from)
-    VALUES('engineering',5.00,'provider',true,now());
+    VALUES('engineering',5.00,'provider',true,now())
+    ON CONFLICT (activity_type) DO UPDATE
+      SET rate_percent=EXCLUDED.rate_percent,
+          payer_side=EXCLUDED.payer_side,
+          is_active=true,
+          effective_from=EXCLUDED.effective_from;
 
     -- Delivery trigger: create a commission, settle it, then mutate the source.
     -- The paid ledger row must remain byte-for-byte stable through the upsert and void paths.
