@@ -116,7 +116,7 @@ revenueCsvSandbox.db = {
           revenueQueryTrace.push({ids:this.ids.slice(),from,to});
           const total=this.ids.length===200?1001:1;
           const count=from===0?Math.min(1000,total):Math.max(0,total-from);
-          return {count,data:Array.from({length:count},(_,index)=>({
+          return {count:total,data:Array.from({length:count},(_,index)=>({
             id:'adjustment-'+this.ids[0]+'-'+(from+index),
             ledger_id:this.ids[0],currency:'SDG',amount_delta:-0.01
           }))};
@@ -129,7 +129,6 @@ revenueCsvSandbox.db = {
 const pagedAdjustments = await revenueCsvSandbox.loadRevenueAdjustments(
   Array.from({length:201},(_,index)=>({id:'ledger-'+index}))
 );
-console.log('Revenue adjustment pagination trace:',JSON.stringify(revenueQueryTrace));
 assert.equal(pagedAdjustments.length,1002,'Revenue adjustment loader must fetch every adjustment page for every ledger ID chunk');
 assert.equal(revenueQueryTrace.length,3,'Revenue adjustment loader must paginate and split large ledger ID sets');
 assert.deepEqual(revenueQueryTrace.map(x=>x.ids.length),[200,200,1],'Revenue adjustment loader must use bounded ID chunks');
