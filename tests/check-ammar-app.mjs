@@ -262,3 +262,12 @@ assert.ok(commerceModuleSource.includes('لا تُجرى تحويلات عملا
 assert.ok(commerceModuleSource.includes('الوحدات التسع'), 'Commerce OS must expose the nine-module capability roadmap');
 assert.ok(commerceModuleSource.includes('auth.onAuthStateChange'), 'Commerce OS must follow authenticated session changes');
 assert.ok(commerceModuleSource.includes('auth.getSession'), 'Commerce OS must restore an existing authenticated session');
+
+
+// Supplier performance must be based only on manager-confirmed completed deliveries and current verified providers.
+assert.ok(moduleSource.includes(".eq('status','received').not('received_at','is',null)"), 'Supplier metrics must include only reconciled, completed deliveries');
+assert.ok(moduleSource.includes("'id,supplier_user_id,status,scheduled_at,received_at'"), 'Supplier metrics must use the delivery owner and persisted schedule/receipt timestamps');
+assert.ok(moduleSource.includes("x.status==='active'&&x.is_verified"), 'Supplier metrics must exclude inactive or unverified providers');
+assert.ok(moduleSource.includes('new Date(x.received_at).toISOString().slice(0,10)<=x.scheduled_at'), 'On-time delivery must compare the confirmed receipt date with the scheduled date');
+assert.ok(moduleSource.includes('لا نصدر درجات أو ترتيباً للموردين'), 'No supplier score or ranking may be invented when completed transactions are absent');
+assert.ok(moduleSource.includes('آخر 500 سجل تسليم مكتمل'), 'Supplier performance sample size and bounded history must be disclosed');
