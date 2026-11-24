@@ -303,7 +303,7 @@
 
   async function adminDashboardHtml(){
     if(!isAdmin)throw new Error('صلاحية المدير مطلوبة');
-    const [s,p,r,d,e,c]=await Promise.all([
+    const [s,p,r,d,e,c,l]=await Promise.all([
       db.from('ammar_market_suppliers')
         .select('id,business_name,owner_id,contact_name,contact_phone,whatsapp_phone,governorate,city,status,is_verified,brands,delivery_mode,delivery_coverage,created_at')
         .order('created_at',{ascending:false}).limit(100),
@@ -317,10 +317,11 @@
       db.from('ammar_provider_verification_events')
         .select('id,entity_type,entity_id,business_name_snapshot,decision,reason,evidence_reference,actor_id,created_at')
         .order('created_at',{ascending:false}).limit(20),
-      db.from('ammar_commission_rules').select('activity_type,rate_percent,payer_side,is_active,effective_from').order('activity_type')
+      db.from('ammar_commission_rules').select('activity_type,rate_percent,payer_side,is_active,effective_from').order('activity_type'),
+      db.from('ammar_commission_ledger').select('id,activity_type,source_type,source_id,gross_amount,currency,rate_percent,commission_amount,payer_id,status,recorded_at,settled_at').order('recorded_at',{ascending:false}).limit(100)
     ]);
-    for(const x of [s,p,r,d,e,c])if(x.error)throw x.error;
-    const suppliers=s.data||[],providers=p.data||[],reports=r.data||[],disputes=d.data||[],events=e.data||[],commissionRules=c.data||[];
+    for(const x of [s,p,r,d,e,c,l])if(x.error)throw x.error;
+    const suppliers=s.data||[],providers=p.data||[],reports=r.data||[],disputes=d.data||[],events=e.data||[],commissionRules=c.data||[],commissionLedger=l.data||[];
     const activeCommissionRules=commissionRules.filter(x=>x.is_active);
     const pendingProviders=[...suppliers.map(x=>({...x,_type:'supplier'})),...providers.map(x=>({...x,_type:'service_provider'}))]
       .filter(x=>!x.is_verified||x.status==='suspended');
@@ -339,6 +340,13 @@
           ${activeCommissionRules.map(x=>'<article class="eco-card"><strong>'+esc(({market_materials:'توريد مواد البناء',contracting:'المقاولات والتنفيذ',maintenance:'الصيانة',engineering:'الخدمات الهندسية',other:'الخدمات الأخرى'}[x.activity_type]||x.activity_type))+'</strong><div class="eco-price">'+Number(x.rate_percent).toFixed(2)+'%</div><p>تُحمّل على مقدم الخدمة / المورد، ولا تُحمّل على العميل.</p></article>').join('')}
         </div>
         <p class="hint">تُسجّل العمولة محاسبياً عند اكتمال المعاملة وفق شروط النظام. عَمِّر لا تحتفظ بأموال العملاء ولا تنفّذ التحويلات أو الضمان المالي.</p>
+      </section>
+      <section class="eco-subsection"><h3>كشف العمولات</h3>
+        <div class="eco-note">عرض محاسبي للقيود المسجلة فقط. لا يتم تحصيل الأموال أو تحديث حالة السداد من هذه الشاشة. لا يوجد تاريخ استحقاق في سجل البيانات الحالي، لذلك لا نصنّف أي قيد على أنه متأخر.</div>
+        <div class="eco-grid">
+          \${['recorded','due','paid','void','refunded'].map(status=>'<article class="eco-card"><span class="eco-meta">'+({recorded:'مسجل',due:'مستحق',paid:'مدفوع',void:'ملغى',refunded:'مسترد'}[status])+'</span><h2>'+commissionLedger.filter(x=>x.status===status).length+'</h2><p>عدد القيود</p></article>').join('')}
+        </div>
+        \${commissionLedger.length?commissionLedger.map(x=>'<article class="eco-card"><div class="eco-meta"><span class="eco-pill">'+esc(({recorded:'مسجل',due:'مستحق',paid:'مدفوع',void:'ملغى',refunded:'مسترد'}[x.status]||'حالة غير معروفة'))+'</span><span class="eco-pill">'+esc(({market_materials:'مواد بناء',contracting:'مقاولات',maintenance:'صيانة',engineering:'هندسة',other:'أخرى'}[x.activity_type]||x.activity_type))+'</span></div><div class="eco-price">'+money(x.commission_amount,x.currency)+'</div><p>قيمة المعاملة: '+money(x.gross_amount,x.currency)+' · النسبة المسجلة: '+Number(x.rate_percent).toFixed(2)+'%</p><p>المصدر: '+esc(x.source_type)+' · المرجع: '+esc(x.source_id)+'</p><p class="hint">تاريخ التسجيل: '+esc(x.recorded_at||'غير متاح')+' · تاريخ التسوية: '+esc(x.settled_at||'غير مسجل')+'</p></article>').join(''):'<div class="eco-empty">لا توجد قيود عمولة مسجلة بعد.</div>'}
       </section>
       <section class="eco-subsection"><h3>اعتماد الموردين ومقدمي الخدمات</h3>
         ${providerReviewCards(pendingProviders)}
