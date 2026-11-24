@@ -138,6 +138,10 @@ jobs:
         run: |
           psql -h 127.0.0.1 -U postgres -d ammar_test -v ON_ERROR_STOP=1 -f tests/ammir-private-rpc-smoke.sql
           psql -h 127.0.0.1 -U postgres -d ammar_test -v ON_ERROR_STOP=1 -f tests/ammar-trust-admin.sql
+      - name: Install AMMIR project award and delivery commission triggers
+        env:
+          PGPASSWORD: postgres
+        run: psql -h 127.0.0.1 -U postgres -d ammar_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261117222827_add_project_award_and_delivery_commission_ledger.sql
       - name: Apply AMMIR append-only commission adjustments migration
         env:
           PGPASSWORD: postgres
