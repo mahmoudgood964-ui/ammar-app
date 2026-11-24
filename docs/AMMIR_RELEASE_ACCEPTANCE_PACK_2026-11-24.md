@@ -7,8 +7,8 @@
 
 - Repository: `mahmoudgood964-ui/ammar-app`; production branch: `main`.
 - Revenue implementation PR: #14, branch `feature/ammir-revenue-engine-v1`.
-- Current feature head at preparation: `0ef45b561a104857f33f76ffda48372120e86b6c`.
-- Vercel preview for that head: `https://ammar-eyhmm5upm-mahmoudgood964-ui.vercel.app` (READY; preview only).
+- Latest code-and-test head verified for this pack: `34d3dbb9b1179d1bdbad03aa260fcb14d0168e2e`.
+- Vercel preview for that code head: `https://ammar-pqp98j9y0-mahmoudgood964-ui.vercel.app` (READY; preview only). A documentation-only refresh may advance the branch head without changing the tested application code.
 - Supabase production project: `uutwijowzewmvvrzsaww`, ACTIVE_HEALTHY, PostgreSQL 17.
 - Production migration history does not contain `20261124211500` or `20261124230000`.
 - No Supabase development branches exist; to avoid recurring compute charges, revenue migration tests now run in an ephemeral PostgreSQL 17 service container inside GitHub Actions instead of a paid Supabase branch.
@@ -18,7 +18,7 @@
 
 The workflow run associated with the previous PR head (`797705962acdb70db79826b6407ffc10c593a29f`) completed with failure. All preceding database, trust/admin, marketplace, messaging, storage, RLS, and private-RPC steps shown in that run completed successfully. The final static application check failed because it hard-coded the old Service Worker cache name `ammir-shell-v9-identity-first-load`, while both `main` and the feature branch already use `ammir-shell-v10-persistent-auth`.
 
-The test was corrected on this feature branch to assert a versioned AMMIR shell cache-name pattern rather than one obsolete literal. This is a test-maintenance correction, not a change to the Service Worker or its cache behaviour. A fresh green workflow run confirmed the correction: [GitHub Actions run #45489721782](https://github.com/mahmoudgood964-ui/ammar-app/actions/runs/45489721782), commit `d3a216036a129279cb7c9eb3377641280b182e5a` (SUCCESS).
+The test was corrected on this feature branch to assert a versioned AMMIR shell cache-name pattern rather than one obsolete literal. This is a test-maintenance correction, not a change to the Service Worker or its cache behaviour. A fresh green workflow run confirmed the correction: [GitHub Actions run #45489721782](https://github.com/mahmoudgood964-ui/ammar-app/actions/runs/45489721782), commit `d3a216036a129279cb7c9eb3377641280b182e5a` (SUCCESS). The expanded fee-decrease, invalid-input and same-key concurrency tests were then run on `34d3dbb9b1179d1bdbad03aa260fcb14d0168e2e`; both [push run #45492304272](https://github.com/mahmoudgood964-ui/ammar-app/actions/runs/45492304272) and [pull-request run #45492316397](https://github.com/mahmoudgood964-ui/ammar-app/actions/runs/45492316397) completed SUCCESS, with every job step green.
 
 ## 3. Release 0 — production acceptance checklist
 
@@ -74,21 +74,21 @@ The two migrations below are committed to the feature branch only. They must not
 
 ### Commission adjustments RPC and table
 
-- [ ] Anonymous caller cannot execute the RPC.
+- [x] Anonymous role has no EXECUTE privilege on the RPC (CI privilege assertion; direct anonymous invocation is not separately simulated).
 - [x] Authenticated non-admin cannot execute the RPC (CI fixture).
 - [x] Admin can create a valid partial refund; delta is negative (CI fixture).
-- [ ] Admin can create a valid fee decrease; delta is negative.
-- [ ] Admin can create a valid fee increase; delta is positive.
+- [x] Admin can create a valid fee decrease; delta is negative (CI fixture).
+- [x] Admin can create a valid fee increase; delta is positive (CI fixture).
 - [x] Full reversal equals the remaining balance after prior adjustments (CI fixture).
 - [x] Reduction exceeding remaining balance is rejected (CI fixture).
 - [x] Currency mismatch is rejected (CI fixture).
-- [ ] Missing/short reason, malformed key, zero/negative amount, and >2-decimal amount are rejected.
+- [x] Short reason, short idempotency key, zero/negative amount, and >2-decimal amount are rejected (CI fixture). Null/blank values and malformed non-short keys are not separately covered.
 - [x] Same idempotency key + same payload returns the same adjustment ID and creates one row (CI fixture).
 - [x] Same idempotency key + different payload is rejected (CI fixture).
 - [x] UPDATE and DELETE are rejected by the immutable trigger (CI fixture).
 - [x] Payer can read their own adjustment rows; unrelated payer cannot (CI fixture). Admin-read path is covered by policy/schema assertions; full UI/admin account acceptance remains open.
 - [x] Concurrent reductions with distinct keys cannot reduce net commission below zero (two-session CI test).
-- [ ] Concurrent replay with the same key produces one logical adjustment.
+- [x] Concurrent replay with the same key produces one logical adjustment (two-session CI test; both calls succeed and exactly one row is recorded).
 - [ ] Original ledger amount/status and payment milestone/event rows remain unchanged.
 
 ### Paid-ledger trigger protection
@@ -101,7 +101,7 @@ The two migrations below are committed to the feature branch only. They must not
 - [x] Service-award commission is created on the tested existing award-completion path (CI fixture).
 - [x] Repeated delivery/service-award trigger paths preserve the same paid ledger row (CI fixture).
 - [ ] Existing award-with-delivery duplicate prevention remains intact.
-- [ ] No payment milestone, payment event, commission rate, or historical ledger row is modified.
+- [x] No production payment milestone, payment event, commission rate, or historical ledger row was modified during this work (production migration history and read-only checks; CI tests run only in disposable PostgreSQL).
 
 ### Required SQL evidence
 
@@ -127,9 +127,9 @@ For every case, record: fixture IDs, role/claims, SQL command or test name, expe
 
 | Gate | Current status | Evidence needed |
 |---|---|---|
-| PR #14 | Open / draft; mergeable at latest check | CI green #45489721782; code review and explicit release decision still required |
-| Vercel preview | READY for head `d3a2160` | Manual UI acceptance; preview is not production |
-| New SQL migrations | Both migrations applied and tested only in ephemeral GitHub Actions PostgreSQL 17; not applied to production | Complete remaining negative-input/fee-decrease tests, review rollback, then explicit release decision |
+| PR #14 | Open / draft; mergeable at latest check; tested code head `34d3dbb` | CI green #45492304272 (push) and #45492316397 (PR); no review submissions or inline review threads were present at latest check; explicit release decision still required |
+| Vercel preview | READY for code head `34d3dbb` | Manual UI acceptance; preview is not production |
+| New SQL migrations | Both migrations applied and tested only in ephemeral GitHub Actions PostgreSQL 17; not applied to production | Review rollback and complete remaining edge cases (blank/null inputs, non-paid trigger update, delivery-item removal, award-with-delivery duplicate guard, and ledger/payment immutability assertions), then explicit release decision |
 | P0 buyer/supplier/unrelated user | Not evidenced complete | Real consenting test accounts and evidence |
 | P0 admin/disputes | Not evidenced complete | Real admin test evidence |
 | P0 Android/weak network | Not evidenced complete | Physical device test record |
