@@ -234,3 +234,26 @@ assert.match(html, /function passwordPolicyError\(password\)/, 'Password policy 
 assert.match(html, /password\.length<12/, 'Signup and recovery must require at least 12 characters');
 assert.match(html, /classes<3/, 'Password policy must require three character classes');
 assert.match(html, /minlength="12"/, 'Password inputs must expose the 12-character minimum');
+
+
+// Commerce OS safety and data-contract regression checks.
+assert.match(html, /<script src="\/ammir-commerce-os\.js" defer><\/script>/, 'Commerce OS must load as a deferred module');
+assert.ok(commerceModuleSource.includes("db.from(table).select(fields)"), 'Commerce OS must read through the existing authenticated Supabase client');
+assert.ok(commerceModuleSource.includes(".limit(150)"), 'Commerce OS queries must remain bounded');
+for (const table of [
+  'ammar_market_suppliers','ammar_market_products','ammar_market_requests',
+  'ammir_project_rfqs','ammir_project_rfq_quotes','ammir_project_deliveries',
+  'ammir_project_boq_items'
+]) {
+  assert.ok(commerceModuleSource.includes("['" + table + "'"), 'Commerce OS is missing the expected read model for ' + table);
+}
+assert.doesNotMatch(commerceModuleSource, /\.\s*(?:insert|update|upsert|delete)\s*\(/i, 'Commerce OS must remain read-only until write workflows receive dedicated authorization and tests');
+assert.doesNotMatch(commerceModuleSource, /fetch\s*\(|XMLHttpRequest|WebSocket\s*\(/, 'Commerce OS must not bypass the authenticated Supabase client with direct network calls');
+assert.ok(commerceModuleSource.includes("v==null||v===''?'غير مسجل'"), 'Missing costs must never be presented as zero');
+assert.ok(commerceModuleSource.includes("||esc(v)||'غير محدد'"), 'Unknown status labels must be escaped before rendering');
+assert.ok(commerceModuleSource.includes('GPS حيّاً'), 'Delivery view must disclose that it is not live GPS tracking');
+assert.ok(commerceModuleSource.includes('ليس تحليلاً بالذكاء الاصطناعي'), 'BOQ view must not claim AI analysis before that feature exists');
+assert.ok(commerceModuleSource.includes('لا تُجرى تحويلات عملات'), 'Quote comparison must not imply unsupported currency conversion');
+assert.ok(commerceModuleSource.includes('الوحدات التسع'), 'Commerce OS must expose the nine-module capability roadmap');
+assert.ok(commerceModuleSource.includes('auth.onAuthStateChange'), 'Commerce OS must follow authenticated session changes');
+assert.ok(commerceModuleSource.includes('auth.getSession'), 'Commerce OS must restore an existing authenticated session');
