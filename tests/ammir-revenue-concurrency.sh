@@ -46,7 +46,7 @@ result=$("${DB[@]}" -At -c "
   SELECT count(*) || ':' || coalesce(sum(amount_delta),0)
   FROM public.ammar_commission_adjustments
   WHERE ledger_id='aaaaaaaa-2424-4000-8000-000000000098'::uuid;
-)"
+")
 
 if [[ "$result" != "1:-30.00" && "$result" != "1:-30" ]]; then
   echo "Unexpected concurrent adjustment state: $result"
