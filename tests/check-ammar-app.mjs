@@ -129,6 +129,7 @@ revenueCsvSandbox.db = {
 const pagedAdjustments = await revenueCsvSandbox.loadRevenueAdjustments(
   Array.from({length:201},(_,index)=>({id:'ledger-'+index}))
 );
+console.log('Revenue adjustment pagination trace:',JSON.stringify(revenueQueryTrace));
 assert.equal(pagedAdjustments.length,1002,'Revenue adjustment loader must fetch every adjustment page for every ledger ID chunk');
 assert.equal(revenueQueryTrace.length,3,'Revenue adjustment loader must paginate and split large ledger ID sets');
 assert.deepEqual(revenueQueryTrace.map(x=>x.ids.length),[200,200,1],'Revenue adjustment loader must use bounded ID chunks');
