@@ -167,3 +167,9 @@ A Vercel preview was requested for exact head `d40825c`, but the Vercel API agai
 The revenue-engine SQL test now confirms all three sides of the adjustment read policy: the payer sees their own adjustments, an unrelated authenticated account sees none, and an administrator can read all adjustment rows. The assertion runs under the authenticated role with the admin fixture, so it exercises the policy rather than merely inspecting its definition.
 
 Exact head `ea9b0c52d0836129325ee18bdc8465bc1f377186` passed [push run #45503670749](https://github.com/mahmoudgood964-ui/ammar-app/actions/runs/45503670749) and [pull-request run #45503683103](https://github.com/mahmoudgood964-ui/ammar-app/actions/runs/45503683103), both SUCCESS (39/39 workflow steps).
+
+## 7. Production PWA static smoke check (read-only)
+
+A read-only HTTP check against `https://app.ammirbuild.com` returned HTTP 200 for the Arabic RTL application shell, `manifest.webmanifest`, `sw.js`, and all three manifest icon assets (`icon-192.png`, `icon-512.png`, `icon.svg`). The manifest parses as JSON and declares standalone display, root start URL/scope, Arabic RTL metadata, and the expected 192/512/SVG icons. The service worker is served successfully and contains the current `ammir-shell-v10-persistent-auth` cache identifier, navigation fallback, `skipWaiting`, and `clients.claim` handling.
+
+This is a static production smoke check only. It does not replace physical Android installation, real authentication/session transitions, private-file access checks, offline retry, or weak-network acceptance. No production data or settings were changed.
