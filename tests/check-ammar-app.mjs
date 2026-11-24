@@ -32,6 +32,34 @@ inlineScripts.forEach((match, index) => {
 });
 new vm.Script(moduleSource, { filename: 'ammar-marketplace.js' });
 
+const revenueExportStart = moduleSource.indexOf('function revenueCsvCell(');
+const revenueExportEnd = moduleSource.indexOf('async function adminDashboardHtml()', revenueExportStart);
+assert.ok(revenueExportStart >= 0 && revenueExportEnd > revenueExportStart, 'Revenue CSV export helpers are missing');
+const revenueCsvSandbox = {};
+vm.runInNewContext(
+  moduleSource.slice(revenueExportStart, revenueExportEnd) + String.fromCharCode(10) + 'globalThis.revenueCsvCell=revenueCsvCell;',
+  revenueCsvSandbox
+);
+assert.equal(
+  revenueCsvSandbox.revenueCsvCell('=HYPERLINK("https://evil.example")', 'source_id'),
+  '"\'=HYPERLINK(""https://evil.example"")"',
+  'CSV export must neutralize spreadsheet formulas in text fields'
+);
+assert.equal(
+  revenueCsvSandbox.revenueCsvCell('@SUM(A1:A2)', 'source_id'),
+  '"\'@SUM(A1:A2)"',
+  'CSV export must neutralize formula-like text beginning with @'
+);
+assert.equal(
+  revenueCsvSandbox.revenueCsvCell('-5.00', 'commission_amount'),
+  '"-5.00"',
+  'CSV export must preserve numeric values as numeric text'
+);
+assert.ok(
+  moduleSource.includes("if(!isAdmin)throw new Error('ليست لديك صلاحية إدارة الإيرادات')"),
+  'Revenue dashboard must enforce the admin guard before loading data'
+);
+
 assert.match(html, /window\.ammarSupabase\s*=\s*client/, 'Expose the existing authenticated Supabase client');
 assert.match(html, /<script src="\/ammar-marketplace\.js"><\/script>/, 'Load the ecosystem browser module');
 assert.match(serviceWorker, /ammar-marketplace\.js/, 'Cache the ecosystem module in the service worker');
