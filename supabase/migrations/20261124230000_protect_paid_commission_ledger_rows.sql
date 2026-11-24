@@ -123,8 +123,7 @@ BEGIN
 
   RETURN NULL;
 END;
-$function$
-
+$function$;
 
 CREATE OR REPLACE FUNCTION app_private.ammir_sync_project_delivery_commission()
  RETURNS trigger
@@ -300,5 +299,4 @@ BEGIN
 
   RETURN NULL;
 END;
-$function$
-
+$function$;
