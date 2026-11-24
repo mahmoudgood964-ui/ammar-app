@@ -37,7 +37,7 @@ const revenueExportEnd = moduleSource.indexOf('async function adminDashboardHtml
 assert.ok(revenueExportStart >= 0 && revenueExportEnd > revenueExportStart, 'Revenue CSV export helpers are missing');
 const revenueCsvSandbox = {};
 vm.runInNewContext(
-  moduleSource.slice(revenueExportStart, revenueExportEnd) + String.fromCharCode(10) + 'globalThis.revenueCsvCell=revenueCsvCell;',
+  moduleSource.slice(revenueExportStart, revenueExportEnd) + String.fromCharCode(10) + 'globalThis.revenueCsvCell=revenueCsvCell;globalThis.revenueAdjustmentSummary=revenueAdjustmentSummary;',
   revenueCsvSandbox
 );
 assert.equal(
@@ -64,6 +64,36 @@ assert.ok(
   moduleSource.includes("if(!isAdmin)throw new Error('ليست لديك صلاحية إدارة الإيرادات')"),
   'Revenue dashboard must enforce the admin guard before loading data'
 );
+const summarizedRevenue = revenueCsvSandbox.revenueAdjustmentSummary(
+  [
+    {id:'ledger-a',currency:'SDG',commission_amount:50.00,status:'due'},
+    {id:'ledger-b',currency:'USD',commission_amount:25.00,status:'paid'}
+  ],
+  [
+    {ledger_id:'ledger-a',currency:'SDG',amount_delta:-10.00},
+    {ledger_id:'ledger-a',currency:'SDG',amount_delta:-5.00},
+    {ledger_id:'ledger-a',currency:'SDG',amount_delta:3.00},
+    {ledger_id:'ledger-b',currency:'USD',amount_delta:-2.50},
+    {ledger_id:'unloaded-ledger',currency:'SDG',amount_delta:-99.00}
+  ]
+);
+assert.equal(summarizedRevenue[0].adjustment_delta,-12.00,'Revenue summary must net all append-only adjustments for the ledger');
+assert.equal(summarizedRevenue[0].net_commission_amount,38.00,'Revenue summary must calculate original commission plus adjustments');
+assert.equal(summarizedRevenue[0].commission_amount,50.00,'Revenue summary must preserve the immutable original commission amount');
+assert.equal(summarizedRevenue[1].adjustment_delta,-2.50,'Revenue summary must keep currency-specific ledger adjustments separate');
+assert.equal(summarizedRevenue[1].net_commission_amount,22.50,'Revenue summary must calculate adjusted commission for each ledger row');
+assert.throws(
+  () => revenueCsvSandbox.revenueAdjustmentSummary(
+    [{id:'ledger-c',currency:'SDG',commission_amount:10}],
+    [{ledger_id:'ledger-c',currency:'USD',amount_delta:-1}]
+  ),
+  /عملة التعديل لا تطابق عملة سجل العمولة/,
+  'Revenue summary must reject an adjustment whose currency differs from its ledger row'
+);
+assert.ok(moduleSource.includes("db.from('ammar_commission_adjustments')"),'Revenue dashboard must load append-only adjustment rows');
+assert.ok(moduleSource.includes("record_type:'adjustment'"),'Revenue CSV must include adjustment event rows separately from ledger rows');
+assert.ok(moduleSource.includes('net_commission_amount'),'Revenue dashboard and export must expose adjusted net commission');
+
 
 assert.match(html, /window\.ammarSupabase\s*=\s*client/, 'Expose the existing authenticated Supabase client');
 assert.match(html, /<script src="\/ammar-marketplace\.js"><\/script>/, 'Load the ecosystem browser module');
