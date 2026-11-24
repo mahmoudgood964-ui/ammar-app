@@ -264,7 +264,7 @@ assert.ok(commerceModuleSource.includes('auth.onAuthStateChange'), 'Commerce OS 
 assert.ok(commerceModuleSource.includes('auth.getSession'), 'Commerce OS must restore an existing authenticated session');
 
 
-// Supplier performance must be based only on manager-confirmed completed deliveries and current verified providers.
+// Supplier performance must be scoped to the authenticated active, verified supplier and manager-confirmed completed deliveries.
 assert.ok(moduleSource.includes(".eq('supplier_user_id',user.id).eq('status','received').not('received_at','is',null)"), 'Supplier metrics must be scoped to the authenticated supplier and reconciled completed deliveries');
 assert.ok(moduleSource.includes("'id,status,scheduled_at,received_at'"), 'Supplier metrics must use persisted schedule and receipt timestamps only');
 assert.ok(moduleSource.includes("p.status==='active'&&p.is_verified"), 'Supplier metrics must be limited to active, verified supplier accounts');
