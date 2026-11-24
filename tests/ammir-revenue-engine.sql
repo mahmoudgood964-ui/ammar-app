@@ -343,6 +343,7 @@ SELECT public.ammar_record_commission_adjustment(
   'CI fee decrease test','ci-fee-decrease-01',NULL
 );
 
+RESET ROLE;
 DO $test$
 BEGIN
   IF NOT EXISTS (
@@ -372,6 +373,8 @@ BEGIN
 END
 $test$;
 
+-- Restore the authenticated role for the row-level visibility checks below.
+SET ROLE authenticated;
 -- Payer sees their rows; an unrelated authenticated account sees none.
 SELECT set_config('request.jwt.claim.sub','aaaaaaaa-2424-4000-8000-000000000001',false);
 DO $test$
