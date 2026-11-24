@@ -161,3 +161,9 @@ The revenue-engine SQL assertions now also verify the adjustment table's least-p
 Exact head `d40825c9827826067c3d83f4a769f28f25514327` passed [push run #45503249823](https://github.com/mahmoudgood964-ui/ammar-app/actions/runs/45503249823) and [pull-request run #45503260402](https://github.com/mahmoudgood964-ui/ammar-app/actions/runs/45503260402), both SUCCESS. The partial-receipt correction head `3dfe6fbd7a990234a0c201bec9dc20bbd209d22b` also passed [push run #45502800544](https://github.com/mahmoudgood964-ui/ammar-app/actions/runs/45502800544) and [pull-request run #45502811222](https://github.com/mahmoudgood964-ui/ammar-app/actions/runs/45502811222), both SUCCESS.
 
 A Vercel preview was requested for exact head `d40825c`, but the Vercel API again returned HTTP 402 `api-deployments-free-per-day` with a 24-hour retry window. No billing, plan, project, or production settings were changed. The feature remains unmerged and its migrations remain unapplied to production.
+
+## 6. Administrator adjustment visibility regression
+
+The revenue-engine SQL test now confirms all three sides of the adjustment read policy: the payer sees their own adjustments, an unrelated authenticated account sees none, and an administrator can read all adjustment rows. The assertion runs under the authenticated role with the admin fixture, so it exercises the policy rather than merely inspecting its definition.
+
+Exact head `ea9b0c52d0836129325ee18bdc8465bc1f377186` passed [push run #45503670749](https://github.com/mahmoudgood964-ui/ammar-app/actions/runs/45503670749) and [pull-request run #45503683103](https://github.com/mahmoudgood964-ui/ammar-app/actions/runs/45503683103), both SUCCESS (39/39 workflow steps).
