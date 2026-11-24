@@ -27,7 +27,8 @@ Do not add broad feature scope until the critical transaction journey is tested 
 - [x] Delivery evidence and reconciliation implementation: supplier dispatch, private evidence upload, manager review through short-lived signed URLs, per-line received/damaged/missing quantities, atomic receiver confirmation, and optional consent-based GPS metadata. Supplier dispatch fields and evidence Storage lifecycle are restricted by database policies/triggers.
 - [ ] Separate buyer + supplier + unrelated-account end-to-end acceptance remains open; no production test accounts or persistent test data were created.
 - [ ] Handle partial delivery, rejection, return, cancellation and changes without duplicating or erasing earned commission.
-- [ ] Supplier performance metrics based only on completed, verified transactions.
+- [x] Admin supplier performance view: read-only metrics from the latest 500 manager-confirmed `received` deliveries with a recorded receipt timestamp, limited to suppliers/providers currently active and verified. Shows completed delivery count and on-time rate only where a scheduled date exists; partial, exception, cancelled, quote-only and unverified activity is excluded. No composite score or ranking is invented.
+- [ ] Validate supplier metrics against real completed transactions during the pilot; current production has zero delivery, award and commission-ledger rows, so no real supplier performance score can be displayed yet.
 
 ## P1 — Trust, operations and revenue
 
