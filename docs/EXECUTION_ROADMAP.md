@@ -32,7 +32,7 @@ Do not add broad feature scope until the critical transaction journey is tested 
 ## P1 — Trust, operations and revenue
 
 - [ ] Operational admin queue for supplier/provider verification, disputes, reports, overdue RFQs and delayed deliveries.
-- [ ] Commission statements: accrued, due, paid, overdue, reversed; 5% provider-side policy remains the agreed rule.
+- [x] Admin commission ledger statement: read-only view of recorded ledger rows and persisted statuses (`recorded`, `due`, `paid`, `void`, `refunded`), with bounded latest-100 query and status counts. No payment collection or settlement mutation is exposed. Overdue reporting remains deferred because the current ledger schema has no due-date field; do not infer overdue from age.
 - [ ] Commission collection procedure and provider agreement; no in-app custody or escrow until a licensed payment partner and legal review are in place.
 - [ ] Real supplier/provider onboarding with consent, documents, references, coverage, specialties, product/service catalog and current availability.
 - [ ] Pilot: target 3 real projects, 8 suppliers, 3 contractors and 2 engineering offices; these are initial targets, not validated market-size assumptions.

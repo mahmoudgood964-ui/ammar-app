@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 
 const html = fs.readFileSync('index.html', 'utf8');
 const moduleSource = fs.readFileSync('ammar-marketplace.js', 'utf8');
+const commerceModuleSource = fs.readFileSync('ammir-commerce-os.js', 'utf8');
 const serviceWorker = fs.readFileSync('sw.js', 'utf8');
 const migration = fs.readFileSync('supabase/migrations/202611120006_ammar_marketplace_messaging.sql', 'utf8');
 const messagingPlus = fs.readFileSync('supabase/migrations/202611120007_ammar_messaging_plus.sql', 'utf8');
@@ -31,6 +32,7 @@ inlineScripts.forEach((match, index) => {
   new vm.Script(match[1], { filename: 'index.html:inline-script-' + (index + 1) });
 });
 new vm.Script(moduleSource, { filename: 'ammar-marketplace.js' });
+new vm.Script(commerceModuleSource, { filename: 'ammir-commerce-os.js' });
 
 assert.match(html, /window\.ammarSupabase\s*=\s*client/, 'Expose the existing authenticated Supabase client');
 assert.match(html, /<script src="\/ammar-marketplace\.js"><\/script>/, 'Load the ecosystem browser module');
@@ -90,6 +92,11 @@ assert.ok(messagingTests.includes('AMMAR ADVANCED MESSAGING TESTS PASSED'), 'Adv
 assert.ok(messagingTests.includes('بعد إلغاء الحظر'), 'Unblock/resume messaging test is missing');
 assert.ok(messagingTests.includes("'market_quote'"), 'Quote-linked conversation test is missing');
 assert.ok(messagingTests.includes("'agreement'"), 'Agreement-linked conversation test is missing');
+assert.ok(moduleSource.includes("db.from('ammar_commission_ledger').select('id,activity_type,source_type,source_id,gross_amount,currency,rate_percent,commission_amount,payer_id,status,recorded_at,settled_at')"), 'Admin commission statement must read the existing ledger fields only');
+assert.ok(moduleSource.includes('لا يوجد تاريخ استحقاق في سجل البيانات الحالي'), 'Commission UI must not invent overdue status without a due date');
+assert.ok(moduleSource.includes("['recorded','due','paid','void','refunded']"), 'Commission statement must expose only persisted ledger statuses');
+assert.ok(moduleSource.includes('لا يتم تحصيل الأموال أو تحديث حالة السداد'), 'Commission statement must remain read-only and not imply payment collection');
+
 assert.ok(competitiveAudit.includes('عمار لمواد البناء'), 'Direct same-name building-materials competitor not documented');
 assert.ok(competitiveAudit.includes('BOQ'), 'Defensible project procurement differentiation is not documented');
 assert.ok(releaseAudit.includes('synthetic PostgreSQL'), 'Release audit must distinguish synthetic CI from production readiness');
@@ -221,7 +228,9 @@ assert.ok(pwaManifest.icons.some(icon => icon.src === '/icon-512.png' && icon.si
 assert.ok(identityCss.includes("url('/icon.svg')"), 'The app brand mark must use the canonical AMMIR seal');
 assert.ok(identityCss.includes(':focus-visible'), 'Keyboard-visible focus treatment is missing');
 assert.ok(serviceWorker.includes('/icon-512.png'), 'The 512px install icon must be cached in the app shell');
-assert.ok(serviceWorker.includes('ammir-shell-v9-identity-first-load'), 'Service worker cache must be versioned for the new identity assets');
+assert.ok(serviceWorker.includes('ammir-shell-v11-commerce-os'), 'Service worker cache must be versioned for the Commerce OS shell');
+assert.ok(serviceWorker.includes("'/ammir-commerce-os.js'"), 'Commerce OS module must be precached for offline app-shell use');
+assert.ok(serviceWorker.includes("'/ammir-analytics.js'"), 'Analytics module must be precached for offline app-shell use');
 assert.ok(!serviceWorker.includes("html.replace('</head>'"), 'Service worker must not rewrite HTML to inject identity assets; first-load HTML must declare them directly');
 
 console.log('AMMIR static application and migration checks passed.');
@@ -230,3 +239,26 @@ assert.match(html, /function passwordPolicyError\(password\)/, 'Password policy 
 assert.match(html, /password\.length<12/, 'Signup and recovery must require at least 12 characters');
 assert.match(html, /classes<3/, 'Password policy must require three character classes');
 assert.match(html, /minlength="12"/, 'Password inputs must expose the 12-character minimum');
+
+
+// Commerce OS safety and data-contract regression checks.
+assert.match(html, /<script src="\/ammir-commerce-os\.js" defer><\/script>/, 'Commerce OS must load as a deferred module');
+assert.ok(commerceModuleSource.includes("db.from(table).select(fields)"), 'Commerce OS must read through the existing authenticated Supabase client');
+assert.ok(commerceModuleSource.includes(".limit(150)"), 'Commerce OS queries must remain bounded');
+for (const table of [
+  'ammar_market_suppliers','ammar_market_products','ammar_market_requests',
+  'ammir_project_rfqs','ammir_project_rfq_quotes','ammir_project_deliveries',
+  'ammir_project_boq_items'
+]) {
+  assert.ok(commerceModuleSource.includes("['" + table + "'"), 'Commerce OS is missing the expected read model for ' + table);
+}
+assert.doesNotMatch(commerceModuleSource, /\.\s*(?:insert|update|upsert|delete)\s*\(/i, 'Commerce OS must remain read-only until write workflows receive dedicated authorization and tests');
+assert.doesNotMatch(commerceModuleSource, /fetch\s*\(|XMLHttpRequest|WebSocket\s*\(/, 'Commerce OS must not bypass the authenticated Supabase client with direct network calls');
+assert.ok(commerceModuleSource.includes("v==null||v===''?'غير مسجل'"), 'Missing costs must never be presented as zero');
+assert.ok(commerceModuleSource.includes("||esc(v)||'غير محدد'"), 'Unknown status labels must be escaped before rendering');
+assert.ok(commerceModuleSource.includes('GPS حيّاً'), 'Delivery view must disclose that it is not live GPS tracking');
+assert.ok(commerceModuleSource.includes('ليس تحليلاً بالذكاء الاصطناعي'), 'BOQ view must not claim AI analysis before that feature exists');
+assert.ok(commerceModuleSource.includes('لا تُجرى تحويلات عملات'), 'Quote comparison must not imply unsupported currency conversion');
+assert.ok(commerceModuleSource.includes('الوحدات التسع'), 'Commerce OS must expose the nine-module capability roadmap');
+assert.ok(commerceModuleSource.includes('auth.onAuthStateChange'), 'Commerce OS must follow authenticated session changes');
+assert.ok(commerceModuleSource.includes('auth.getSession'), 'Commerce OS must restore an existing authenticated session');
