@@ -7,10 +7,10 @@ create table if not exists public.ammar_commission_adjustments (
   adjustment_kind text not null
     check (adjustment_kind in ('partial_refund','full_reversal','fee_increase','fee_decrease')),
   amount_delta numeric(14,2) not null check (amount_delta <> 0),
-  currency text not null check (char_length(currency) between 1 and 12),
+  currency text not null check (currency = btrim(currency) and char_length(currency) between 1 and 12),
   reason text not null check (char_length(btrim(reason)) between 10 and 1000),
   idempotency_key text not null unique
-    check (char_length(idempotency_key) between 12 and 128),
+    check (idempotency_key = btrim(idempotency_key) and char_length(idempotency_key) between 12 and 128),
   source_reference text,
   created_by uuid references auth.users(id) on delete set null,
   created_at timestamptz not null default now(),
@@ -93,7 +93,7 @@ begin
     raise exception 'Adjustment amount must be positive and have at most two decimal places';
   end if;
 
-  if p_currency is null or char_length(p_currency) not between 1 and 12 then
+  if p_currency is null or p_currency <> btrim(p_currency) or char_length(p_currency) not between 1 and 12 then
     raise exception 'A valid currency is required';
   end if;
 
@@ -101,7 +101,7 @@ begin
     raise exception 'A reason between 10 and 1000 characters is required';
   end if;
 
-  if p_idempotency_key is null or char_length(p_idempotency_key) not between 12 and 128 then
+  if p_idempotency_key is null or p_idempotency_key <> btrim(p_idempotency_key) or char_length(p_idempotency_key) not between 12 and 128 then
     raise exception 'An idempotency key between 12 and 128 characters is required';
   end if;
 
