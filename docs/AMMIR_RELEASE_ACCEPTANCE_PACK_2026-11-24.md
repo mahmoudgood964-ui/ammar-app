@@ -177,3 +177,9 @@ This is a static production smoke check only. It does not replace physical Andro
 ## 6. Admin-session navigation regression checks
 
 The browser/static regression suite now also asserts that the revenue/admin navigation state is sourced from the server-side `is_admin` RPC, hidden for non-admin sessions, redirected to the market panel if a non-admin attempts to select an admin/revenue panel, and hidden when the session is cleared. These checks complement the existing server-side revenue dashboard guard; they do not replace acceptance with real administrator and non-administrator accounts.
+
+## 8. Admin navigation guard CI result
+
+The browser/static checks now assert that the admin state is populated by the existing server-side `db.rpc('is_admin')` call, the revenue tab is hidden for non-admin sessions, non-admin attempts to open admin/revenue panels are redirected to the market panel, and revenue navigation is hidden after session clear. An initial test-only assertion used the wrong source-code spelling and failed; the assertion was corrected to match the actual `db.rpc('is_admin').then(result=>` implementation. No application authorization logic was changed by that correction.
+
+Exact code/test head `143b5b2f6c508b600c8d617ff6a01a845d9b8dbe` passed [push run #45513590620](https://github.com/mahmoudgood964-ui/ammar-app/actions/runs/45513590620) and [pull-request run #45513597608](https://github.com/mahmoudgood964-ui/ammar-app/actions/runs/45513597608), both SUCCESS (39/39 steps in the push run). The subsequent acceptance-pack documentation update is at `973892f1d7a351ce7b1e14b7b6d7f53490122597`; its CI runs are tracked separately.
