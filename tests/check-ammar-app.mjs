@@ -32,12 +32,12 @@ inlineScripts.forEach((match, index) => {
 });
 new vm.Script(moduleSource, { filename: 'ammar-marketplace.js' });
 
-const revenueExportStart = moduleSource.indexOf('function revenueCsvCell(');
+const revenueExportStart = moduleSource.indexOf('async function loadRevenueAdjustments(');
 const revenueExportEnd = moduleSource.indexOf('async function adminDashboardHtml()', revenueExportStart);
 assert.ok(revenueExportStart >= 0 && revenueExportEnd > revenueExportStart, 'Revenue CSV export helpers are missing');
 const revenueCsvSandbox = {};
 vm.runInNewContext(
-  moduleSource.slice(revenueExportStart, revenueExportEnd) + String.fromCharCode(10) + 'globalThis.revenueCsvCell=revenueCsvCell;globalThis.revenueAdjustmentSummary=revenueAdjustmentSummary;',
+  moduleSource.slice(revenueExportStart, revenueExportEnd) + String.fromCharCode(10) + 'globalThis.revenueCsvCell=revenueCsvCell;globalThis.revenueAdjustmentSummary=revenueAdjustmentSummary;globalThis.loadRevenueAdjustments=loadRevenueAdjustments;',
   revenueCsvSandbox
 );
 assert.equal(
@@ -103,6 +103,37 @@ assert.throws(
 assert.ok(moduleSource.includes("db.from('ammar_commission_adjustments')"),'Revenue dashboard must load append-only adjustment rows');
 assert.ok(moduleSource.includes("record_type:'adjustment'"),'Revenue CSV must include adjustment event rows separately from ledger rows');
 assert.ok(moduleSource.includes('net_commission_amount'),'Revenue dashboard and export must expose adjusted net commission');
+const revenueQueryTrace = [];
+revenueCsvSandbox.db = {
+  from(table) {
+    assert.equal(table,'ammar_commission_adjustments','Revenue adjustment loader must query the append-only adjustments table');
+    return {
+      select() {
+        const query = {ids:[]};
+        query.in = function(field,ids) { assert.equal(field,'ledger_id'); this.ids=ids; return this; };
+        query.order = function(field,options) { assert.equal(field,'created_at'); assert.equal(options.ascending,false); return this; };
+        query.range = async function(from,to) {
+          revenueQueryTrace.push({ids:this.ids.slice(),from,to});
+          const total=this.ids.length===200?1001:1;
+          const count=from===0?Math.min(1000,total):Math.max(0,total-from);
+          return {count,data:Array.from({length:count},(_,index)=>({
+            id:'adjustment-'+this.ids[0]+'-'+(from+index),
+            ledger_id:this.ids[0],currency:'SDG',amount_delta:-0.01
+          }))};
+        };
+        return query;
+      }
+    };
+  }
+};
+const pagedAdjustments = await revenueCsvSandbox.loadRevenueAdjustments(
+  Array.from({length:201},(_,index)=>({id:'ledger-'+index}))
+);
+assert.equal(pagedAdjustments.length,1003,'Revenue adjustment loader must fetch every adjustment page for every ledger ID chunk');
+assert.equal(revenueQueryTrace.length,3,'Revenue adjustment loader must paginate and split large ledger ID sets');
+assert.deepEqual(revenueQueryTrace.map(x=>x.ids.length),[200,200,1],'Revenue adjustment loader must use bounded ID chunks');
+assert.deepEqual(revenueQueryTrace.map(x=>x.from),[0,1000,0],'Revenue adjustment loader must request subsequent pages without skipping rows');
+
 
 
 assert.match(html, /window\.ammarSupabase\s*=\s*client/, 'Expose the existing authenticated Supabase client');
