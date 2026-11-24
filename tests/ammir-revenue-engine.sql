@@ -282,7 +282,7 @@ BEGIN
   BEGIN
     PERFORM public.ammar_record_commission_adjustment(
       'aaaaaaaa-2424-4000-8000-000000000099'::uuid,'partial_refund',1,'SDG',
-      'Blank reason rejection test','ci-blank-reason-001',NULL
+      '          ','ci-blank-reason-001',NULL
     );
   EXCEPTION WHEN OTHERS THEN v_rejected := true;
   END;
