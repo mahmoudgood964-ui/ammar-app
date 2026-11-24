@@ -92,6 +92,11 @@ assert.ok(messagingTests.includes('AMMAR ADVANCED MESSAGING TESTS PASSED'), 'Adv
 assert.ok(messagingTests.includes('بعد إلغاء الحظر'), 'Unblock/resume messaging test is missing');
 assert.ok(messagingTests.includes("'market_quote'"), 'Quote-linked conversation test is missing');
 assert.ok(messagingTests.includes("'agreement'"), 'Agreement-linked conversation test is missing');
+assert.ok(moduleSource.includes("db.from('ammar_commission_ledger').select('id,activity_type,source_type,source_id,gross_amount,currency,rate_percent,commission_amount,payer_id,status,recorded_at,settled_at')"), 'Admin commission statement must read the existing ledger fields only');
+assert.ok(moduleSource.includes('لا يوجد تاريخ استحقاق في سجل البيانات الحالي'), 'Commission UI must not invent overdue status without a due date');
+assert.ok(moduleSource.includes("['recorded','due','paid','void','refunded']"), 'Commission statement must expose only persisted ledger statuses');
+assert.ok(moduleSource.includes('لا يتم تحصيل الأموال أو تحديث حالة السداد'), 'Commission statement must remain read-only and not imply payment collection');
+
 assert.ok(competitiveAudit.includes('عمار لمواد البناء'), 'Direct same-name building-materials competitor not documented');
 assert.ok(competitiveAudit.includes('BOQ'), 'Defensible project procurement differentiation is not documented');
 assert.ok(releaseAudit.includes('synthetic PostgreSQL'), 'Release audit must distinguish synthetic CI from production readiness');
