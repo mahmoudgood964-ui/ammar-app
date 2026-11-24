@@ -85,7 +85,7 @@ begin
     raise exception 'Administrator permission required';
   end if;
 
-  if p_adjustment_kind not in ('partial_refund','full_reversal','fee_increase','fee_decrease') then
+  if p_adjustment_kind is null or p_adjustment_kind not in ('partial_refund','full_reversal','fee_increase','fee_decrease') then
     raise exception 'Unsupported commission adjustment kind';
   end if;
 
@@ -103,6 +103,23 @@ begin
 
   if p_idempotency_key is null or char_length(p_idempotency_key) not between 12 and 128 then
     raise exception 'An idempotency key between 12 and 128 characters is required';
+  end if;
+
+  select *
+    into v_existing
+  from public.ammar_commission_adjustments
+  where idempotency_key = p_idempotency_key;
+
+  if found then
+    if v_existing.ledger_id <> p_ledger_id
+       or v_existing.adjustment_kind <> p_adjustment_kind
+       or abs(v_existing.amount_delta) <> p_amount
+       or v_existing.currency <> p_currency
+       or v_existing.reason <> btrim(p_reason)
+       or coalesce(v_existing.source_reference, '') <> coalesce(nullif(btrim(p_source_reference), ''), '') then
+      raise exception 'Idempotency key was already used with a different adjustment payload';
+    end if;
+    return v_existing.id;
   end if;
 
   select *
