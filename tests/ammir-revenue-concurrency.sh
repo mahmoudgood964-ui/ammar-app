@@ -42,7 +42,7 @@ if [[ "$status1" -ne 0 && "$status2" -ne 0 ]]; then
   exit 1
 fi
 
-result="$("${DB[@]}" -At -c "
+result=$("${DB[@]}" -At -c "
   SELECT count(*) || ':' || coalesce(sum(amount_delta),0)
   FROM public.ammar_commission_adjustments
   WHERE ledger_id='aaaaaaaa-2424-4000-8000-000000000098'::uuid;
