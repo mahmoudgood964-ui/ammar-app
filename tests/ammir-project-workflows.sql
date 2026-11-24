@@ -304,10 +304,10 @@ BEGIN
 
     -- Delivery trigger: create a commission, settle it, then mutate the source.
     -- The paid ledger row must remain byte-for-byte stable through the upsert and void paths.
+    UPDATE public.ammir_project_delivery_items
+      SET received_quantity=5,missing_quantity=1
+      WHERE id=v_delivery_item_b;
     UPDATE public.ammir_project_deliveries SET status='exception'
-      WHERE id=v_delivery_b;
-    UPDATE public.ammir_project_deliveries
-      SET status='received',received_at=now(),received_by=v_owner
       WHERE id=v_delivery_b;
 
     SELECT id,gross_amount,rate_percent,commission_amount,payer_id
@@ -324,7 +324,7 @@ BEGIN
       WHERE id=v_service_ledger_id;
 
     UPDATE public.ammir_project_delivery_items
-      SET received_quantity=5
+      SET received_quantity=4,missing_quantity=2
       WHERE id=v_delivery_item_b;
 
     IF NOT EXISTS (
@@ -336,7 +336,7 @@ BEGIN
       RAISE EXCEPTION 'Paid delivery commission was changed by a source-trigger upsert';
     END IF;
 
-    UPDATE public.ammir_project_deliveries SET status='planned' WHERE id=v_delivery_b;
+    UPDATE public.ammir_project_deliveries SET status='cancelled' WHERE id=v_delivery_b;
     IF NOT EXISTS (
       SELECT 1 FROM public.ammar_commission_ledger
       WHERE id=v_service_ledger_id AND status='paid'
