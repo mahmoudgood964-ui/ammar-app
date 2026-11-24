@@ -277,6 +277,56 @@ BEGIN
   EXCEPTION WHEN OTHERS THEN v_rejected := true;
   END;
   IF NOT v_rejected THEN RAISE EXCEPTION 'Short idempotency key was accepted'; END IF;
+
+  v_rejected := false;
+  BEGIN
+    PERFORM public.ammar_record_commission_adjustment(
+      'aaaaaaaa-2424-4000-8000-000000000099'::uuid,'partial_refund',1,'SDG',
+      'Blank reason rejection test','ci-blank-reason-001',NULL
+    );
+  EXCEPTION WHEN OTHERS THEN v_rejected := true;
+  END;
+  IF NOT v_rejected THEN RAISE EXCEPTION 'Blank adjustment reason was accepted'; END IF;
+
+  v_rejected := false;
+  BEGIN
+    PERFORM public.ammar_record_commission_adjustment(
+      'aaaaaaaa-2424-4000-8000-000000000099'::uuid,'partial_refund',1,'',
+      'Blank currency rejection test','ci-blank-currency-01',NULL
+    );
+  EXCEPTION WHEN OTHERS THEN v_rejected := true;
+  END;
+  IF NOT v_rejected THEN RAISE EXCEPTION 'Blank currency was accepted'; END IF;
+
+  v_rejected := false;
+  BEGIN
+    PERFORM public.ammar_record_commission_adjustment(
+      'aaaaaaaa-2424-4000-8000-000000000099'::uuid,'partial_refund',NULL,'SDG',
+      'Null amount rejection test','ci-null-amount-0001',NULL
+    );
+  EXCEPTION WHEN OTHERS THEN v_rejected := true;
+  END;
+  IF NOT v_rejected THEN RAISE EXCEPTION 'Null adjustment amount was accepted'; END IF;
+
+  v_rejected := false;
+  BEGIN
+    PERFORM public.ammar_record_commission_adjustment(
+      'aaaaaaaa-2424-4000-8000-000000000099'::uuid,'partial_refund',1,'SDG',
+      NULL,'ci-null-reason-0001',NULL
+    );
+  EXCEPTION WHEN OTHERS THEN v_rejected := true;
+  END;
+  IF NOT v_rejected THEN RAISE EXCEPTION 'Null adjustment reason was accepted'; END IF;
+
+  v_rejected := false;
+  BEGIN
+    PERFORM public.ammar_record_commission_adjustment(
+      'aaaaaaaa-2424-4000-8000-000000000099'::uuid,'partial_refund',1,'SDG',
+      'Null idempotency key test',NULL,NULL
+    );
+  EXCEPTION WHEN OTHERS THEN v_rejected := true;
+  END;
+  IF NOT v_rejected THEN RAISE EXCEPTION 'Null idempotency key was accepted'; END IF;
 END
 $test$;
 
@@ -303,6 +353,22 @@ BEGIN
     SELECT 1 FROM public.ammar_commission_adjustments
     WHERE idempotency_key='ci-fee-decrease-01' AND amount_delta=-2.00
   ) THEN RAISE EXCEPTION 'Fee decrease did not create a negative adjustment'; END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM public.ammar_commission_ledger
+    WHERE id='aaaaaaaa-2424-4000-8000-000000000099'::uuid
+      AND gross_amount=1000.00 AND currency='SDG' AND rate_percent=5.00
+      AND commission_amount=50.00
+      AND payer_id='aaaaaaaa-2424-4000-8000-000000000001'::uuid
+      AND status='due'
+  ) THEN
+    RAISE EXCEPTION 'Commission adjustments rewrote the original ledger financial values or status';
+  END IF;
+
+  IF (SELECT count(*) FROM public.project_payment_milestones) <> 0
+     OR (SELECT count(*) FROM public.project_payment_events) <> 0 THEN
+    RAISE EXCEPTION 'Revenue adjustment tests unexpectedly wrote legacy payment milestone/event rows';
+  END IF;
 END
 $test$;
 
