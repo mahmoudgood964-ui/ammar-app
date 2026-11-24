@@ -45,5 +45,7 @@
 11. Concurrent reductions cannot drive net commission below zero.
 12. Original commission row, status, project payment milestones, and payment events remain unchanged.
 
-## Follow-up critical fix
-The live delivery commission trigger currently permits financial fields to be overwritten on a row already marked paid. Before the first real paid commission is recorded, change that trigger so it never rewrites a paid ledger row. Subsequent differences must be captured through append-only adjustment entries and reconciled against payment-provider records. Do not silently preserve a paid status while changing its amount.
+## Follow-up critical fix — implemented in the feature branch, not production
+The feature-branch migration `20261124230000_protect_paid_commission_ledger_rows.sql` replaces the two delivery/award commission trigger functions so their upserts cannot rewrite a ledger row whose status is `paid`. Paid rows also remain paid when source delivery state changes or delivery records/items are removed. The regression suite verifies the original paid amount, gross basis, currency, rate, payer, and status remain unchanged through those source mutations and through an award-completion retry.
+
+This fix is present only in PR #14's feature branch. It has passed disposable PostgreSQL CI tests but has **not** been applied to production. Once merged and safely migrated, later differences must be captured as append-only adjustment entries and separately reconciled against payment-provider/bank records. The adjustment journal itself does not prove cash was refunded or collected.
