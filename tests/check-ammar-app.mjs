@@ -76,7 +76,7 @@ assert.ok(
 );
 
 assert.ok(
-  moduleSource.includes("const result=await db.rpc('is_admin')"),
+  moduleSource.includes("db.rpc('is_admin').then(result=>"),
   'Admin UI privilege state must come from the server-side is_admin RPC'
 );
 assert.ok(
