@@ -16,7 +16,7 @@
 - An append-only `ammar_commission_adjustments` table linked to the existing commission ledger.
 - Four explicit adjustment kinds: partial refund, full reversal, fee increase, fee decrease.
 - Signed adjustment amounts; reduction types are negative, increase is positive.
-- Required reason and globally unique idempotency key.
+- Required reason and globally unique idempotency key. Currency and idempotency-key inputs must be trimmed (no leading/trailing whitespace); whitespace-only or padded keys/currencies are rejected by both RPC validation and table constraints.
 - Currency matching and a row lock on the original commission record to prevent concurrent over-adjustment.
 - A full reversal must equal the remaining commission balance; a reduction cannot exceed that balance.
 - Retry-safe behavior: replaying the same idempotency key and payload returns the original adjustment ID; reusing the key with a different payload is rejected.
