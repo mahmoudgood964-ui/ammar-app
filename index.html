@@ -1264,9 +1264,9 @@ async function loadRfqInbox(){
   const poIds=(purchaseOrders.data||[]).map(x=>x.id);let purchaseOrderItems=[];
   if(poIds.length){const pi=await client.from('ammir_project_purchase_order_items').select('*').in('purchase_order_id',poIds);if(pi.error)throw pi.error;purchaseOrderItems=pi.data||[];}
   const supplierDeliveryIds=(deliveries.data||[]).map(x=>x.id);let deliveryClaims=[],deliveryClaimEvents=[];
-  if(supplierDeliveryIds.length){const claims=await client.from('ammir_project_delivery_claims').select('*').in('delivery_id',supplierDeliveryIds).order('created_at',{ascending:false}).limit(100);if(claims.error)throw claims.error;deliveryClaims=claims.data||[];}
+  if(supplierDeliveryIds.length){const claims=await client.from('ammir_project_delivery_claims').select('*').in('delivery_id',supplierDeliveryIds).order('created_at',{ascending:false}).limit(100);if(claims.error)console.warn('AMMIR delivery claims are not available yet:',claims.error.message);else deliveryClaims=claims.data||[];}
   const supplierClaimIds=deliveryClaims.map(x=>x.id);
-  if(supplierClaimIds.length){const events=await client.from('ammir_project_delivery_claim_events').select('*').in('claim_id',supplierClaimIds).order('created_at',{ascending:true}).limit(500);if(events.error)throw events.error;deliveryClaimEvents=events.data||[];}
+  if(supplierClaimIds.length){const events=await client.from('ammir_project_delivery_claim_events').select('*').in('claim_id',supplierClaimIds).order('created_at',{ascending:true}).limit(500);if(events.error)console.warn('AMMIR delivery claim history is not available yet:',events.error.message);else deliveryClaimEvents=events.data||[];}
   renderRfqInbox({invites,rfqs,items,quotes,quoteItems,awards:awards.data||[],awardItems,deliveries:deliveries.data||[],purchaseOrders:purchaseOrders.data||[],purchaseOrderItems,deliveryClaims,deliveryClaimEvents,verified});
  }catch(error){box.innerHTML='<div class="message error">تعذر تحميل الدعوات: '+esc(error.message||'خطأ في الاتصال')+' <button class="btn light" type="button" data-rfq-inbox-action="refresh">إعادة المحاولة</button></div>';}
 }
