@@ -19,12 +19,12 @@ LANGUAGE sql
 STABLE
 SECURITY DEFINER
 SET search_path = ''
-AS $
+AS $function$
  SELECT EXISTS (
    SELECT 1 FROM public.profiles
    WHERE id = (SELECT auth.uid()) AND role = 'admin'
  )
-$;
+$function$;
 
 -- Match the production profiles RLS contract; tests must not run against an
 -- unprotected profiles fixture.
