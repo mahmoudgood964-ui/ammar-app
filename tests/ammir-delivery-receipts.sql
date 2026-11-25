@@ -170,6 +170,46 @@ BEGIN
     RAISE EXCEPTION 'First receipt commission mismatch: rows %, gross %, commission %',v_count,v_gross,v_commission;
   END IF;
 
+  -- Reusing an idempotency key with a different payload must be rejected.
+  v_failed := false;
+  v_error := null;
+  BEGIN
+    PERFORM public.ammir_record_delivery_receipt(
+      v_delivery_a,
+      jsonb_build_array(jsonb_build_object(
+        'delivery_item_id',v_item_a,'received_quantity',1,'damaged_quantity',0,
+        'missing_quantity',0,'rejected_quantity',0,'condition_notes',null
+      )),
+      'partially_received',v_key_a,null
+    );
+  EXCEPTION WHEN OTHERS THEN
+    v_failed := true;
+    GET STACKED DIAGNOSTICS v_error = MESSAGE_TEXT;
+  END;
+  IF NOT v_failed OR v_error NOT LIKE '%idempotency key was already used with a different payload%' THEN
+    RAISE EXCEPTION 'Reusing an idempotency key with a changed payload was not rejected: %',coalesce(v_error,'no error');
+  END IF;
+
+  -- A batch may not account for more than the outstanding delivery quantity.
+  v_failed := false;
+  v_error := null;
+  BEGIN
+    PERFORM public.ammir_record_delivery_receipt(
+      v_delivery_a,
+      jsonb_build_array(jsonb_build_object(
+        'delivery_item_id',v_item_a,'received_quantity',3,'damaged_quantity',0,
+        'missing_quantity',0,'rejected_quantity',0,'condition_notes',null
+      )),
+      'received',gen_random_uuid(),null
+    );
+  EXCEPTION WHEN OTHERS THEN
+    v_failed := true;
+    GET STACKED DIAGNOSTICS v_error = MESSAGE_TEXT;
+  END;
+  IF NOT v_failed OR v_error NOT LIKE '%Invalid receipt quantities%' THEN
+    RAISE EXCEPTION 'Receipt quantity beyond outstanding balance was not rejected: %',coalesce(v_error,'no error');
+  END IF;
+
   UPDATE public.ammar_commission_ledger
   SET status='paid',settled_at=now()
   WHERE source_type='project_delivery' AND source_id LIKE v_delivery_a::text||':%';
@@ -262,6 +302,27 @@ BEGIN
   WHERE id=v_delivery_b AND supplier_user_id=v_supplier;
 
   PERFORM set_config('request.jwt.claim.sub',v_owner::text,true);
+
+  -- A rejected quantity without a recorded reason must be rejected.
+  v_failed := false;
+  v_error := null;
+  BEGIN
+    PERFORM public.ammir_record_delivery_receipt(
+      v_delivery_b,
+      jsonb_build_array(jsonb_build_object(
+        'delivery_item_id',v_item_b,'received_quantity',4,'damaged_quantity',0,
+        'missing_quantity',0,'rejected_quantity',2,'condition_notes',null
+      )),
+      'exception',gen_random_uuid(),null
+    );
+  EXCEPTION WHEN OTHERS THEN
+    v_failed := true;
+    GET STACKED DIAGNOSTICS v_error = MESSAGE_TEXT;
+  END;
+  IF NOT v_failed OR v_error NOT LIKE '%Invalid receipt quantities, reason%' THEN
+    RAISE EXCEPTION 'Rejected quantity without a reason was not rejected: %',coalesce(v_error,'no error');
+  END IF;
+
   PERFORM public.ammir_record_delivery_receipt(
     v_delivery_b,
     jsonb_build_array(jsonb_build_object(
