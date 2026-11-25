@@ -510,7 +510,7 @@ BEGIN
 
     SELECT count(*),coalesce(sum(a.adjustment_amount),0)
       INTO v_adjustment_count,v_adjustment_total
-    FROM public.ammar_commission_adjustments a
+    FROM public.ammir_commission_adjustment_proposals a
     JOIN public.ammar_commission_ledger l ON l.id=a.original_ledger_id
     WHERE l.source_type='project_delivery'
       AND l.source_id=v_delivery_a::text||':SDG:'||v_receipt_a::text;
@@ -525,7 +525,7 @@ BEGIN
     );
     SELECT count(*),coalesce(sum(a.adjustment_amount),0)
       INTO v_adjustment_count,v_adjustment_total
-    FROM public.ammar_commission_adjustments a
+    FROM public.ammir_commission_adjustment_proposals a
     JOIN public.ammar_commission_ledger l ON l.id=a.original_ledger_id
     WHERE l.source_type='project_delivery'
       AND l.source_id=v_delivery_a::text||':SDG:'||v_receipt_a::text;
@@ -596,7 +596,7 @@ BEGIN
     IF NOT v_failed THEN RAISE EXCEPTION 'Cumulative returns across claims exceeded the receipt-line quantity'; END IF;
 
     IF EXISTS (
-      SELECT 1 FROM public.ammar_commission_adjustments a
+      SELECT 1 FROM public.ammir_commission_adjustment_proposals a
       JOIN public.ammar_commission_ledger l ON l.id=a.original_ledger_id
       WHERE l.source_type='project_delivery'
         AND l.source_id LIKE v_delivery_b::text||':%'
