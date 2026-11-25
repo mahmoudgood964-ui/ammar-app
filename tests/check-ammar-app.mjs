@@ -311,6 +311,7 @@ assert.ok(returnAdjustmentMigration.includes('ammar_commission_adjustments'), 'P
 assert.ok(returnAdjustmentMigration.includes('Cumulative return quantity exceeds the accepted claim quantity'), 'Accepted claim quantity cap is missing');
 assert.ok(returnAdjustmentMigration.includes('Cumulative return quantity exceeds the accepted-good receipt quantity'), 'Receipt quantity cap is missing');
 assert.ok(returnAdjustmentMigration.includes('pending_review'), 'Adjustment proposals must remain pending finance review');
+assert.ok(returnAdjustmentMigration.includes("nullif(btrim(ai.currency),'')") && returnAdjustmentMigration.includes('Award item currency must be explicitly recorded before accepting a return'), 'Return adjustments must reject missing currency rather than invent a default');
 assert.ok(returnAdjustmentMigration.includes('v_ledger_commission * least(v_total_returned_gross, v_ledger_gross) / v_ledger_gross'), 'Proportional adjustment must use the original receipt ledger basis');
 assert.ok(returnAdjustmentMigration.includes('FOR UPDATE'), 'Return processing must serialize quantity and cumulative adjustment checks');
 assert.ok(returnAdjustmentMigration.includes('Accepted delivery return history is immutable'), 'Return history immutability guard is missing');
