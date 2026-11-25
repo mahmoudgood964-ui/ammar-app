@@ -533,7 +533,7 @@
 
   async function adminDashboardHtml(){
     if(!isAdmin)throw new Error('صلاحية المدير مطلوبة');
-    const [s,p,r,d,e,c]=await Promise.all([
+    const [s,p,r,d,e,c,a]=await Promise.all([
       db.from('ammar_market_suppliers')
         .select('id,business_name,owner_id,contact_name,contact_phone,whatsapp_phone,governorate,city,status,is_verified,brands,delivery_mode,delivery_coverage,created_at')
         .order('created_at',{ascending:false}).limit(100),
@@ -547,10 +547,11 @@
       db.from('ammar_provider_verification_events')
         .select('id,entity_type,entity_id,business_name_snapshot,decision,reason,evidence_reference,actor_id,created_at')
         .order('created_at',{ascending:false}).limit(20),
-      db.from('ammar_commission_rules').select('activity_type,rate_percent,payer_side,is_active,effective_from').order('activity_type')
+      db.from('ammar_commission_rules').select('activity_type,rate_percent,payer_side,is_active,effective_from').order('activity_type'),
+      db.rpc('ammar_admin_list_operational_alerts',{p_limit:100})
     ]);
-    for(const x of [s,p,r,d,e,c])if(x.error)throw x.error;
-    const suppliers=s.data||[],providers=p.data||[],reports=r.data||[],disputes=d.data||[],events=e.data||[],commissionRules=c.data||[];
+    for(const x of [s,p,r,d,e,c,a])if(x.error)throw x.error;
+    const suppliers=s.data||[],providers=p.data||[],reports=r.data||[],disputes=d.data||[],events=e.data||[],commissionRules=c.data||[],operationalAlerts=a.data||[];
     const activeCommissionRules=commissionRules.filter(x=>x.is_active);
     const pendingProviders=[...suppliers.map(x=>({...x,_type:'supplier'})),...providers.map(x=>({...x,_type:'service_provider'}))]
       .filter(x=>!x.is_verified||x.status==='suspended');
@@ -575,6 +576,10 @@
       </section>
       <section class="eco-subsection"><h3>مراجعة البلاغات على الرسائل</h3>
         ${adminReportCards(reports)}
+      </section>
+      <section class="eco-subsection"><h3>التنبيهات التشغيلية: طلبات عروض الأسعار والتسليمات</h3>
+        <p class="hint">عرض محدود للطلبات التي تجاوزت موعدها والتسليمات المتأخرة أو المسجلة كاستثناء. هذه التنبيهات للمتابعة ولا تمنح الإدارة صلاحية تعديل سجلات المشروع أو التوريد.</p>
+        ${adminOperationalAlertCards(operationalAlerts)}
       </section>
       <section class="eco-subsection"><h3>مراجعة النزاعات التجارية</h3>
         ${adminDisputeCards(disputes)}
@@ -632,6 +637,22 @@
             <option value="dismissed" ${r.report_status==='dismissed'?'selected':''}>مرفوض</option>
           </select>
         </label>
+      </article>`;
+    }).join('');
+  }
+
+  function adminOperationalAlertCards(rows){
+    if(!rows.length)return '<div class="eco-empty">لا توجد طلبات عروض أسعار أو تسليمات متأخرة حالياً</div>';
+    return rows.map(x=>{
+      const isRfq=x.alert_kind==='rfq';
+      const relatedLabel=isRfq?'عروض مستلمة':'بنود تحتاج متابعة';
+      const due=x.due_at?new Date(x.due_at).toLocaleString('ar',{dateStyle:'medium',timeStyle:isRfq?'short':undefined}):'غير محدد';
+      return `<article class="eco-card">
+        <div class="eco-meta"><span class="eco-pill">${isRfq?'طلب عروض أسعار متأخر':'تسليم يحتاج متابعة'}</span><span class="eco-pill">${esc(x.status)}</span></div>
+        <h4>${esc(x.subject||x.reference_code)}</h4>
+        <p>${esc(x.project_title)} · ${esc(x.reference_code)}</p>
+        <p>${esc(x.attention_reason)}</p>
+        <p class="muted">الموعد: ${esc(due)} · ${relatedLabel}: ${Number(x.related_count||0)}</p>
       </article>`;
     }).join('');
   }
