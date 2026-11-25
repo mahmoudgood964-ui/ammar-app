@@ -61,6 +61,7 @@ USING (
       AND (
         d.supplier_user_id = (SELECT auth.uid())
         OR app_private.ammar_project_role(d.project_id::text) IS NOT NULL
+        OR (SELECT public.is_admin())
       )
   )
 );
@@ -78,6 +79,7 @@ USING (
       AND (
         d.supplier_user_id = (SELECT auth.uid())
         OR app_private.ammar_project_role(d.project_id::text) IS NOT NULL
+        OR (SELECT public.is_admin())
       )
   )
 );
