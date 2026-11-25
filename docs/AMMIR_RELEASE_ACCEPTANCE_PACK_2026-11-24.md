@@ -287,3 +287,19 @@ The month validator correction and the prior-period adjustment fixture are inclu
 - Push/PR workflow validation [#45589432169](https://github.com/mahmoudgood964-ui/ammar-app/actions/runs/45589432169): SUCCESS. All 40 steps passed, including the new authorization fixture, private-RPC checks, revenue regressions, browser-code/migration wiring, and service-worker tests.
 - An earlier run exposed a static assertion mismatch about the combined `REVOKE ... FROM PUBLIC, anon` statement; the assertion was corrected and the exact final head passed.
 - No production migration, production deployment, PR merge, commission/payment change, or payment milestone modification was performed.
+
+
+## Supplier and contractor performance dashboard (2026-11-25)
+
+- Added the admin-only performance panel to the existing AMMIR administration dashboard. It covers the last 90 days.
+- Metrics are sourced from project RFQ invitations/responses and recorded delivery headers/items; no scores or synthetic events are generated.
+- RFQ response rate excludes withdrawn invitations and invitations whose response window is still open. Response time is measured from invitation time to the recorded response time.
+- Delivery completion counts only deliveries in `received` state with a recorded receipt, positive expected quantity, all expected quantity received, and no damaged or missing quantity. Canceled deliveries are excluded.
+- On-time rate uses only fully completed deliveries with a scheduled date; the receipt date must be on or before the scheduled date. If there is no eligible sample, the rate is NULL and the UI shows "غير متاح".
+- Completion and response rates include their numerator/denominator counts so small samples are visible. No performance grade or ranking is inferred from insufficient data.
+- Added `public.ammar_admin_supplier_performance(timestamptz)` as a SECURITY INVOKER wrapper over a bounded internal function in `app_private`. The internal function requires an authenticated administrator, clamps the lookback window to at most 24 months, and returns at most 500 provider aggregates.
+- The RPC does not return project IDs, project titles, RFQ references, delivery references, contact information, prices, or other project-specific details. It does not add broad SELECT policies or change project RLS.
+- Added integration coverage for non-admin denial, expected RFQ response metrics, incomplete-delivery handling, and aggregate-only result contract; added static checks for dashboard wiring and RPC security.
+- Exact validated branch head: `7331c4df99a9024152e1f4947a0b8e583cae6ab1`.
+- GitHub Actions run [#45591384626](https://github.com/mahmoudgood964-ui/ammar-app/actions/runs/45591384626): SUCCESS. The workflow completed all 42 steps, including the supplier-performance migration and integration test, existing revenue/security regressions, browser-code checks, and service-worker tests.
+- The feature remains in the open draft PR #14. No production migration, merge, deployment, or change to financial records, commission rules, payment milestones, or production data was performed.
