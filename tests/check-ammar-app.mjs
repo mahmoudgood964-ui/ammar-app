@@ -512,3 +512,16 @@ assert.ok(moduleSource.includes('شهر الكشف (UTC)'), 'Monthly statement t
 assert.ok(moduleSource.includes("if(!/^\\d{4}-(0[1-9]|1[0-2])$/.test(month))"), 'Monthly statement must validate YYYY-MM using a real digit escape');
 assert.doesNotMatch(moduleSource, /if\(!\/\^\\\\d\{4\}/, 'Monthly statement must not use an escaped literal backslash instead of a digit class');
 
+
+const accountResetStart = moduleSource.indexOf('function resetAccountState(){');
+const accountResetEnd = moduleSource.indexOf('function start(sessionUser)', accountResetStart);
+assert.ok(accountResetStart >= 0 && accountResetEnd > accountResetStart, 'Account-scoped reset helper must exist before session startup');
+const accountResetBody = moduleSource.slice(accountResetStart, accountResetEnd);
+for (const stateName of ['supplier=null','provider=null','products=[]','myProducts=[]','projects=[]','serviceProviders=[]','availableConversations=[]','revenueRows=[]','revenueAdjustments=[]','activeConversation=null','replyToMessageId=null','tab=\'market\'','isAdmin=false']) {
+  assert.ok(accountResetBody.includes(stateName), 'Account switch reset must clear ' + stateName);
+}
+assert.ok(accountResetBody.includes('db.removeChannel(messageChannel)'), 'Account reset must detach the previous user realtime channel');
+assert.ok(accountResetBody.includes("$('ecoPanel').replaceChildren()"), 'Account reset must clear rendered account-specific content');
+assert.ok(moduleSource.includes('if(user&&user.id!==sessionUser.id)resetAccountState();'), 'Switching directly between signed-in accounts must clear the previous account state');
+assert.match(moduleSource, /onAuthStateChange\(\(event,session\)=>\{[\s\S]*?else\{\s*resetAccountState\(\);/, 'Sign-out events must clear account-scoped state');
+
