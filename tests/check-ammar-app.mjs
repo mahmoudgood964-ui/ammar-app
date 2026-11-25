@@ -281,6 +281,7 @@ const receiptTests = fs.readFileSync('tests/ammir-delivery-receipts.sql', 'utf8'
 assert.ok(receiptMigration.includes('ammir_project_delivery_receipts') && receiptMigration.includes('idempotency_key'), 'Delivery receipt batches must be persisted with an idempotency key');
 assert.ok(receiptMigration.includes('rejected_quantity') && receiptMigration.includes('condition_notes'), 'Delivery rejection quantity and reason must be recorded');
 assert.ok(receiptMigration.includes('ammir_record_delivery_receipt'), 'The incremental receipt RPC must be present');
+assert.ok(receiptMigration.includes('GRANT EXECUTE ON FUNCTION app_private.ammir_record_project_delivery_receipt(uuid,jsonb,text,uuid,uuid)') && receiptMigration.includes('TO authenticated, service_role'), 'Authenticated users must be able to invoke the private receipt RPC through its public invoker wrapper');
 assert.ok(receiptMigration.includes('DROP TRIGGER IF EXISTS ammir_project_delivery_commission_sync') && receiptMigration.includes('DROP TRIGGER IF EXISTS ammir_project_delivery_items_commission_sync'), 'Aggregate commission triggers must be removed to prevent rewriting paid entries');
 assert.ok(receiptMigration.includes("v_delivery_id::text || ':' || v_currency || ':' || p_receipt_id::text"), 'Each receipt batch must have its own immutable commission source');
 assert.ok(receiptMigration.includes("current_setting('app.ammir_receipt_write', true) IS DISTINCT FROM 'on'"), 'Direct delivery quantity edits must be blocked outside the receipt RPC');
