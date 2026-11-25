@@ -137,6 +137,14 @@ jobs:
         env:
           PGPASSWORD: postgres
         run: psql -h 127.0.0.1 -U postgres -d ammar_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261125103000_add_admin_operational_alerts.sql
+      - name: Add aggregate AMMIR supplier performance RPC
+        env:
+          PGPASSWORD: postgres
+        run: psql -h 127.0.0.1 -U postgres -d ammar_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261125114500_add_admin_supplier_performance.sql
+      - name: Test aggregate AMMIR supplier performance authorization and data contract
+        env:
+          PGPASSWORD: postgres
+        run: psql -h 127.0.0.1 -U postgres -d ammar_test -v ON_ERROR_STOP=1 -f tests/ammir-admin-supplier-performance.sql
       - name: Verify AMMIR private RPC wrappers and access
         env:
           PGPASSWORD: postgres
