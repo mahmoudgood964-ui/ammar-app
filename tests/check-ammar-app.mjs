@@ -491,3 +491,7 @@ assert.equal(statementTotals.find(x=>x.currency==='USD').net_activity,12,'USD ne
 assert.equal(statementSandbox.statementCsvCell('=SUM(A1:A2)','reason'),'"\'=SUM(A1:A2)"','CSV text cells must be guarded against formula injection');
 assert.equal(statementSandbox.statementCsvCell(-15,'adjustment_delta'),'"-15"','Signed numeric adjustments must remain numeric in CSV');
 
+
+assert.ok(moduleSource.includes('Date.UTC(year,monthNumber-1,1)'), 'Monthly statement start must use a UTC calendar boundary');
+assert.ok(moduleSource.includes('Date.UTC(year,monthNumber,1)'), 'Monthly statement end must use a UTC calendar boundary');
+assert.ok(moduleSource.includes('شهر الكشف (UTC)'), 'Monthly statement timezone must be disclosed in the UI');
