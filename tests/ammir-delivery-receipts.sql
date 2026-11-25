@@ -353,6 +353,16 @@ BEGIN
     v_ledger_count_before integer;
     v_ledger_gross_before numeric(20,2);
     v_ledger_commission_before numeric(20,2);
+    v_return_claim_id uuid;
+    v_second_return_claim_id uuid;
+    v_return_id_one uuid;
+    v_return_id_two uuid;
+    v_return_replay uuid;
+    v_adjustment_count integer;
+    v_adjustment_total numeric(14,2);
+    v_original_status text;
+    v_original_gross numeric(14,2);
+    v_original_commission numeric(14,2);
   BEGIN
     SELECT count(*),coalesce(sum(gross_amount),0),coalesce(sum(commission_amount),0)
       INTO v_ledger_count_before,v_ledger_gross_before,v_ledger_commission_before
@@ -459,6 +469,149 @@ BEGIN
         AND resolved_by=v_owner AND resolved_at IS NOT NULL
         AND resolution_note='Claim accepted for operational follow-up; no automatic financial adjustment.'
     ) THEN RAISE EXCEPTION 'Claim resolution details were not persisted'; END IF;
+
+    -- A separate accepted return is required; claim acceptance alone never changes commission.
+    v_return_claim_id := public.ammir_submit_delivery_claim(
+      v_delivery_a,
+      (SELECT id FROM public.ammir_project_delivery_receipt_items
+       WHERE receipt_id=v_receipt_a AND delivery_item_id=v_item_a LIMIT 1),
+      'quality',2,
+      'Two accepted units from this receipt batch failed the agreed quality inspection.'
+    );
+    PERFORM public.ammir_transition_delivery_claim(v_return_claim_id,'under_review',null);
+    PERFORM public.ammir_transition_delivery_claim(
+      v_return_claim_id,'accepted','Quality claim accepted for a two-unit physical return.'
+    );
+
+    v_return_id_one := public.ammir_record_delivery_return(
+      v_return_claim_id,1,gen_random_uuid(),
+      'One returned unit received and checked by the project manager.'
+    );
+    v_return_replay := public.ammir_record_delivery_return(
+      v_return_claim_id,1,
+      (SELECT idempotency_key FROM public.ammir_project_delivery_returns WHERE id=v_return_id_one),
+      'One returned unit received and checked by the project manager.'
+    );
+    IF v_return_id_one<>v_return_replay THEN
+      RAISE EXCEPTION 'Return idempotency replay did not return the original return id';
+    END IF;
+
+    v_failed := false;
+    BEGIN
+      PERFORM public.ammir_record_delivery_return(
+        v_return_claim_id,0.5,
+        (SELECT idempotency_key FROM public.ammir_project_delivery_returns WHERE id=v_return_id_one),
+        'Changed payload on a previously used return idempotency key.'
+      );
+    EXCEPTION WHEN OTHERS THEN
+      v_failed := true;
+    END;
+    IF NOT v_failed THEN RAISE EXCEPTION 'Changed return payload reused an existing idempotency key'; END IF;
+
+    SELECT count(*),coalesce(sum(a.adjustment_amount),0)
+      INTO v_adjustment_count,v_adjustment_total
+    FROM public.ammir_commission_adjustment_proposals a
+    JOIN public.ammar_commission_ledger l ON l.id=a.original_ledger_id
+    WHERE l.source_type='project_delivery'
+      AND l.source_id=v_delivery_a::text||':SDG:'||v_receipt_a::text;
+    IF v_adjustment_count<>1 OR v_adjustment_total<>5.50 THEN
+      RAISE EXCEPTION 'One returned unit must propose half of the original commission; rows %, amount %',
+        v_adjustment_count,v_adjustment_total;
+    END IF;
+
+    v_return_id_two := public.ammir_record_delivery_return(
+      v_return_claim_id,1,gen_random_uuid(),
+      'Second returned unit received and checked by the project manager.'
+    );
+    SELECT count(*),coalesce(sum(a.adjustment_amount),0)
+      INTO v_adjustment_count,v_adjustment_total
+    FROM public.ammir_commission_adjustment_proposals a
+    JOIN public.ammar_commission_ledger l ON l.id=a.original_ledger_id
+    WHERE l.source_type='project_delivery'
+      AND l.source_id=v_delivery_a::text||':SDG:'||v_receipt_a::text;
+    IF v_adjustment_count<>2 OR v_adjustment_total<>11.00 THEN
+      RAISE EXCEPTION 'Two partial returns must cumulatively reverse no more than the original commission; rows %, amount %',
+        v_adjustment_count,v_adjustment_total;
+    END IF;
+
+    v_failed := false;
+    BEGIN
+      PERFORM public.ammir_record_delivery_return(
+        v_return_claim_id,0.1,gen_random_uuid(),
+        'This excess return must be rejected by the accepted claim quantity cap.'
+      );
+    EXCEPTION WHEN OTHERS THEN
+      v_failed := true;
+    END;
+    IF NOT v_failed THEN
+      RAISE EXCEPTION 'Cumulative return quantity above accepted claim quantity was accepted';
+    END IF;
+
+    PERFORM set_config('request.jwt.claim.sub',v_unrelated::text,true);
+    v_failed := false;
+    BEGIN
+      PERFORM public.ammir_record_delivery_return(
+        v_return_claim_id,0.1,gen_random_uuid(),
+        'An unrelated user must not accept or record a return.'
+      );
+    EXCEPTION WHEN OTHERS THEN
+      v_failed := true;
+    END;
+    IF NOT v_failed THEN RAISE EXCEPTION 'Unrelated user unexpectedly accepted a delivery return'; END IF;
+
+    -- A second accepted claim cannot return the same receipt units again.
+    PERFORM set_config('request.jwt.claim.sub',v_owner::text,true);
+    v_second_return_claim_id := public.ammir_submit_delivery_claim(
+      v_delivery_a,
+      (SELECT id FROM public.ammir_project_delivery_receipt_items
+       WHERE receipt_id=v_receipt_a AND delivery_item_id=v_item_a LIMIT 1),
+      'quality',1,
+      'A separate overlapping claim is used to verify the receipt-line return cap.'
+    );
+    PERFORM public.ammir_transition_delivery_claim(v_second_return_claim_id,'under_review',null);
+    PERFORM public.ammir_transition_delivery_claim(
+      v_second_return_claim_id,'accepted','Accepted for review only; all units already returned.'
+    );
+    PERFORM set_config('request.jwt.claim.sub',v_supplier::text,true);
+    v_failed := false;
+    BEGIN
+      PERFORM public.ammir_record_delivery_return(
+        v_second_return_claim_id,0.1,gen_random_uuid(),
+        'Supplier cannot accept a physical return on behalf of the project.'
+      );
+    EXCEPTION WHEN OTHERS THEN
+      v_failed := true;
+    END;
+    IF NOT v_failed THEN RAISE EXCEPTION 'Assigned supplier unexpectedly accepted a physical return'; END IF;
+    PERFORM set_config('request.jwt.claim.sub',v_owner::text,true);
+    v_failed := false;
+    BEGIN
+      PERFORM public.ammir_record_delivery_return(
+        v_second_return_claim_id,0.1,gen_random_uuid(),
+        'Overlapping claims cannot return the same receipt quantity twice.'
+      );
+    EXCEPTION WHEN OTHERS THEN
+      v_failed := true;
+    END;
+    IF NOT v_failed THEN RAISE EXCEPTION 'Cumulative returns across claims exceeded the receipt-line quantity'; END IF;
+
+    IF EXISTS (
+      SELECT 1 FROM public.ammir_commission_adjustment_proposals a
+      JOIN public.ammar_commission_ledger l ON l.id=a.original_ledger_id
+      WHERE l.source_type='project_delivery'
+        AND l.source_id LIKE v_delivery_b::text||':%'
+    ) THEN
+      RAISE EXCEPTION 'Rejected-goods claim created a commission adjustment for goods excluded from commission';
+    END IF;
+
+    SELECT l.status,l.gross_amount,l.commission_amount
+      INTO v_original_status,v_original_gross,v_original_commission
+    FROM public.ammar_commission_ledger l
+    WHERE l.source_type='project_delivery'
+      AND l.source_id=v_delivery_a::text||':SDG:'||v_receipt_a::text;
+    IF v_original_status<>'paid' OR v_original_gross<>220 OR v_original_commission<>11 THEN
+      RAISE EXCEPTION 'Return workflow mutated the original paid commission row';
+    END IF;
 
     IF (
       SELECT count(*) FROM public.ammar_commission_ledger
