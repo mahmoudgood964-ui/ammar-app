@@ -1619,8 +1619,28 @@ function providerTypeLabel(type){
     window.openAmmarEcosystem=open;
   }
 
+  function resetAccountState(){
+    if(refreshTimer)clearInterval(refreshTimer);
+    if(presenceTimer)clearInterval(presenceTimer);
+    refreshTimer=null;presenceTimer=null;
+    if(messageChannel&&db)db.removeChannel(messageChannel).catch(()=>{});
+    messageChannel=null;
+    user=null;supplier=null;provider=null;
+    products=[];myProducts=[];projects=[];serviceProviders=[];
+    availableConversations=[];revenueRows=[];revenueAdjustments=[];
+    activeConversation=null;replyToMessageId=null;
+    tab='market';showLastSeen=true;isAdmin=false;
+    if($('ecoAdminTab'))$('ecoAdminTab').hidden=true;
+    if($('ecoRevenueTab'))$('ecoRevenueTab').hidden=true;
+    if($('ecoPanel'))$('ecoPanel').replaceChildren();
+    document.querySelectorAll('[data-eco-unread]').forEach(b=>{b.textContent='0';b.hidden=true;});
+    $('ammarEcosystemView')?.classList.remove('active');
+  }
+
   function start(sessionUser){
-    user=sessionUser;if(!user)return;mount();if(!mounted)return;
+    if(!sessionUser)return;
+    if(user&&user.id!==sessionUser.id)resetAccountState();
+    user=sessionUser;mount();if(!mounted)return;
     db.from('ammar_user_presence').select('show_last_seen').eq('user_id',user.id).maybeSingle()
       .then(r=>{if(!r.error&&r.data)showLastSeen=r.data.show_last_seen!==false;})
       .finally(()=>db.rpc('ammar_set_presence',{p_show_last_seen:showLastSeen}).then(()=>{}).catch(()=>{}));
@@ -1649,13 +1669,7 @@ function providerTypeLabel(type){
     db.auth.onAuthStateChange((event,session)=>{
       if(session?.user)start(session.user);
       else{
-        user=null;activeConversation=null;isAdmin=false;
-        if($('ecoAdminTab'))$('ecoAdminTab').hidden=true;
-        if($('ecoRevenueTab'))$('ecoRevenueTab').hidden=true;
-        if(refreshTimer)clearInterval(refreshTimer);
-        if(presenceTimer)clearInterval(presenceTimer);
-        if(messageChannel)db.removeChannel(messageChannel).catch(()=>{});
-        $('ammarEcosystemView')?.classList.remove('active');
+        resetAccountState();
       }
     });
     db.auth.getSession().then(r=>{if(r.data?.session?.user)start(r.data.session.user);}).catch(err=>console.warn('AMMIR ecosystem auth:',err.message));
