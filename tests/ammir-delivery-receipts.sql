@@ -11,7 +11,6 @@ DECLARE
   v_quote_item uuid;
   v_award uuid;
   v_award_item uuid;
-  v_po uuid;
   v_delivery_a uuid;
   v_delivery_b uuid;
   v_item_a uuid;
@@ -93,14 +92,6 @@ BEGIN
   UPDATE public.ammir_project_awards
   SET status='accepted',accepted_at=now()
   WHERE id=v_award AND supplier_user_id=v_supplier;
-
-  PERFORM set_config('request.jwt.claim.sub',v_owner::text,true);
-  v_po := public.ammir_issue_purchase_order(v_award,'RCPT-PO-01');
-
-  PERFORM set_config('request.jwt.claim.sub',v_supplier::text,true);
-  UPDATE public.ammir_project_purchase_orders
-  SET status='accepted',accepted_at=now()
-  WHERE id=v_po AND supplier_user_id=v_supplier;
 
   PERFORM set_config('request.jwt.claim.sub',v_owner::text,true);
   INSERT INTO public.ammir_project_deliveries(
