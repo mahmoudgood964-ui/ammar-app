@@ -49,9 +49,14 @@ INSERT INTO public.ammir_project_rfq_invites(
  'cccccccc-2511-4000-8000-000000000001',
  'bbbbbbbb-2511-4000-8000-000000000001',
  'aaaaaaaa-2511-4000-8000-000000000003',
- 'supplier','Operational Alerts Test Supplier','accepted',
+ 'supplier','Operational Alerts Test Supplier','invited',
  'aaaaaaaa-2511-4000-8000-000000000002',now()
 ) ON CONFLICT DO NOTHING;
+
+UPDATE public.ammir_project_rfq_invites
+SET status='accepted',responded_at=now()
+WHERE rfq_id='cccccccc-2511-4000-8000-000000000001'
+  AND provider_user_id='aaaaaaaa-2511-4000-8000-000000000003';
 
 INSERT INTO public.ammir_project_rfq_quotes(
  id,rfq_id,project_id,provider_user_id,currency,total_cost,status,submitted_at
