@@ -124,7 +124,6 @@ FOR EACH ROW EXECUTE FUNCTION public.ammir_guard_delivery_item_receipt_write();
 
 REVOKE UPDATE, DELETE ON public.ammir_project_delivery_items FROM anon, authenticated;
 REVOKE ALL ON FUNCTION public.ammir_guard_delivery_item_receipt_write() FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public.ammir_guard_delivery_status() FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.ammir_guard_delivery_reconciliation_state() FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.ammir_validate_delivery_item() FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.ammir_reconcile_project_delivery(uuid,jsonb,text) FROM PUBLIC, anon, authenticated;
@@ -277,6 +276,7 @@ BEGIN
   RAISE EXCEPTION 'Invalid delivery status transition';
 END;
 $$;
+REVOKE ALL ON FUNCTION public.ammir_guard_delivery_status() FROM PUBLIC, anon, authenticated;
 
 -- Existing aggregate triggers could rewrite a previously paid commission row when
 -- a later partial receipt arrived. Replace them with one immutable commission
