@@ -124,35 +124,35 @@ assert.ok(moduleSource.includes('net_commission_amount'),'Revenue dashboard and 
 const statementStart=moduleSource.indexOf('function statementCsvCell(');
 const statementEnd=moduleSource.indexOf('async function agreementsHtml()',statementStart);
 assert.ok(statementStart>=0&&statementEnd>statementStart,'Period-based commission statement helpers are missing');
-const statementSandbox={};
+const monthlyStatementSandbox={};
 vm.runInNewContext(
   moduleSource.slice(statementStart,statementEnd)+String.fromCharCode(10)+
   'globalThis.statementCsvCell=statementCsvCell;globalThis.buildCommissionStatementRows=buildCommissionStatementRows;globalThis.summarizeCommissionStatement=summarizeCommissionStatement;',
-  statementSandbox
+  monthlyStatementSandbox
 );
 assert.equal(
-  statementSandbox.statementCsvCell('=HYPERLINK("https://bad.example")','reason'),
+  monthlyStatementSandbox.statementCsvCell('=HYPERLINK("https://bad.example")','reason'),
   '"\'=HYPERLINK(""https://bad.example"")"',
   'Commission statement CSV must neutralize spreadsheet formula injection in text fields'
 );
 assert.equal(
-  statementSandbox.statementCsvCell('-12.50','adjustment_delta'),
+  monthlyStatementSandbox.statementCsvCell('-12.50','adjustment_delta'),
   '"-12.50"',
   'Commission statement CSV must preserve signed numeric adjustment values'
 );
-const statementRows=statementSandbox.buildCommissionStatementRows(
+const monthlyStatementRows=monthlyStatementSandbox.buildCommissionStatementRows(
   [{id:'ledger-1',recorded_at:'2026-11-03T10:00:00Z',activity_type:'market_materials',source_type:'market_request',source_id:'req-1',gross_amount:1000,currency:'SDG',rate_percent:5,commission_amount:50,status:'due'}],
   [{id:'adj-1',ledger_id:'ledger-1',created_at:'2026-11-12T10:00:00Z',adjustment_kind:'partial_refund',amount_delta:-10,currency:'SDG',reason:'Refund correction',source_reference:'bank-ref-1'}],
   [{id:'ledger-1',activity_type:'market_materials',source_type:'market_request',source_id:'req-1',status:'due'}]
 );
-assert.equal(statementRows.length,2,'Statement must include commission and its adjustment as separate dated events');
-assert.equal(statementRows[1].source_id,'req-1','Adjustment statement row must retain its source transaction reference');
-assert.equal(statementRows[1].net_activity,-10,'Adjustment statement row must retain its signed net activity');
-const statementTotals=statementSandbox.summarizeCommissionStatement(statementRows);
-assert.equal(statementTotals[0].gross_amount,1000,'Statement summary must total gross transaction basis');
-assert.equal(statementTotals[0].commission_amount,50,'Statement summary must preserve original commission');
-assert.equal(statementTotals[0].adjustment_delta,-10,'Statement summary must total signed adjustments separately');
-assert.equal(statementTotals[0].net_activity,40,'Statement summary must calculate net period activity');
+assert.equal(monthlyStatementRows.length,2,'Statement must include commission and its adjustment as separate dated events');
+assert.equal(monthlyStatementRows[1].source_id,'req-1','Adjustment statement row must retain its source transaction reference');
+assert.equal(monthlyStatementRows[1].net_activity,-10,'Adjustment statement row must retain its signed net activity');
+const monthlyStatementTotals=monthlyStatementSandbox.summarizeCommissionStatement(monthlyStatementRows);
+assert.equal(monthlyStatementTotals[0].gross_amount,1000,'Statement summary must total gross transaction basis');
+assert.equal(monthlyStatementTotals[0].commission_amount,50,'Statement summary must preserve original commission');
+assert.equal(monthlyStatementTotals[0].adjustment_delta,-10,'Statement summary must total signed adjustments separately');
+assert.equal(monthlyStatementTotals[0].net_activity,40,'Statement summary must calculate net period activity');
 assert.ok(moduleSource.includes("gte('recorded_at',start).lt('recorded_at',end)"),'Statement ledger query must be restricted to the selected month');
 assert.ok(moduleSource.includes("gte('created_at',start).lt('created_at',end)"),'Statement adjustment query must be restricted to the selected month');
 assert.ok(moduleSource.includes(".eq('payer_id',user.id)"),'Statement ledger query must remain scoped to the signed-in payer');
