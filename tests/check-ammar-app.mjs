@@ -447,9 +447,9 @@ assert.ok(statementHelperStart >= 0 && statementHelperEnd > statementHelperStart
 const statementSandbox = {};
 vm.runInNewContext(
   moduleSource.slice(statementHelperStart, statementHelperEnd) +
-    '\\n globalThis.buildCommissionStatementRows = buildCommissionStatementRows;' +
-    '\\n globalThis.summarizeCommissionStatement = summarizeCommissionStatement;' +
-    '\\n globalThis.statementCsvCell = statementCsvCell;',
+    '\n globalThis.buildCommissionStatementRows = buildCommissionStatementRows;' +
+    '\n globalThis.summarizeCommissionStatement = summarizeCommissionStatement;' +
+    '\n globalThis.statementCsvCell = statementCsvCell;',
   statementSandbox
 );
 const statementLedger = [
