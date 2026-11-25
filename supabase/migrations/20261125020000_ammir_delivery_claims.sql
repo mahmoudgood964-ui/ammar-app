@@ -143,6 +143,7 @@ DECLARE
   v_role text;
   v_claimant_side text;
   v_claim_id uuid;
+  v_recorded_quantity numeric(18,3);
 BEGIN
   IF auth.uid() IS NULL THEN RAISE EXCEPTION 'Authentication required'; END IF;
   IF p_claim_type NOT IN ('damaged_goods','missing_goods','rejected_goods','quality','wrong_item','documentation','other') THEN
@@ -178,12 +179,28 @@ BEGIN
     RAISE EXCEPTION 'Only the project team or assigned supplier may open a delivery claim';
   END IF;
 
-  IF p_receipt_item_id IS NOT NULL AND NOT EXISTS (
-    SELECT 1
+  IF p_claim_type IN ('damaged_goods','missing_goods','rejected_goods','quality','wrong_item')
+     AND p_receipt_item_id IS NULL THEN
+    RAISE EXCEPTION 'A quantity-based claim must reference a recorded receipt line';
+  END IF;
+  IF p_receipt_item_id IS NOT NULL THEN
+    SELECT CASE p_claim_type
+      WHEN 'damaged_goods' THEN ri.damaged_quantity
+      WHEN 'missing_goods' THEN ri.missing_quantity
+      WHEN 'rejected_goods' THEN ri.rejected_quantity
+      WHEN 'quality' THEN ri.received_quantity
+      WHEN 'wrong_item' THEN ri.received_quantity
+      ELSE NULL
+    END
+    INTO v_recorded_quantity
     FROM public.ammir_project_delivery_receipt_items ri
-    WHERE ri.id=p_receipt_item_id AND ri.delivery_id=p_delivery_id
-  ) THEN
-    RAISE EXCEPTION 'Claim receipt item must belong to the selected delivery';
+    WHERE ri.id=p_receipt_item_id AND ri.delivery_id=p_delivery_id;
+    IF NOT FOUND THEN
+      RAISE EXCEPTION 'Claim receipt item must belong to the selected delivery';
+    END IF;
+    IF v_recorded_quantity IS NOT NULL AND p_claimed_quantity>v_recorded_quantity+0.0005 THEN
+      RAISE EXCEPTION 'Claimed quantity exceeds the quantity recorded on the selected receipt line';
+    END IF;
   END IF;
   IF p_evidence_id IS NOT NULL AND NOT EXISTS (
     SELECT 1 FROM public.ammir_project_delivery_evidence e
