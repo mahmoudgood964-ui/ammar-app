@@ -446,7 +446,7 @@
   }
 
   function parseSettlementCsv(input){
-    const source=String(input||'').replace(/^\\uFEFF/,'');
+    const source=String(input||'').replace(/^\uFEFF/,'');
     const records=[];let row=[],field='',quoted=false;
     for(let i=0;i<source.length;i++){
       const ch=source[i];
@@ -456,8 +456,8 @@
         else field+=ch;
       }else if(ch==='"'&&field==='')quoted=true;
       else if(ch===','){row.push(field);field='';}
-      else if(ch==='\\n'||ch==='\\r'){
-        if(ch==='\\r'&&source[i+1]==='\\n')i++;
+      else if(ch==='\n'||ch==='\r'){
+        if(ch==='\r'&&source[i+1]==='\n')i++;
         row.push(field);field='';
         if(row.some(x=>String(x).trim()!==''))records.push(row);
         row=[];
@@ -1287,8 +1287,8 @@ function providerTypeLabel(type){
       adjustment_kind:'',adjustment_delta:x.adjustment_delta,net_activity:x.net_activity,
       status:'',reason:'عدد سجلات العمولات: '+x.commission_count,source_reference:''
     }));
-    const csv=[columns.join(','),...rows.concat(summary).map(row=>columns.map(key=>statementCsvCell(row[key],key)).join(','))].join('\\r\\n');
-    const blob=new Blob(['\\uFEFF'+csv],{type:'text/csv;charset=utf-8;'});
+    const csv=[columns.join(','),...rows.concat(summary).map(row=>columns.map(key=>statementCsvCell(row[key],key)).join(','))].join('\r\n');
+    const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8;'});
     const url=URL.createObjectURL(blob),link=document.createElement('a');
     link.href=url;link.download='ammir-commission-statement-'+month+'.csv';
     document.body.appendChild(link);link.click();link.remove();URL.revokeObjectURL(url);
