@@ -4,6 +4,7 @@ DO $delivery_receipt_tests$
 DECLARE
   v_owner uuid := gen_random_uuid();
   v_supplier uuid := gen_random_uuid();
+  v_unrelated uuid := gen_random_uuid();
   v_project uuid := gen_random_uuid();
   v_rfq uuid;
   v_rfq_item uuid;
@@ -27,10 +28,12 @@ DECLARE
   v_paid_gross numeric(20,2);
   v_paid_commission numeric(20,2);
   v_failed boolean;
+  v_error text;
 BEGIN
   INSERT INTO auth.users(id,email) VALUES
     (v_owner,'delivery-receipt-owner@example.test'),
-    (v_supplier,'delivery-receipt-supplier@example.test');
+    (v_supplier,'delivery-receipt-supplier@example.test'),
+    (v_unrelated,'delivery-receipt-unrelated@example.test');
   INSERT INTO public.profiles(id,role) VALUES
     (v_owner,'client'),(v_supplier,'client');
   INSERT INTO public.projects(id,client_id,title)
@@ -109,6 +112,28 @@ BEGIN
   SET status='dispatched',dispatched_at=now()
   WHERE id=v_delivery_a AND supplier_user_id=v_supplier;
 
+  PERFORM set_config('request.jwt.claim.sub',v_owner::text,true);
+
+  -- An authenticated but unrelated user must not reconcile another project's delivery.
+  PERFORM set_config('request.jwt.claim.sub',v_unrelated::text,true);
+  v_failed := false;
+  v_error := null;
+  BEGIN
+    PERFORM public.ammir_record_delivery_receipt(
+      v_delivery_a,
+      jsonb_build_array(jsonb_build_object(
+        'delivery_item_id',v_item_a,'received_quantity',1,'damaged_quantity',0,
+        'missing_quantity',0,'rejected_quantity',0,'condition_notes',null
+      )),
+      'partially_received',gen_random_uuid(),null
+    );
+  EXCEPTION WHEN OTHERS THEN
+    v_failed := true;
+    GET STACKED DIAGNOSTICS v_error = MESSAGE_TEXT;
+  END;
+  IF NOT v_failed OR v_error NOT LIKE '%Project manager permission required%' THEN
+    RAISE EXCEPTION 'Unrelated authenticated user was not rejected by project authorization: %',coalesce(v_error,'no error');
+  END IF;
   PERFORM set_config('request.jwt.claim.sub',v_owner::text,true);
 
   -- A premature full-receipt claim must fail without creating an event or ledger row.
