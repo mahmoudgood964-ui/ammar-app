@@ -346,7 +346,98 @@ BEGIN
       AND condition_notes='Rejected by buyer: specification mismatch'
   ) THEN RAISE EXCEPTION 'Rejected quantity and reason were not preserved in receipt history'; END IF;
 
-  RAISE NOTICE 'AMMIR INCREMENTAL DELIVERY RECEIPT TESTS PASSED';
+  -- Delivery claims create an auditable dispute trail without changing receipt or commission data.
+  DECLARE
+    v_claim_id uuid;
+    v_claim_event_count integer;
+    v_ledger_count_before integer;
+    v_ledger_gross_before numeric(20,2);
+    v_ledger_commission_before numeric(20,2);
+  BEGIN
+    SELECT count(*),coalesce(sum(gross_amount),0),coalesce(sum(commission_amount),0)
+      INTO v_ledger_count_before,v_ledger_gross_before,v_ledger_commission_before
+    FROM public.ammar_commission_ledger
+    WHERE source_type='project_delivery' AND source_id LIKE v_delivery_b::text||':%';
+
+    PERFORM set_config('request.jwt.claim.sub',v_owner::text,true);
+    v_claim_id := public.ammir_submit_delivery_claim(
+      v_delivery_b,
+      (SELECT id FROM public.ammir_project_delivery_receipt_items
+       WHERE delivery_id=v_delivery_b AND delivery_item_id=v_item_b LIMIT 1),
+      'rejected_goods',2,
+      'The supplier delivered rejected goods that do not match the agreed specification.'
+    );
+
+    -- A user unrelated to the project or assigned supplier cannot add claim messages.
+    PERFORM set_config('request.jwt.claim.sub',v_unrelated::text,true);
+    v_failed := false;
+    BEGIN
+      PERFORM public.ammir_add_delivery_claim_message(v_claim_id,'I am not a party to this delivery claim.');
+    EXCEPTION WHEN OTHERS THEN
+      v_failed := true;
+    END;
+    IF NOT v_failed THEN RAISE EXCEPTION 'Unrelated user unexpectedly added a claim message'; END IF;
+
+    -- The assigned supplier can respond; project managers control resolution.
+    PERFORM set_config('request.jwt.claim.sub',v_supplier::text,true);
+    PERFORM public.ammir_add_delivery_claim_message(
+      v_claim_id,'We acknowledge the rejection and will review the supplied batch documentation.'
+    );
+
+    PERFORM set_config('request.jwt.claim.sub',v_owner::text,true);
+    PERFORM public.ammir_transition_delivery_claim(v_claim_id,'under_review',null);
+    PERFORM public.ammir_transition_delivery_claim(v_claim_id,'response_requested',null);
+    PERFORM public.ammir_transition_delivery_claim(
+      v_claim_id,'accepted','Claim accepted for operational follow-up; no automatic financial adjustment.'
+    );
+
+    SELECT count(*) INTO v_claim_event_count
+    FROM public.ammir_project_delivery_claim_events
+    WHERE claim_id=v_claim_id;
+    IF v_claim_event_count<>5 THEN
+      RAISE EXCEPTION 'Expected opening, supplier response and three status events; found %',v_claim_event_count;
+    END IF;
+
+    v_failed := false;
+    BEGIN
+      UPDATE public.ammir_project_delivery_claim_events
+      SET body='tampered'
+      WHERE claim_id=v_claim_id;
+    EXCEPTION WHEN OTHERS THEN
+      v_failed := true;
+    END;
+    IF NOT v_failed THEN RAISE EXCEPTION 'Claim event history was unexpectedly mutable'; END IF;
+
+    v_failed := false;
+    BEGIN
+      PERFORM public.ammir_add_delivery_claim_message(v_claim_id,'This message must be blocked after resolution.');
+    EXCEPTION WHEN OTHERS THEN
+      v_failed := true;
+    END;
+    IF NOT v_failed THEN RAISE EXCEPTION 'Resolved claim unexpectedly accepted a new message'; END IF;
+
+    IF NOT EXISTS (
+      SELECT 1 FROM public.ammir_project_delivery_claims
+      WHERE id=v_claim_id AND status='accepted'
+        AND resolved_by=v_owner AND resolved_at IS NOT NULL
+        AND resolution_note='Claim accepted for operational follow-up; no automatic financial adjustment.'
+    ) THEN RAISE EXCEPTION 'Claim resolution details were not persisted'; END IF;
+
+    IF (
+      SELECT count(*) FROM public.ammar_commission_ledger
+      WHERE source_type='project_delivery' AND source_id LIKE v_delivery_b::text||':%'
+    )<>v_ledger_count_before OR (
+      SELECT coalesce(sum(gross_amount),0) FROM public.ammar_commission_ledger
+      WHERE source_type='project_delivery' AND source_id LIKE v_delivery_b::text||':%'
+    )<>v_ledger_gross_before OR (
+      SELECT coalesce(sum(commission_amount),0) FROM public.ammar_commission_ledger
+      WHERE source_type='project_delivery' AND source_id LIKE v_delivery_b::text||':%'
+    )<>v_ledger_commission_before THEN
+      RAISE EXCEPTION 'Claim resolution unexpectedly changed delivery commission ledger';
+    END IF;
+  END;
+
+  RAISE NOTICE 'AMMIR INCREMENTAL DELIVERY RECEIPT AND CLAIM TESTS PASSED';
 END
 $delivery_receipt_tests$;
 
