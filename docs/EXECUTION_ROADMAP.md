@@ -121,6 +121,6 @@ Every implementation must include: migration (if needed), regression test, secur
 - [x] Require a written resolution note before a project manager can accept or reject a claim.
 - [x] Prevent direct client inserts/updates/deletes of claims and events; expose authenticated operations through guarded RPCs.
 - [x] Keep claim outcomes operational only: no automatic receipt edits, commission reversals, refunds, credits, or settlement mutations.
-- [x] Full GitHub Actions run `45581509761` passed on the exact PR head, applying the claims migration and running receipt/claim SQL regressions plus browser-code/migration wiring checks.
+- [x] Full GitHub Actions run `45581898419` passed on code commit `37f09a9`, applying the claims migration and running receipt/claim SQL regressions plus browser-code/migration wiring checks, including supplier-side claim UI and authorization coverage.
 - [ ] Authenticated buyer/supplier acceptance and evidence upload review remain pending.
 - [ ] Financial adjustment / return / refund / credit-note workflow remains deliberately unimplemented until the settlement policy and approval authority are agreed.
