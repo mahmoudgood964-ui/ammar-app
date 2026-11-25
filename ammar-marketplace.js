@@ -1110,7 +1110,7 @@ function providerTypeLabel(type){
 
   function statementCsvCell(value,key){
     let raw=String(value??'');
-    if(!['gross_amount','rate_percent','commission_amount','adjustment_delta','net_activity'].includes(key)&&/^[\\s]*[=+\\-@]/.test(raw))raw="'"+raw;
+    if(!['gross_amount','rate_percent','commission_amount','adjustment_delta','net_activity'].includes(key)&&/^[\s]*[=+\-@]/.test(raw))raw="'"+raw;
     return '"'+raw.replace(/"/g,'""')+'"';
   }
 
