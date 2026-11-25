@@ -609,8 +609,12 @@ AS $function$
   );
 $function$;
 
+-- Match the established private-RPC pattern: authenticated users may execute the
+-- private SECURITY DEFINER implementation only through its public INVOKER wrapper.
 REVOKE ALL ON FUNCTION app_private.ammir_record_project_delivery_receipt(uuid,jsonb,text,uuid,uuid)
-  FROM PUBLIC, anon, authenticated;
+  FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION app_private.ammir_record_project_delivery_receipt(uuid,jsonb,text,uuid,uuid)
+  TO authenticated, service_role;
 REVOKE ALL ON FUNCTION public.ammir_record_delivery_receipt(uuid,jsonb,text,uuid,uuid)
   FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.ammir_record_delivery_receipt(uuid,jsonb,text,uuid,uuid)
