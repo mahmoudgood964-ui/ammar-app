@@ -355,6 +355,14 @@ assert.ok(verificationMigration.includes('SET search_path ='), 'Admin verificati
 assert.ok(trustTests.includes('Supplier self-verification or self-suspension was not blocked'), 'Trust regression tests are missing');
 assert.ok(trustTests.includes('Non-admin was able to approve a supplier'), 'Non-admin privilege-escalation test is missing');
 assert.ok(trustTests.includes('AMMIR TRUST AND ADMIN ACCESS TESTS PASSED'), 'Trust/admin integration test completion marker is missing');
+assert.ok(moduleSource.includes("db.from('ammar_disputes')"), 'Admin dashboard must load commercial disputes');
+assert.ok(moduleSource.includes('${adminDisputeCards(disputes)}'), 'Admin dashboard must render the commercial dispute queue');
+assert.ok(moduleSource.includes('async function handleAdminDisputeChange(select)'), 'Admin dispute status handler is missing');
+assert.ok(moduleSource.includes("if(!isAdmin)throw new Error('ليست لديك صلاحية إدارة عَمِّر')"), 'Admin dispute handler must enforce the local admin guard');
+assert.ok(moduleSource.includes("resolved_at:['resolved','rejected'].includes(select.value)"), 'Admin dispute closure must record its resolution timestamp');
+assert.ok(trustTests.includes('An unrelated account can read a commercial dispute'), 'Commercial dispute isolation regression is missing');
+assert.ok(trustTests.includes('Administrator could not resolve the commercial dispute'), 'Admin dispute resolution regression is missing');
+
 
 
 assert.ok(providerGateMigration.includes('s.is_verified = true'), 'Market purchase verification gate is missing');
