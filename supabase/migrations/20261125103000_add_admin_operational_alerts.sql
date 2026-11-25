@@ -2,7 +2,7 @@ BEGIN;
 
 -- A narrow, read-only operational alert feed. It does not grant administrators
 -- broad SELECT access to project, supplier, quote, award, or delivery tables.
-CREATE OR REPLACE FUNCTION public.ammar_admin_list_operational_alerts(
+CREATE OR REPLACE FUNCTION app_private.ammar_admin_list_operational_alerts(
   p_limit integer DEFAULT 100
 )
 RETURNS TABLE (
@@ -88,11 +88,40 @@ BEGIN
 END;
 $function$;
 
-REVOKE ALL ON FUNCTION public.ammar_admin_list_operational_alerts(integer) FROM PUBLIC;
-REVOKE ALL ON FUNCTION public.ammar_admin_list_operational_alerts(integer) FROM anon;
-GRANT EXECUTE ON FUNCTION public.ammar_admin_list_operational_alerts(integer) TO authenticated;
+REVOKE ALL ON FUNCTION app_private.ammar_admin_list_operational_alerts(integer) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION app_private.ammar_admin_list_operational_alerts(integer) TO authenticated, service_role;
 
+-- Keep the exposed RPC as SECURITY INVOKER; privileged work stays in app_private.
+CREATE OR REPLACE FUNCTION public.ammar_admin_list_operational_alerts(
+  p_limit integer DEFAULT 100
+)
+RETURNS TABLE (
+  alert_kind text,
+  alert_id uuid,
+  project_id uuid,
+  project_title text,
+  reference_code text,
+  subject text,
+  status text,
+  due_at timestamptz,
+  created_at timestamptz,
+  related_count bigint,
+  attention_reason text
+)
+LANGUAGE sql
+STABLE
+SECURITY INVOKER
+SET search_path = ''
+AS $wrapper$
+  SELECT * FROM app_private.ammar_admin_list_operational_alerts(p_limit)
+$wrapper$;
+
+REVOKE ALL ON FUNCTION public.ammar_admin_list_operational_alerts(integer) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.ammar_admin_list_operational_alerts(integer) TO authenticated, service_role;
+
+COMMENT ON FUNCTION app_private.ammar_admin_list_operational_alerts(integer)
+IS 'Internal read-only bounded overdue RFQ and delivery alert query; requires administrator identity';
 COMMENT ON FUNCTION public.ammar_admin_list_operational_alerts(integer)
-IS 'Read-only, bounded overdue RFQ and delivery alerts for AMMIR administrators; does not grant broad project or supplier data access';
+IS 'SECURITY INVOKER wrapper for the bounded administrator-only operational alert feed';
 
 COMMIT;
