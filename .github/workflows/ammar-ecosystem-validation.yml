@@ -9,6 +9,7 @@ on:
       - fix/ammir-android-pwa-install
       - feature/ammir-incremental-delivery-reconciliation
       - feature/ammir-delivery-claims-workflow
+      - feature/ammir-proportional-return-adjustments
   pull_request:
     branches:
       - main
