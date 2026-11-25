@@ -391,9 +391,9 @@ assert.match(html, /password\.length<12/, 'Signup and recovery must require at l
 assert.match(html, /classes<3/, 'Password policy must require three character classes');
 assert.match(html, /minlength="12"/, 'Password inputs must expose the 12-character minimum');
 
-assert.ok(html.includes("db.from('ammar_commission_adjustments')"), 'Payer statement must include append-only commission adjustments');
-assert.ok(html.includes(".eq('payer_id',user.id)"), 'Payer statement must be scoped to the authenticated payer');
-assert.ok(html.includes('statementTotals'), 'Payer statement currency totals are missing');
-assert.ok(html.includes('data-statement-export'), 'Payer statement CSV export control is missing');
-assert.ok(html.includes('net_commission_amount') || html.includes('net_commission'), 'Payer statement must calculate net commission after adjustments');
-assert.ok(html.includes('ليس فاتورة ضريبية') || html.includes('إثبات تحصيل نقدي'), 'Payer statement must disclose that it is not tax invoice or cash-settlement evidence');
+assert.ok(moduleSource.includes("db.from('ammar_commission_adjustments')"), 'Payer statement must include append-only commission adjustments');
+assert.ok(moduleSource.includes(".eq('payer_id',user.id)"), 'Payer statement must be scoped to the authenticated payer');
+assert.ok(moduleSource.includes('statementTotals'), 'Payer statement currency totals are missing');
+assert.ok(moduleSource.includes('data-statement-export'), 'Payer statement CSV export control is missing');
+assert.ok(moduleSource.includes('net_commission_amount') || moduleSource.includes('net_commission'), 'Payer statement must calculate net commission after adjustments');
+assert.ok(moduleSource.includes('ليس فاتورة ضريبية') || moduleSource.includes('إثبات تحصيل نقدي'), 'Payer statement must disclose that it is not tax invoice or cash-settlement evidence');
