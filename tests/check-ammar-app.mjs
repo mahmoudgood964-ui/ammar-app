@@ -368,7 +368,7 @@ assert.ok(operationalAlertsMigration.includes('public.ammar_admin_list_operation
 assert.ok(operationalAlertsMigration.includes('auth.uid() IS NULL OR NOT public.is_admin()'), 'Admin operational alerts RPC must reject non-admin callers');
 assert.ok(operationalAlertsMigration.includes("r.status IN ('open','closing')"), 'Overdue RFQ filter is missing');
 assert.ok(operationalAlertsMigration.includes("d.status IN ('planned','dispatched','partially_received','exception')"), 'Delivery follow-up filter is missing');
-assert.ok(operationalAlertsMigration.includes('REVOKE ALL ON FUNCTION public.ammar_admin_list_operational_alerts(integer) FROM anon'), 'Anon execution must be revoked for admin alerts');
+assert.ok(operationalAlertsMigration.includes('REVOKE ALL ON FUNCTION public.ammar_admin_list_operational_alerts(integer) FROM PUBLIC, anon'), 'Anon execution must be revoked for admin alerts');
 assert.ok(moduleSource.includes("db.rpc('ammar_admin_list_operational_alerts',{p_limit:100})"), 'Admin dashboard must call the bounded operational alerts RPC');
 assert.ok(moduleSource.includes('${adminOperationalAlertCards(operationalAlerts)}'), 'Admin dashboard must render operational alert cards');
 assert.ok(moduleSource.includes('function adminOperationalAlertCards(rows)'), 'Operational alert renderer is missing');
