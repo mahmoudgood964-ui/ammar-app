@@ -487,7 +487,8 @@
       const currency=String(row.currency||'').trim().toUpperCase();
       const ledger=ledgerMap.get(ledgerId);
       let status='matched',reason='';
-      if(!ledgerId||!amountValid||!currency){status='invalid_row';reason='معرّف القيد أو المبلغ أو العملة غير صالح';}
+      const validLedgerId=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(ledgerId);
+      if(!validLedgerId||!amountValid||!currency){status='invalid_row';reason='معرّف القيد أو المبلغ أو العملة غير صالح';}
       else if(counts.get(ledgerId)>1){status='duplicate_ledger';reason='معرّف القيد مكرر في ملف الجهة الخارجية';}
       else if(!ledger){status='unknown_ledger';reason='لم يُعثر على قيد مطابق ضمن صلاحيات الإدارة';}
       else if(currency!==String(ledger.currency||'').trim().toUpperCase()){status='currency_mismatch';reason='العملة في الملف تختلف عن عملة دفتر عَمِّر';}
@@ -512,7 +513,7 @@
     if(!isAdmin)throw new Error('صلاحية المدير مطلوبة.');
     if(!file||file.size>10*1024*1024)throw new Error('اختر ملف CSV لا يتجاوز 10 ميجابايت.');
     const reportRows=parseSettlementCsv(await file.text());
-    const ids=[...new Set(reportRows.map(row=>String(row.ledger_id||'').trim()).filter(Boolean))];
+    const ids=[...new Set(reportRows.map(row=>String(row.ledger_id||'').trim()).filter(id=>/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id)))];
     const ledgerRows=[];
     for(let i=0;i<ids.length;i+=100){
       const chunk=ids.slice(i,i+100);
