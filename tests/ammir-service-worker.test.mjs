@@ -42,7 +42,6 @@ const response = (url, type = 'text/html') => ({
   clone() { return response(url, type); }
 });
 
-await listeners.install({ waitUntil(p) { this.promise = p; }, get promise() { return this._promise; }, set promise(p) { this._promise = p; } }.promise ?? Promise.resolve());
 // Explicitly execute lifecycle promises with observable event objects.
 const installEvent = { waitUntil(p) { this.promise = p; } };
 listeners.install(installEvent);
