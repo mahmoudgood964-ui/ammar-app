@@ -69,20 +69,7 @@ USING (
 CREATE POLICY ammar_commission_adjustments_select
 ON public.ammar_commission_adjustments
 FOR SELECT TO authenticated
-USING (
-  EXISTS (
-    SELECT 1
-    FROM public.ammir_project_delivery_returns r
-    JOIN public.ammir_project_deliveries d
-      ON d.id = r.delivery_id AND d.project_id = r.project_id
-    WHERE r.id = ammar_commission_adjustments.return_id
-      AND (
-        d.supplier_user_id = (SELECT auth.uid())
-        OR app_private.ammar_project_role(d.project_id::text) IS NOT NULL
-        OR (SELECT public.is_admin())
-      )
-  )
-);
+USING ((SELECT public.is_admin()));
 
 REVOKE ALL ON public.ammir_project_delivery_returns FROM anon, authenticated;
 REVOKE ALL ON public.ammar_commission_adjustments FROM anon, authenticated;
