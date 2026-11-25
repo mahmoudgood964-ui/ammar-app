@@ -276,6 +276,11 @@ BEGIN
   RAISE EXCEPTION 'Invalid delivery status transition';
 END;
 $$;
+DROP TRIGGER IF EXISTS ammir_guard_delivery_status_trigger ON public.ammir_project_deliveries;
+CREATE TRIGGER ammir_guard_delivery_status_trigger
+BEFORE UPDATE OF status ON public.ammir_project_deliveries
+FOR EACH ROW EXECUTE FUNCTION public.ammir_guard_delivery_status();
+
 REVOKE ALL ON FUNCTION public.ammir_guard_delivery_status() FROM PUBLIC, anon, authenticated;
 
 -- Existing aggregate triggers could rewrite a previously paid commission row when
