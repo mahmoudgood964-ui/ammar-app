@@ -20,7 +20,7 @@ END $$;
 -- A signed-in non-admin must be denied by the RPC itself, not merely hidden by UI.
 SET LOCAL ROLE authenticated;
 SELECT set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000099',true);
-DO $
+DO $nonadmin$
 BEGIN
   BEGIN
     PERFORM * FROM public.ammar_admin_supplier_performance(now() - interval '90 days');
@@ -28,7 +28,7 @@ BEGIN
   EXCEPTION WHEN insufficient_privilege THEN
     NULL;
   END;
-END $;
+END $nonadmin$;
 RESET ROLE;
 
 -- The exposed result contract must stay aggregate-only: no project identifiers,
