@@ -288,4 +288,5 @@ assert.ok(receiptMigration.includes('A delivery with receipt history cannot be c
 assert.ok(receiptMigration.includes('Receipt idempotency key was already used with a different payload'), 'Idempotency keys must reject payload reuse');
 assert.ok(html.includes("client.rpc('ammir_record_delivery_receipt'") && html.includes('rejected_quantity'), 'The delivery UI must use incremental receipt batches and rejected quantities');
 assert.ok(html.includes('receipt_key') && html.includes('المتبقي'), 'The receipt UI must expose remaining quantities and retain an idempotency key');
+assert.ok(html.includes("deliveryReceipts:'ammir_project_delivery_receipts'") && html.includes('سجل دفعات الاستلام'), 'The project execution view must show the immutable receipt audit history');
 assert.ok(receiptTests.includes('A paid commission row was changed by a later partial receipt') && receiptTests.includes('Rejected quantities must be excluded from commission'), 'Receipt regression tests must cover paid commission immutability and rejected goods');
