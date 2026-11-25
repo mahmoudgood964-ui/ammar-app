@@ -33,6 +33,8 @@ BEGIN
   END IF;
   IF v_since < now() - interval '24 months' THEN
     v_since := now() - interval '24 months';
+  ELSIF v_since > now() THEN
+    v_since := now();
   END IF;
 
   RETURN QUERY
@@ -46,8 +48,17 @@ BEGIN
       avg(extract(epoch FROM (i.responded_at - i.invited_at)) / 3600.0)
         FILTER (WHERE i.responded_at IS NOT NULL AND i.responded_at >= i.invited_at) AS avg_response_hours
     FROM public.ammir_project_rfq_invites i
+    JOIN public.ammir_project_rfqs r
+      ON r.id = i.rfq_id AND r.project_id = i.project_id
     WHERE i.invited_at >= v_since
       AND i.provider_user_id IS NOT NULL
+      AND i.status <> 'withdrawn'
+      -- Do not penalize suppliers for invitations whose response window is still open.
+      AND (
+        i.responded_at IS NOT NULL
+        OR (r.deadline_at IS NOT NULL AND r.deadline_at <= now())
+        OR r.status IN ('awarded','cancelled','closed')
+      )
     GROUP BY i.provider_user_id
   ),
   delivery_rows AS (
@@ -66,6 +77,7 @@ BEGIN
       ON di.delivery_id = d.id AND di.project_id = d.project_id
     WHERE d.created_at >= v_since
       AND d.supplier_user_id IS NOT NULL
+      AND d.status <> 'cancelled'
     GROUP BY d.supplier_user_id, d.id, d.scheduled_at, d.received_at
   ),
   delivery_stats AS (
@@ -74,6 +86,7 @@ BEGIN
       count(*) FILTER (WHERE dr.item_count > 0)::bigint AS delivery_count,
       count(*) FILTER (
         WHERE dr.item_count > 0
+          AND dr.status = 'received'
           AND dr.received_at IS NOT NULL
           AND dr.expected_quantity > 0
           AND dr.received_quantity >= dr.expected_quantity
@@ -82,6 +95,7 @@ BEGIN
       )::bigint AS completed_count,
       count(*) FILTER (
         WHERE dr.item_count > 0
+          AND dr.status = 'received'
           AND dr.received_at IS NOT NULL
           AND dr.scheduled_at IS NOT NULL
           AND dr.expected_quantity > 0
