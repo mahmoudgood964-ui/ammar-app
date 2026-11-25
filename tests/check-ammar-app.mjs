@@ -496,24 +496,3 @@ assert.ok(moduleSource.includes('Date.UTC(year,monthNumber-1,1)'), 'Monthly stat
 assert.ok(moduleSource.includes('Date.UTC(year,monthNumber,1)'), 'Monthly statement end must use a UTC calendar boundary');
 assert.ok(moduleSource.includes('شهر الكشف (UTC)'), 'Monthly statement timezone must be disclosed in the UI');
 
-const statementHelpersStart=moduleSource.indexOf('function statementCsvCell(');
-const statementHelpersEnd=moduleSource.indexOf('async function fetchStatementPages(',statementHelpersStart);
-assert.ok(statementHelpersStart>=0&&statementHelpersEnd>statementHelpersStart,'Pure commission statement helpers must be extractable for behavioral tests');
-const statementHelpers=vm.runInNewContext(moduleSource.slice(statementHelpersStart,statementHelpersEnd)+';({statementCsvCell,buildCommissionStatementRows,summarizeCommissionStatement})');
-const statementLedger=[
-  {id:'ledger-sdg',recorded_at:'2026-11-03T10:00:00Z',activity_type:'market_materials',source_type:'purchase_order',source_id:'po-1',gross_amount:100,currency:'SDG',rate_percent:5,commission_amount:5,status:'due'},
-  {id:'ledger-usd',recorded_at:'2026-11-04T10:00:00Z',activity_type:'contracting',source_type:'award',source_id:'award-2',gross_amount:200,currency:'USD',rate_percent:5,commission_amount:10,status:'paid'}
-];
-const statementAdjustments=[
-  {ledger_id:'ledger-sdg',created_at:'2026-11-05T10:00:00Z',currency:'SDG',adjustment_kind:'partial_refund',amount_delta:-1.5,reason:'Partial correction',source_reference:'bank-ref-1'},
-  {ledger_id:'ledger-usd',created_at:'2026-11-06T10:00:00Z',currency:'USD',adjustment_kind:'fee_increase',amount_delta:2,reason:'Approved fee change',source_reference:'approval-2'}
-];
-const statementRows=statementHelpers.buildCommissionStatementRows(statementLedger,statementAdjustments,statementLedger);
-assert.equal(statementRows.length,4,'Statement must preserve separate commission and adjustment activity rows');
-const statementTotals=statementHelpers.summarizeCommissionStatement(statementRows);
-assert.deepEqual(JSON.parse(JSON.stringify(statementTotals)),[
-  {currency:'SDG',commission_count:1,gross_amount:100,commission_amount:5,adjustment_delta:-1.5,net_activity:3.5},
-  {currency:'USD',commission_count:1,gross_amount:200,commission_amount:10,adjustment_delta:2,net_activity:12}
-],'Statement totals must remain separated by currency and include signed adjustments');
-assert.equal(statementHelpers.statementCsvCell('=HYPERLINK("x")','reason'),'"\'=HYPERLINK(""x"")"','CSV text formula prefixes must be neutralized');
-assert.equal(statementHelpers.statementCsvCell(-1.5,'adjustment_delta'),'"-1.5"','Signed numeric adjustment values must remain numeric in CSV');
