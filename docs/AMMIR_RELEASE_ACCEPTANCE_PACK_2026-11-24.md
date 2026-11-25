@@ -261,3 +261,15 @@ The month validator correction and the prior-period adjustment fixture are inclu
 **Current branch status:** PR #14 remains open and draft, with exact head `3b14d0a542adb308ca8b3734b81648f6adf25021`. The branch is not merged. Both revenue migrations remain unapplied to production. No production data, commission rates, payment milestones, or financial settings were changed. The prior Vercel free-tier deployment quota restriction remains a separate preview limitation; no paid upgrade or production deployment was attempted.
 
 **Still required before release:** real payer A/payer B/admin account checks for statement visibility and CSV content; Android/weak-network acceptance; exact-head preview when free-tier quota permits; Auth leaked-password setting review by the project owner; local legal/accounting review. A green CI run does not close these manual gates.
+
+## Commercial dispute authorization regression — 2026-11-25
+
+- Added a disposable PostgreSQL regression fixture to the AMMIR trust/admin suite.
+- A buyer creates a commercial dispute against an accepted market request; the buyer can read its own dispute.
+- An unrelated authenticated account receives no dispute rows.
+- An administrator can read the dispute, move it to `under_review`, and record a `resolved` status with a resolution note and timestamp.
+- The test is executed in the CI workflow alongside the existing provider-verification and message-report moderation checks.
+- Exact test commit: `0385c6b5c433389ab8fffaeaeb94874f642344dc`.
+- Push CI run [#45585385511](https://github.com/mahmoudgood964-ui/ammar-app/actions/runs/45585385511) completed successfully.
+- This proves the SQL/RLS workflow in disposable PostgreSQL only. It does not prove the admin dashboard exposes a complete operational queue or replace live buyer/supplier/admin UI acceptance.
+- No production rows, schema, deployment, commission rules, payment milestones, or production migrations were changed.
