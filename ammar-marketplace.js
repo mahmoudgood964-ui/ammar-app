@@ -482,7 +482,7 @@
     return (reportRows||[]).map((row,index)=>{
       const ledgerId=String(row.ledger_id||'').trim();
       const rawAmount=String(row.amount??'').trim();
-      const amountValid=/^\\d+(?:\\.\\d{1,2})?$/.test(rawAmount);
+      const amountValid=/^\d+(?:\.\d{1,2})?$/.test(rawAmount);
       const reportedAmount=amountValid?Number(rawAmount):null;
       const currency=String(row.currency||'').trim().toUpperCase();
       const ledger=ledgerMap.get(ledgerId);
