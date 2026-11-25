@@ -7,6 +7,7 @@ on:
       - feature/ammar-market-messaging
       - launch/ammir-trust-hardening
       - fix/ammir-android-pwa-install
+      - feature/ammir-incremental-delivery-reconciliation
   pull_request:
     branches:
       - main
@@ -128,6 +129,20 @@ jobs:
         env:
           PGPASSWORD: postgres
         run: psql -h 127.0.0.1 -U postgres -d ammar_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261117083000_move_authenticated_definer_rpcs_to_app_private.sql
+      - name: Apply AMMIR commission and incremental delivery receipt migrations
+        env:
+          PGPASSWORD: postgres
+        run: |
+          psql -h 127.0.0.1 -U postgres -d ammar_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261117222410_activate_agreed_commission_and_provider_specialties.sql
+          psql -h 127.0.0.1 -U postgres -d ammar_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261117222827_add_project_award_and_delivery_commission_ledger.sql
+          psql -h 127.0.0.1 -U postgres -d ammar_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261117222938_extend_supplier_delivery_and_order_profile.sql
+          psql -h 127.0.0.1 -U postgres -d ammar_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261117223432_fix_project_delivery_commission_cleanup_relation.sql
+          psql -h 127.0.0.1 -U postgres -d ammar_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261117223523_fix_project_delivery_commission_award_item_reference.sql
+          psql -h 127.0.0.1 -U postgres -d ammar_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261125010000_ammir_incremental_delivery_receipts.sql
+      - name: Test AMMIR incremental delivery receipts and commission immutability
+        env:
+          PGPASSWORD: postgres
+        run: psql -h 127.0.0.1 -U postgres -d ammar_test -v ON_ERROR_STOP=1 -f tests/ammir-delivery-receipts.sql
       - name: Verify AMMIR private RPC wrappers and access
         env:
           PGPASSWORD: postgres
