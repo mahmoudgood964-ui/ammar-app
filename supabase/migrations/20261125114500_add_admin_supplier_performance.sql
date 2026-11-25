@@ -88,16 +88,16 @@ BEGIN
           AND dr.received_quantity >= dr.expected_quantity
           AND dr.damaged_quantity = 0
           AND dr.missing_quantity = 0
-          AND dr.expected_quantity > 0
-          AND dr.received_quantity >= dr.expected_quantity
-          AND dr.damaged_quantity = 0
-          AND dr.missing_quantity = 0
           AND dr.received_at::date <= dr.scheduled_at
       )::bigint AS on_time_count,
       count(*) FILTER (
         WHERE dr.item_count > 0
           AND dr.received_at IS NOT NULL
           AND dr.scheduled_at IS NOT NULL
+          AND dr.expected_quantity > 0
+          AND dr.received_quantity >= dr.expected_quantity
+          AND dr.damaged_quantity = 0
+          AND dr.missing_quantity = 0
       )::bigint AS on_time_denominator
     FROM delivery_rows dr
     GROUP BY dr.provider_user_id
