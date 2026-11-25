@@ -121,6 +121,9 @@
       }
       if(e.target.id==='ecoChatFilter')filterChatList();
       if(e.target.id==='ecoProviderCategoryFilter')filterServiceProviders();
+      if(e.target.id==='ecoReconciliationFile'&&e.target.files?.[0]){
+        processSettlementFile(e.target.files[0]).catch(err=>tell('تعذرت مطابقة كشف التسوية: '+(err.message||'خطأ'),'error')).finally(()=>{e.target.value='';});
+      }
       const report=e.target.closest('[data-admin-report-status]');
       if(report)handleAdminReportChange(report).catch(err=>tell(err.message,'error'));
       const dispute=e.target.closest('[data-admin-dispute-status]');
@@ -389,7 +392,8 @@
       <section class="eco-subsection"><h3>قواعد العمولة الحالية</h3><div class="eco-grid">${rulesHtml||'<div class="eco-empty">لا توجد قواعد.</div>'}</div><p class="hint">القواعد المعروضة إعدادات قائمة حالياً، وليست توصية بتطبيق النسبة نفسها على النقل أو التمويل أو الإعلانات أو الاشتراكات.</p></section>
       <section class="eco-subsection"><h3>أحدث سجلات العمولات — حتى 100</h3><div style="overflow:auto"><table style="width:100%;border-collapse:collapse;min-width:980px;font-size:12px"><thead><tr><th>التاريخ</th><th>النشاط</th><th>المصدر</th><th>قيمة الصفقة</th><th>النسبة</th><th>العمولة الأصلية</th><th>صافي التعديلات</th><th>العمولة بعد التعديل</th><th>الحالة</th></tr></thead><tbody>${rowsHtml||'<tr><td colspan="9">لا توجد سجلات</td></tr>'}</tbody></table></div></section>
       <section class="eco-subsection"><h3>سجل الاستردادات وتعديلات العمولات — حتى 100</h3><div style="overflow:auto"><table style="width:100%;border-collapse:collapse;min-width:760px;font-size:12px"><thead><tr><th>التاريخ</th><th>النوع</th><th>قيمة التعديل</th><th>السبب</th><th>مرجع خارجي</th><th>مرجع العمولة</th></tr></thead><tbody>${adjustmentRows||'<tr><td colspan="6">لا توجد تعديلات مرتبطة بالسجلات المحمّلة</td></tr>'}</tbody></table></div></section>
-      <div class="eco-note">التعديلات تُعرض كسجل مستقل ولا تغيّر العمولة الأصلية. لا تُعامل التعديلات كتحصيل نقدي تلقائي؛ يلزم لاحقاً كشف تسوية ومطابقة مع البنك أو مزود الدفع. لا تعدّل هذه اللوحة قواعد العمولة أو القيود المالية.</div>
+      <section class="eco-subsection"><h3>مطابقة كشف مزود الدفع أو البنك</h3><p class="muted">ارفع ملف CSV يحتوي الأعمدة الإلزامية <code>ledger_id,amount,currency</code>، ويمكن إضافة <code>external_reference,settled_at</code>. تتم المقارنة محلياً في جلسة المدير فقط، ولا يُرفع الملف إلى التخزين ولا تُعدّل حالة أي قيد.</p><div class="eco-form"><div class="wide"><label for="ecoReconciliationFile">ملف كشف التسوية CSV (حد أقصى 10 ميجابايت)</label><input id="ecoReconciliationFile" type="file" accept=".csv,text/csv"></div></div><div id="ecoReconciliationResults" class="eco-subsection"><p class="muted">لم يتم تحميل كشف خارجي بعد.</p></div></section>
+      <div class="eco-note">التعديلات تُعرض كسجل مستقل ولا تغيّر العمولة الأصلية. المطابقة هنا مقارنة حسابية بين الملف والدفتر فقط؛ لا تُعامل كتحصيل نقدي تلقائي ولا تنفذ تسوية بنكية. لا تعدّل هذه اللوحة قواعد العمولة أو القيود المالية.</div>
     `;
   }
 
@@ -439,6 +443,91 @@
     const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8;'});
     const url=URL.createObjectURL(blob),link=document.createElement('a');
     link.href=url;link.download='ammir-revenue-ledger-and-adjustments.csv';document.body.appendChild(link);link.click();link.remove();URL.revokeObjectURL(url);
+  }
+
+  function parseSettlementCsv(input){
+    const source=String(input||'').replace(/^\\uFEFF/,'');
+    const records=[];let row=[],field='',quoted=false;
+    for(let i=0;i<source.length;i++){
+      const ch=source[i];
+      if(quoted){
+        if(ch==='"'&&source[i+1]==='"'){field+='"';i++;}
+        else if(ch==='"')quoted=false;
+        else field+=ch;
+      }else if(ch==='"'&&field==='')quoted=true;
+      else if(ch===','){row.push(field);field='';}
+      else if(ch==='\\n'||ch==='\\r'){
+        if(ch==='\\r'&&source[i+1]==='\\n')i++;
+        row.push(field);field='';
+        if(row.some(x=>String(x).trim()!==''))records.push(row);
+        row=[];
+      }else field+=ch;
+    }
+    if(quoted)throw new Error('ملف CSV يحتوي على حقل نصي غير مغلق بعلامة اقتباس.');
+    row.push(field);if(row.some(x=>String(x).trim()!==''))records.push(row);
+    if(records.length<2)throw new Error('ملف التسوية فارغ أو لا يحتوي على بيانات.');
+    const headers=records.shift().map(x=>String(x).trim().toLowerCase());
+    for(const required of ['ledger_id','amount','currency'])if(!headers.includes(required))throw new Error('عمود مطلوب مفقود: '+required);
+    return records.map(values=>Object.fromEntries(headers.map((key,index)=>[key,String(values[index]??'').trim()])));
+  }
+
+  function buildSettlementReconciliation(reportRows,ledgerRows,adjustmentRows){
+    const adjusted=revenueAdjustmentSummary(ledgerRows,adjustmentRows);
+    const ledgerMap=new Map(adjusted.map(row=>[String(row.id),row]));
+    const counts=new Map();
+    for(const row of reportRows||[]){
+      const id=String(row.ledger_id||'').trim();
+      if(id)counts.set(id,(counts.get(id)||0)+1);
+    }
+    return (reportRows||[]).map((row,index)=>{
+      const ledgerId=String(row.ledger_id||'').trim();
+      const rawAmount=String(row.amount??'').trim();
+      const amountValid=/^\\d+(?:\\.\\d{1,2})?$/.test(rawAmount);
+      const reportedAmount=amountValid?Number(rawAmount):null;
+      const currency=String(row.currency||'').trim().toUpperCase();
+      const ledger=ledgerMap.get(ledgerId);
+      let status='matched',reason='';
+      if(!ledgerId||!amountValid||!currency){status='invalid_row';reason='معرّف القيد أو المبلغ أو العملة غير صالح';}
+      else if(counts.get(ledgerId)>1){status='duplicate_ledger';reason='معرّف القيد مكرر في ملف الجهة الخارجية';}
+      else if(!ledger){status='unknown_ledger';reason='لم يُعثر على قيد مطابق ضمن صلاحيات الإدارة';}
+      else if(currency!==String(ledger.currency||'').trim().toUpperCase()){status='currency_mismatch';reason='العملة في الملف تختلف عن عملة دفتر عَمِّر';}
+      else if(Math.abs(reportedAmount-Number(ledger.net_commission_amount||0))>0.01){status='amount_mismatch';reason='المبلغ الخارجي لا يساوي صافي العمولة بعد التعديلات';}
+      return {
+        row_number:index+2,status,reason,ledger_id:ledgerId,external_reference:String(row.external_reference||''),
+        reported_amount:reportedAmount,expected_amount:ledger?Number(ledger.net_commission_amount||0):null,
+        currency,ledger_currency:ledger?.currency||'',ledger_status:ledger?.status||'',settled_at:String(row.settled_at||'')
+      };
+    });
+  }
+
+  function settlementReconciliationHtml(results){
+    const labels={matched:'متطابق حسابياً',amount_mismatch:'اختلاف مبلغ',currency_mismatch:'اختلاف عملة',unknown_ledger:'قيد غير معروف',duplicate_ledger:'قيد مكرر',invalid_row:'صف غير صالح'};
+    const counts={};for(const row of results||[])counts[row.status]=(counts[row.status]||0)+1;
+    const summary=Object.entries(labels).map(([key,label])=>'<article class="eco-card"><span class="eco-meta">'+label+'</span><h3>'+(counts[key]||0)+'</h3></article>').join('');
+    const rows=(results||[]).map(row=>'<tr><td>'+row.row_number+'</td><td>'+esc(labels[row.status]||row.status)+'</td><td>'+esc(row.ledger_id)+'</td><td>'+esc(row.external_reference||'—')+'</td><td>'+ (row.reported_amount===null?'—':fmt(row.reported_amount,row.currency))+'</td><td>'+ (row.expected_amount===null?'—':fmt(row.expected_amount,row.ledger_currency))+'</td><td>'+esc(row.ledger_status||'—')+'</td><td>'+esc(row.reason||'—')+'</td></tr>').join('');
+    return '<div class="eco-grid">'+summary+'</div><div class="eco-note">المطابقة حسابية فقط. لا تغيّر حالة الدفتر، ولا تسجّل التحصيل أو التسوية، ولا تثبت انتقال الأموال.</div><div style="overflow:auto"><table style="width:100%;border-collapse:collapse;min-width:850px;font-size:12px"><thead><tr><th>صف الملف</th><th>النتيجة</th><th>معرّف القيد</th><th>مرجع خارجي</th><th>المبلغ الخارجي</th><th>المبلغ المتوقع</th><th>حالة الدفتر</th><th>التفصيل</th></tr></thead><tbody>'+ (rows||'<tr><td colspan="8">لا توجد صفوف</td></tr>')+'</tbody></table></div>';
+  }
+
+  async function processSettlementFile(file){
+    if(!isAdmin)throw new Error('صلاحية المدير مطلوبة.');
+    if(!file||file.size>10*1024*1024)throw new Error('اختر ملف CSV لا يتجاوز 10 ميجابايت.');
+    const reportRows=parseSettlementCsv(await file.text());
+    const ids=[...new Set(reportRows.map(row=>String(row.ledger_id||'').trim()).filter(Boolean))];
+    const ledgerRows=[];
+    for(let i=0;i<ids.length;i+=100){
+      const chunk=ids.slice(i,i+100);
+      ledgerRows.push(...await fetchStatementPages(()=>db.from('ammar_commission_ledger').select('*').in('id',chunk)));
+    }
+    const adjustmentRows=[];
+    for(let i=0;i<ids.length;i+=100){
+      const chunk=ids.slice(i,i+100);
+      adjustmentRows.push(...await fetchStatementPages(()=>db.from('ammar_commission_adjustments').select('*').in('ledger_id',chunk)));
+    }
+    const results=buildSettlementReconciliation(reportRows,ledgerRows,adjustmentRows);
+    const target=$('ecoReconciliationResults');
+    if(target)target.innerHTML=settlementReconciliationHtml(results);
+    const matched=results.filter(x=>x.status==='matched').length;
+    tell('اكتملت المقارنة: '+matched+' من '+results.length+' صفاً متطابق حسابياً. لم تتغير أي حالة مالية.','success');
   }
 
   async function adminDashboardHtml(){
