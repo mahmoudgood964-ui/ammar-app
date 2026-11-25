@@ -29,7 +29,7 @@
 - It does not modify the 5% active rules.
 - It does not create wallet, escrow, lending, payout, payment-custody, or bank milestone behavior.
 - It does not yet automatically create adjustments when a delivery is edited after commission settlement. That trigger change needs its own reviewed patch and acceptance tests so that delivery workflows are not broken.
-- Supplier statements and actual payment-provider reconciliation are subsequent slices.
+- Payer-facing monthly commission activity statements and a read-only CSV comparison against external settlement reports are implemented in PR #14's feature branch. This is not a live payment-provider integration, does not persist imported reports, does not mark ledger entries paid, and does not prove bank settlement. Durable reconciliation batches, provider API integrations, settlement evidence, and any status transitions remain separate future work requiring their own controls and explicit approval.
 
 ## Required test cases before applying
 1. Non-admin cannot call the adjustment RPC.
