@@ -8,6 +8,7 @@ on:
       - launch/ammir-trust-hardening
       - fix/ammir-android-pwa-install
       - feature/ammir-incremental-delivery-reconciliation
+      - feature/ammir-delivery-claims-workflow
   pull_request:
     branches:
       - main
