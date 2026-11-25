@@ -24,6 +24,8 @@ const workflowIndexes = fs.readFileSync('supabase/migrations/20261113094000_ammi
 const workflowGuards = fs.readFileSync('supabase/migrations/20261113100000_ammir_execution_state_guards.sql', 'utf8');
 const operationalAlertsMigration = fs.readFileSync('supabase/migrations/20261125103000_add_admin_operational_alerts.sql', 'utf8');
 const operationalAlertsTests = fs.readFileSync('tests/ammir-admin-operational-alerts.sql', 'utf8');
+const supplierPerformanceMigration = fs.readFileSync('supabase/migrations/20261125114500_add_admin_supplier_performance.sql', 'utf8');
+const supplierPerformanceTests = fs.readFileSync('tests/ammir-admin-supplier-performance.sql', 'utf8');
 const workflowTests = fs.readFileSync('tests/ammir-project-workflows.sql', 'utf8');
 
 
@@ -546,3 +548,10 @@ assert.ok(accountResetBody.includes("$('ecoPanel').replaceChildren()"), 'Account
 assert.ok(moduleSource.includes('if(user&&user.id!==sessionUser.id)resetAccountState();'), 'Switching directly between signed-in accounts must clear the previous account state');
 assert.match(moduleSource, /onAuthStateChange\(\(event,session\)=>\{[\s\S]*?else\{\s*resetAccountState\(\);/, 'Sign-out events must clear account-scoped state');
 
+
+assert.ok(supplierPerformanceMigration.includes('SECURITY DEFINER') && supplierPerformanceMigration.includes('public.is_admin()'), 'Supplier performance RPC must be guarded inside the database');
+assert.ok(supplierPerformanceMigration.includes('SECURITY INVOKER'), 'Exposed supplier performance wrapper must use SECURITY INVOKER');
+assert.ok(!supplierPerformanceMigration.includes('project_title') && !supplierPerformanceMigration.includes('reference_code'), 'Supplier performance RPC must not return project-specific details');
+assert.ok(supplierPerformanceTests.includes('non-admin unexpectedly received supplier performance'), 'Supplier performance test must verify non-admin denial');
+assert.ok(moduleSource.includes('ammar_admin_supplier_performance'), 'Admin supplier performance dashboard must call the guarded RPC');
+assert.ok(moduleSource.includes('adminSupplierPerformanceCards'), 'Admin supplier performance cards must render the aggregate metrics');
