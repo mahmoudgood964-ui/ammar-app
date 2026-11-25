@@ -488,6 +488,20 @@ assert.equal(statementRows[2].source_reference,'refund-1','Adjustment source ref
 assert.equal(statementTotals.length,2,'Statement totals must never combine different currencies');
 assert.equal(statementTotals.find(x=>x.currency==='SDG').net_activity,35,'SDG net activity must include its negative adjustment');
 assert.equal(statementTotals.find(x=>x.currency==='USD').net_activity,12,'USD net activity must include its positive adjustment');
+const priorMonthLedger = [
+  {id:'old-l1',recorded_at:'2026-10-31T23:59:59Z',activity_type:'market_materials',source_type:'project_delivery',source_id:'delivery-old',gross_amount:900,currency:'SDG',rate_percent:5,commission_amount:45,status:'due'}
+];
+const currentMonthAdjustment = [
+  {id:'a3',ledger_id:'old-l1',created_at:'2026-11-01T00:00:00Z',adjustment_kind:'partial_refund',amount_delta:-5,currency:'SDG',reason:'Adjustment in selected month',source_reference:'nov-refund'}
+];
+const periodRows = statementSandbox.buildCommissionStatementRows([],currentMonthAdjustment,priorMonthLedger);
+assert.equal(periodRows.length,1,'A current-period adjustment must appear even when its original commission belongs to a prior month');
+assert.equal(periodRows[0].source_id,'delivery-old','Prior-period source metadata must be resolved for a current-period adjustment');
+assert.equal(periodRows[0].source_reference,'nov-refund','Current-period adjustment must retain its external source reference');
+const periodTotals = statementSandbox.summarizeCommissionStatement(periodRows);
+assert.equal(periodTotals[0].gross_amount,0,'An adjustment-only period must not duplicate prior-period GMV');
+assert.equal(periodTotals[0].commission_count,0,'An adjustment-only period must not count a prior-period commission as a new commission');
+assert.equal(periodTotals[0].net_activity,-5,'An adjustment-only period total must include the adjustment delta');
 assert.equal(statementSandbox.statementCsvCell('=SUM(A1:A2)','reason'),'"\'=SUM(A1:A2)"','CSV text cells must be guarded against formula injection');
 assert.equal(statementSandbox.statementCsvCell(-15,'adjustment_delta'),'"-15"','Signed numeric adjustments must remain numeric in CSV');
 
