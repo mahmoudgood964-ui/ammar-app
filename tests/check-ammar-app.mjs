@@ -159,6 +159,42 @@ assert.ok(moduleSource.includes(".eq('payer_id',user.id)"),'Statement ledger que
 assert.ok(moduleSource.includes('async function fetchStatementPages(makeQuery)'), 'Statement export must paginate rather than silently truncate at a fixed row limit');
 assert.ok(moduleSource.includes("link.download='ammir-commission-statement-'+month+'.csv'"),'Statement export filename must identify its reporting month');
 assert.ok(moduleSource.includes("data-statement-export>تنزيل كشف الشهر CSV"),'Statement export must be a month-selected action, not embedded CSV data in HTML');
+
+const reconciliationStart=moduleSource.indexOf('function parseSettlementCsv(');
+const reconciliationEnd=moduleSource.indexOf('async function adminDashboardHtml()',reconciliationStart);
+assert.ok(reconciliationStart>=0&&reconciliationEnd>reconciliationStart,'Read-only settlement reconciliation helpers are missing');
+const reconciliationSandbox={revenueAdjustmentSummary:revenueCsvSandbox.revenueAdjustmentSummary};
+vm.runInNewContext(
+  moduleSource.slice(reconciliationStart,reconciliationEnd)+String.fromCharCode(10)+
+  'globalThis.parseSettlementCsv=parseSettlementCsv;globalThis.buildSettlementReconciliation=buildSettlementReconciliation;',
+  reconciliationSandbox
+);
+const settlementCsv='\\uFEFFledger_id,amount,currency,external_reference\\r\\nl-1,40.00,SDG,"BANK, REF 1"\\r\\nl-2,20.00,SDG,ref-2\\r\\nl-2,20.00,SDG,ref-3\\r\\nunknown-1,10.00,USD,ref-4\\r\\n';
+const parsedSettlement=reconciliationSandbox.parseSettlementCsv(settlementCsv);
+assert.equal(parsedSettlement.length,4,'Settlement CSV parser must preserve all data rows');
+assert.equal(parsedSettlement[0].external_reference,'BANK, REF 1','Settlement CSV parser must preserve quoted commas');
+const settlementResults=reconciliationSandbox.buildSettlementReconciliation(
+  parsedSettlement,
+  [
+    {id:'l-1',currency:'SDG',commission_amount:50,status:'paid'},
+    {id:'l-2',currency:'SDG',commission_amount:25,status:'due'}
+  ],
+  [{ledger_id:'l-1',currency:'SDG',amount_delta:-10}]
+);
+assert.equal(settlementResults[0].status,'matched','Settlement report must match net commission after adjustments');
+assert.equal(settlementResults[0].expected_amount,40,'Settlement report must compare against adjusted commission, not original amount');
+assert.equal(settlementResults[1].status,'duplicate_ledger','Duplicate ledger references must be flagged');
+assert.equal(settlementResults[2].status,'duplicate_ledger','Every row for a duplicate ledger reference must be flagged');
+assert.equal(settlementResults[3].status,'unknown_ledger','Unknown ledger references must be flagged, not accepted');
+assert.throws(
+  ()=>reconciliationSandbox.parseSettlementCsv('ledger_id,amount\\nl-1,2'),
+  /عمود مطلوب مفقود: currency/,
+  'Settlement CSV parser must reject files without required currency column'
+);
+assert.ok(moduleSource.includes("id='ecoReconciliationFile'"),'Admin revenue dashboard must expose a settlement CSV input');
+assert.ok(moduleSource.includes("if(e.target.id==='ecoReconciliationFile'"),'Settlement CSV input must be processed through the change handler');
+assert.ok(moduleSource.includes("eq('payer_id',user.id)")&&moduleSource.includes(".in('ledger_id',chunk)"),'Reconciliation must fetch the ledger and its append-only adjustments by exact IDs');
+assert.ok(moduleSource.includes('لا تُعدّل هذه اللوحة قواعد العمولة أو القيود المالية'),'Reconciliation UI must disclose its read-only financial boundary');
 const revenueQueryTrace = [];
 revenueCsvSandbox.db = {
   from(table) {
