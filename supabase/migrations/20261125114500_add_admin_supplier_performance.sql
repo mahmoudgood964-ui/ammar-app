@@ -84,6 +84,14 @@ BEGIN
         WHERE dr.item_count > 0
           AND dr.received_at IS NOT NULL
           AND dr.scheduled_at IS NOT NULL
+          AND dr.expected_quantity > 0
+          AND dr.received_quantity >= dr.expected_quantity
+          AND dr.damaged_quantity = 0
+          AND dr.missing_quantity = 0
+          AND dr.expected_quantity > 0
+          AND dr.received_quantity >= dr.expected_quantity
+          AND dr.damaged_quantity = 0
+          AND dr.missing_quantity = 0
           AND dr.received_at::date <= dr.scheduled_at
       )::bigint AS on_time_count,
       count(*) FILTER (
@@ -111,7 +119,7 @@ BEGIN
       ) AS provider_name,
       COALESCE(
         max(ins.provider_type),
-        CASE WHEN max(sp.id) IS NOT NULL THEN 'service_provider' ELSE 'supplier' END
+        CASE WHEN bool_or(sp.owner_id IS NOT NULL) THEN 'service_provider' ELSE 'supplier' END
       ) AS provider_kind
     FROM provider_ids ids
     LEFT JOIN invite_stats ins ON ins.provider_user_id = ids.provider_user_id
