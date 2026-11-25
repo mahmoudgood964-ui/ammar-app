@@ -46,8 +46,8 @@ BEGIN
     SET rate_percent=5,payer_side='provider',is_active=true,effective_from=now();
 
   INSERT INTO public.ammir_project_rfqs(
-    project_id,reference_code,title,currency,status,created_by
-  ) VALUES(v_project,'RCPT-RFQ-01','Receipt regression request','SDG','draft',v_owner)
+    project_id,reference_code,title,currency,status,created_by,published_at
+  ) VALUES(v_project,'RCPT-RFQ-01','Receipt regression request','SDG','draft',v_owner,now())
   RETURNING id INTO v_rfq;
 
   INSERT INTO public.ammir_project_rfq_items(
