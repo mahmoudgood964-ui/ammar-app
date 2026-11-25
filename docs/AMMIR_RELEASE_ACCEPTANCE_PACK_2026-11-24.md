@@ -273,3 +273,16 @@ The month validator correction and the prior-period adjustment fixture are inclu
 - Push CI run [#45585385511](https://github.com/mahmoudgood964-ui/ammar-app/actions/runs/45585385511) completed successfully.
 - This proves the SQL/RLS workflow in disposable PostgreSQL only. It does not prove the admin dashboard exposes a complete operational queue or replace live buyer/supplier/admin UI acceptance.
 - No production rows, schema, deployment, commission rules, payment milestones, or production migrations were changed.
+
+## Admin operational alerts — overdue RFQs and deliveries (2026-11-25)
+
+- Added `public.ammar_admin_list_operational_alerts(integer)` as a bounded, read-only RPC. The public entry point is SECURITY INVOKER; its privileged query is isolated in `app_private` and checks both authenticated identity and administrator role.
+- The feed returns only overdue open/closing RFQs and overdue or exception-state deliveries, with a limited set of fields: project title/reference, item status, due date, quote/item count, and reason for attention.
+- No broad SELECT policy was added to BOQ, RFQ, quote, award, delivery, supplier, or project tables.
+- The admin dashboard now renders the alert cards. It does not offer an administrative action to alter project or delivery records.
+- Added `tests/ammir-admin-operational-alerts.sql` for unrelated-account RPC denial and expected admin-only RFQ/delivery alert rows.
+- Added static assertions for RPC authorization, bounded query wiring, and dashboard rendering.
+- CI run `45588774590` exposed two test-fixture issues: the new SECURITY DEFINER function initially sat before the existing private-RPC migration, and the first fixture bypassed RFQ/award lifecycle transitions. Both were corrected: the function now lives in `app_private` behind an invoker wrapper, and the fixture follows draft → publish/issue → accept transitions with a priced quote line.
+- Exact current branch head at documentation time: `171a921b84fc6b55fbb25c8126ec0ddeccfa1b64`.
+- Validation for the corrected head is pending; the previous run is not counted as a pass.
+- No production migration, production deployment, PR merge, commission/payment change, or payment milestone modification was performed.
