@@ -8,6 +8,7 @@ on:
       - launch/ammir-trust-hardening
       - fix/ammir-android-pwa-install
       - feature/ammir-incremental-delivery-reconciliation
+      - feature/ammir-delivery-claims-workflow
   pull_request:
     branches:
       - main
@@ -139,7 +140,11 @@ jobs:
           psql -h 127.0.0.1 -U postgres -d ammar_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261117223432_fix_project_delivery_commission_cleanup_relation.sql
           psql -h 127.0.0.1 -U postgres -d ammar_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261117223523_fix_project_delivery_commission_award_item_reference.sql
           psql -h 127.0.0.1 -U postgres -d ammar_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261125010000_ammir_incremental_delivery_receipts.sql
-      - name: Test AMMIR incremental delivery receipts and commission immutability
+      - name: Apply AMMIR delivery claims migration
+        env:
+          PGPASSWORD: postgres
+        run: psql -h 127.0.0.1 -U postgres -d ammar_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261125020000_ammir_delivery_claims.sql
+      - name: Test AMMIR incremental delivery receipts, claims and commission immutability
         env:
           PGPASSWORD: postgres
         run: psql -h 127.0.0.1 -U postgres -d ammar_test -v ON_ERROR_STOP=1 -f tests/ammir-delivery-receipts.sql

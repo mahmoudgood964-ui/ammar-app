@@ -110,3 +110,17 @@ Every implementation must include: migration (if needed), regression test, secur
 - [x] Full rollback-only database workflow regression: draft RFQ → submitted quote → issued/accepted award → purchase-order RPC → supplier PO acceptance → delivery → dispatch → exception receipt. With 10 units expected, 6 good + 2 damaged + 2 missing produced gross commission basis 600 SDG and exactly 30 SDG at 5%; damaged/missing quantities were excluded.
 - [x] Replayed the delivery-item commission trigger and confirmed the ledger remained one row; a second receipt RPC call was rejected because the delivery was no longer dispatched.
 - [x] Confirmed the synthetic RFQ, award and delivery counts returned to zero after transaction rollback. This is database workflow regression coverage using one existing project-owner identity, not a two-account acceptance test.
+
+
+## AMMIR delivery claims and dispute workflow — 2026-11-25
+
+- [x] Add project-delivery claims linked to the delivery and, optionally, a specific immutable receipt line.
+- [x] Support structured claim categories: damaged goods, missing goods, rejected goods, quality, wrong item, documentation, and other.
+- [x] Restrict claim creation to the assigned supplier or project management roles; restrict messages to the claimant, assigned supplier, and project team.
+- [x] Record opening, messages, evidence references, status transitions, and resolutions in an append-only claim event trail.
+- [x] Require a written resolution note before a project manager can accept or reject a claim.
+- [x] Prevent direct client inserts/updates/deletes of claims and events; expose authenticated operations through guarded RPCs.
+- [x] Keep claim outcomes operational only: no automatic receipt edits, commission reversals, refunds, credits, or settlement mutations.
+- [x] Full GitHub Actions run `45581908979` passed on code commit `37f09a9`, applying the claims migration and running receipt/claim SQL regressions plus browser-code/migration wiring checks, including supplier-side claim UI and authorization coverage.
+- [ ] Authenticated buyer/supplier acceptance and evidence upload review remain pending.
+- [ ] Financial adjustment / return / refund / credit-note workflow remains deliberately unimplemented until the settlement policy and approval authority are agreed.

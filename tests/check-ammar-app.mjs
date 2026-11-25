@@ -278,6 +278,7 @@ assert.ok(moduleSource.includes('async function supplierHtml()') && moduleSource
 // Incremental delivery receipts: append-only batches, rejection accounting and immutable per-batch commissions.
 const receiptMigration = fs.readFileSync('supabase/migrations/20261125010000_ammir_incremental_delivery_receipts.sql', 'utf8');
 const receiptTests = fs.readFileSync('tests/ammir-delivery-receipts.sql', 'utf8');
+const claimsMigration = fs.readFileSync('supabase/migrations/20261125020000_ammir_delivery_claims.sql', 'utf8');
 assert.ok(receiptMigration.includes('ammir_project_delivery_receipts') && receiptMigration.includes('idempotency_key'), 'Delivery receipt batches must be persisted with an idempotency key');
 assert.ok(receiptMigration.includes('rejected_quantity') && receiptMigration.includes('condition_notes'), 'Delivery rejection quantity and reason must be recorded');
 assert.ok(receiptMigration.includes('ammir_record_delivery_receipt'), 'The incremental receipt RPC must be present');
@@ -294,3 +295,12 @@ assert.ok(receiptTests.includes('A paid commission row was changed by a later pa
 assert.ok(receiptTests.includes('delivery-receipt-unrelated@example.test') && receiptTests.includes('Project manager permission required'), 'Receipt RPC regression must reject an unrelated authenticated user');
 assert.ok(receiptTests.includes('Reusing an idempotency key with a changed payload was not rejected') && receiptTests.includes('Receipt quantity beyond outstanding balance was not rejected'), 'Receipt regression must reject changed idempotency payloads and over-receipt');
 assert.ok(receiptTests.includes('Rejected quantity without a reason was not rejected'), 'Receipt regression must require a reason for rejected quantities');
+assert.ok(claimsMigration.includes('ammir_project_delivery_claims') && claimsMigration.includes('ammir_project_delivery_claim_events'), 'Delivery claims must persist cases and an append-only event history');
+assert.ok(claimsMigration.includes('ammir_submit_delivery_claim') && claimsMigration.includes('ammir_add_delivery_claim_message') && claimsMigration.includes('ammir_transition_delivery_claim'), 'Delivery claims must expose authenticated submit, message and transition RPCs');
+assert.ok(claimsMigration.includes('Delivery claim event history is immutable') && claimsMigration.includes('REVOKE ALL ON public.ammir_project_delivery_claim_events FROM anon,authenticated'), 'Claim event history must be immutable and unavailable for direct client writes');
+assert.ok(claimsMigration.includes('A resolution note of at least 10 characters is required') && !claimsMigration.includes('UPDATE public.ammar_commission_ledger'), 'Claim resolution must require an auditable note and must not mutate commission automatically');
+assert.ok(claimsMigration.includes('Claimed quantity exceeds the quantity recorded on the selected receipt line') && receiptTests.includes('Claim quantity above the recorded rejected quantity was accepted'), 'Quantity claims must be bounded by immutable receipt evidence');
+assert.ok(receiptTests.includes('Unrelated user unexpectedly added a claim message') && receiptTests.includes('Claim resolution unexpectedly changed delivery commission ledger'), 'Claim regressions must cover party authorization and no automatic financial adjustment');
+assert.ok(receiptTests.includes('Claim accepted a receipt item belonging to another delivery') && receiptTests.includes('Supplier unexpectedly resolved the project claim'), 'Claim regressions must protect delivery linkage and separate supplier response from project resolution');
+assert.ok(html.includes('data-rfq-supplier-claim') && html.includes('data-rfq-claim-message') && html.includes('submitRfqClaimMessage'), 'Supplier delivery claims must support opening cases and replying from the supplier inbox');
+assert.ok(html.includes('AMMIR delivery claims are not available yet'), 'The supplier inbox must remain usable before the claims migration is deployed');
