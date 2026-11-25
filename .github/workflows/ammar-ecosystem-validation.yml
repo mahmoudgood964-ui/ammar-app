@@ -49,6 +49,10 @@ jobs:
         env:
           PGPASSWORD: postgres
         run: psql -h 127.0.0.1 -U postgres -d ammar_test -v ON_ERROR_STOP=1 -f supabase/migrations/202611120007_ammar_messaging_plus.sql
+      - name: Harden pinned-message conversation scope
+        env:
+          PGPASSWORD: postgres
+        run: psql -h 127.0.0.1 -U postgres -d ammar_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261125091500_harden_pinned_message_conversation_scope.sql
       - name: Apply AMMIR storage and Realtime migration
         env:
           PGPASSWORD: postgres
