@@ -219,3 +219,14 @@ Exact latest PR head `330944aa7a826bc69b27f3ccf6d5f9b881797d00` passed [GitHub A
 The browser validation script now executes the pure statement helpers against fixtures in two currencies. It verifies that commission and adjustment events remain separate rows, signed reductions/increases are aggregated by currency without cross-currency netting, source references survive, CSV text formula prefixes are neutralized, and signed numeric adjustment values remain numeric.
 
 Exact application/test head `e1b5f566aeb66086304ac35f98f043eb143196fb` passed [GitHub Actions run #45516995078](https://github.com/mahmoudgood964-ui/ammar-app/actions/runs/45516995078), SUCCESS (39/39 steps). An immediately preceding test-only attempt failed because it duplicated fixture variable declarations; the duplicate block was removed, and the corrected exact head passed. No application authorization or production database logic was changed by that correction.
+
+
+## 13. Monthly statement period-edge regression — latest verified head
+
+The monthly payer statement regression suite now covers adjustments recorded in the selected month whose source commission ledger row belongs to a prior month. The fixture verifies that the adjustment appears in the selected period with its source metadata and external reference preserved, while the prior-period GMV and original commission are not duplicated. Net activity for the selected month contains only the adjustment delta.
+
+The month validator correction and the prior-period adjustment fixture are included in exact feature-branch head `3b14d0a542adb308ca8b3734b81648f6adf25021`. [GitHub Actions push run #45580772729](https://github.com/mahmoudgood964-ui/ammar-app/actions/runs/45580772729) completed SUCCESS; all 35 workflow steps passed, including the disposable PostgreSQL migrations and browser/static validation. This CI result does not constitute real-account acceptance or a production deployment.
+
+**Current branch status:** PR #14 remains open and draft, with exact head `3b14d0a542adb308ca8b3734b81648f6adf25021`. The branch is not merged. Both revenue migrations remain unapplied to production. No production data, commission rates, payment milestones, or financial settings were changed. The prior Vercel free-tier deployment quota restriction remains a separate preview limitation; no paid upgrade or production deployment was attempted.
+
+**Still required before release:** real payer A/payer B/admin account checks for statement visibility and CSV content; Android/weak-network acceptance; exact-head preview when free-tier quota permits; Auth leaked-password setting review by the project owner; local legal/accounting review. A green CI run does not close these manual gates.
