@@ -1263,8 +1263,9 @@ function providerTypeLabel(type){
     const month=$('ecoStatementMonth')?.value||'';
     if(!/^\\d{4}-(0[1-9]|1[0-2])$/.test(month))throw new Error('اختر شهر كشف الحساب أولاً.');
     const [year,monthNumber]=month.split('-').map(Number);
-    const start=new Date(year,monthNumber-1,1).toISOString();
-    const end=new Date(year,monthNumber,1).toISOString();
+    // Statement periods use UTC calendar boundaries so users in different time zones receive identical exports.
+    const start=new Date(Date.UTC(year,monthNumber-1,1)).toISOString();
+    const end=new Date(Date.UTC(year,monthNumber,1)).toISOString();
     const ledgerSelect='id,activity_type,source_type,source_id,gross_amount,currency,rate_percent,commission_amount,status,recorded_at,settled_at,payer_id';
     const [ledgerRows,adjustments]=await Promise.all([
       fetchStatementPages(()=>db.from('ammar_commission_ledger').select(ledgerSelect)
@@ -1337,7 +1338,7 @@ function providerTypeLabel(type){
     }).join('');
     const totals=[...statementTotals.entries()].map(([currency,m])=>`<article class="eco-card"><strong>${esc(currency)}</strong><p>عدد السجلات: ${m.count}</p><p>إجمالي أساس المعاملات: ${money(m.gross,currency)}</p><p>العمولة الأصلية: ${money(m.base,currency)}</p><p>صافي التعديلات: ${money(m.adjustments,currency)}</p><p><strong>صافي العمولة المسجلة: ${money(m.net,currency)}</strong></p></article>`).join('');
     const currentStatementMonth=new Date().toISOString().slice(0,7);
-    const statementExport=`<div class="eco-form"><div><label for="ecoStatementMonth">شهر الكشف</label><input id="ecoStatementMonth" type="month" value="${currentStatementMonth}"></div><div class="wide"><button class="btn light" type="button" data-statement-export>تنزيل كشف الشهر CSV</button></div></div>`;
+    const statementExport=`<div class="eco-form"><div><label for="ecoStatementMonth">شهر الكشف (UTC)</label><input id="ecoStatementMonth" type="month" value="${currentStatementMonth}"></div><div class="wide"><button class="btn light" type="button" data-statement-export>تنزيل كشف الشهر CSV</button></div></div>`;
     const adjustmentsHtml=adjustmentRows.map(x=>`<div class="eco-row"><div>${esc(x.adjustment_kind)} · ${money(x.amount_delta,x.currency)}<div class="muted">${esc(x.reason)} · ${esc(new Date(x.created_at).toLocaleDateString('ar'))}</div></div><span class="eco-pill">تعديل مسجل</span></div>`).join('');
     return `<section class="eco-card eco-subsection"><h3>الاتفاقات</h3><div class="eco-grid">${agreements||'<div class="eco-empty">لا توجد اتفاقات موثقة.</div>'}</div></section><section class="eco-card eco-subsection"><h3>كشف حساب العمولات</h3><p class="muted">ملخص الشاشة يعرض أحدث 500 قيد فقط، وقد لا يمثل كامل الرصيد التاريخي. ملف CSV أدناه يُنشأ مستقلاً للشهر المختار، ويجلب قيود العمولة والتعديلات على دفعات متتابعة ضمن صلاحيات حسابك.</p><div class="eco-actions">${statementExport}</div><div class="eco-grid">${totals||'<div class="eco-empty">لا توجد قيود عمولات لهذا الحساب.</div>'}</div><h4>تفاصيل القيود</h4>${ledger||'<p class="muted">لا توجد عمولات مسجلة لهذا الحساب.</p>'}<h4>سجل التعديلات</h4>${adjustmentsHtml||'<p class="muted">لا توجد تعديلات مسجلة.</p>'}</section><div class="eco-note">هذا كشف محاسبي للعمولات المسجلة وليس فاتورة ضريبية أو إثبات تحصيل نقدي أو تسوية بنكية. حالة «مدفوع» تعكس حالة دفتر عَمِّر فقط؛ ولا يجوز اعتبارها مطابقة بنكية دون مستند من جهة الدفع.</div>`;
   }
