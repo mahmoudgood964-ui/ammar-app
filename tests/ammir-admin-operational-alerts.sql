@@ -24,11 +24,42 @@ INSERT INTO public.ammir_project_rfqs(
  'AMMIR-OPS-RFQ-001','Overdue test RFQ','CI test location',
  now()-interval '2 days','SDG','draft',
  'aaaaaaaa-2511-4000-8000-000000000002',NULL
+ ) ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO public.ammir_project_rfq_items(
+ id,rfq_id,project_id,item_code,description,specification,unit,quantity,sort_order
+) VALUES (
+ 'ffffffff-2511-4000-8000-000000000001',
+ 'cccccccc-2511-4000-8000-000000000001',
+ 'bbbbbbbb-2511-4000-8000-000000000001',
+ 'OPS-01','Cement supply','50kg bags','bag',10,1
 ) ON CONFLICT (id) DO NOTHING;
 
 UPDATE public.ammir_project_rfqs
 SET status='open',published_at=now()
 WHERE id='cccccccc-2511-4000-8000-000000000001';
+
+INSERT INTO public.ammar_market_suppliers(owner_id,business_name,status,is_verified)
+VALUES('aaaaaaaa-2511-4000-8000-000000000003','Operational Alerts Test Supplier','active',true)
+ON CONFLICT DO NOTHING;
+
+INSERT INTO public.ammir_project_rfq_quotes(
+ id,rfq_id,project_id,provider_user_id,currency,total_cost,status,submitted_at
+) VALUES (
+ 'ffffffff-2511-4000-8000-000000000002',
+ 'cccccccc-2511-4000-8000-000000000001',
+ 'bbbbbbbb-2511-4000-8000-000000000001',
+ 'aaaaaaaa-2511-4000-8000-000000000003','SDG',1000,'submitted',now()
+) ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO public.ammir_project_rfq_quote_items(
+ id,quote_id,rfq_item_id,project_id,quoted_quantity,unit_rate
+) VALUES (
+ 'ffffffff-2511-4000-8000-000000000003',
+ 'ffffffff-2511-4000-8000-000000000002',
+ 'ffffffff-2511-4000-8000-000000000001',
+ 'bbbbbbbb-2511-4000-8000-000000000001',10,100
+) ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO public.ammir_project_awards(
  id,rfq_id,project_id,supplier_user_id,award_reference,status,created_by,issued_at,accepted_at
@@ -39,7 +70,16 @@ INSERT INTO public.ammir_project_awards(
  'aaaaaaaa-2511-4000-8000-000000000003',
  'AMMIR-OPS-AWARD-001','draft',
  'aaaaaaaa-2511-4000-8000-000000000002',NULL,NULL
-) ON CONFLICT (id) DO NOTHING;
+ ) ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO public.ammir_project_award_items(
+ award_id,project_id,rfq_item_id,quote_item_id,awarded_quantity,unit_rate,currency
+) VALUES (
+ 'dddddddd-2511-4000-8000-000000000001',
+ 'bbbbbbbb-2511-4000-8000-000000000001',
+ 'ffffffff-2511-4000-8000-000000000001',
+ 'ffffffff-2511-4000-8000-000000000003',10,100,'SDG'
+) ON CONFLICT DO NOTHING;
 
 UPDATE public.ammir_project_awards
 SET status='issued',issued_at=now()
