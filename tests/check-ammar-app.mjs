@@ -286,6 +286,6 @@ assert.ok(receiptMigration.includes("v_delivery_id::text || ':' || v_currency ||
 assert.ok(receiptMigration.includes("current_setting('app.ammir_receipt_write', true) IS DISTINCT FROM 'on'"), 'Direct delivery quantity edits must be blocked outside the receipt RPC');
 assert.ok(receiptMigration.includes('A delivery with receipt history cannot be cancelled'), 'A delivery with receipt history must not be cancellable');
 assert.ok(receiptMigration.includes('Receipt idempotency key was already used with a different payload'), 'Idempotency keys must reject payload reuse');
-assert.ok(indexHtml.includes("client.rpc('ammir_record_delivery_receipt'") && indexHtml.includes('rejected_quantity'), 'The delivery UI must use incremental receipt batches and rejected quantities');
-assert.ok(indexHtml.includes('receipt_key') && indexHtml.includes('المتبقي'), 'The receipt UI must expose remaining quantities and retain an idempotency key');
+assert.ok(html.includes("client.rpc('ammir_record_delivery_receipt'") && html.includes('rejected_quantity'), 'The delivery UI must use incremental receipt batches and rejected quantities');
+assert.ok(html.includes('receipt_key') && html.includes('المتبقي'), 'The receipt UI must expose remaining quantities and retain an idempotency key');
 assert.ok(receiptTests.includes('A paid commission row was changed by a later partial receipt') && receiptTests.includes('Rejected quantities must be excluded from commission'), 'Receipt regression tests must cover paid commission immutability and rejected goods');
