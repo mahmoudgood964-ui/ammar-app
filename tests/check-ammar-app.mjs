@@ -304,3 +304,17 @@ assert.ok(receiptTests.includes('Unrelated user unexpectedly added a claim messa
 assert.ok(receiptTests.includes('Claim accepted a receipt item belonging to another delivery') && receiptTests.includes('Supplier unexpectedly resolved the project claim'), 'Claim regressions must protect delivery linkage and separate supplier response from project resolution');
 assert.ok(html.includes('data-rfq-supplier-claim') && html.includes('data-rfq-claim-message') && html.includes('submitRfqClaimMessage'), 'Supplier delivery claims must support opening cases and replying from the supplier inbox');
 assert.ok(html.includes('AMMIR delivery claims are not available yet'), 'The supplier inbox must remain usable before the claims migration is deployed');
+
+const returnAdjustmentMigration = fs.readFileSync('supabase/migrations/20261125030000_ammir_proportional_return_adjustments.sql', 'utf8');
+assert.ok(returnAdjustmentMigration.includes('ammir_project_delivery_returns'), 'Append-only accepted return records are missing');
+assert.ok(returnAdjustmentMigration.includes('ammar_commission_adjustments'), 'Proportional commission adjustment proposals are missing');
+assert.ok(returnAdjustmentMigration.includes('Cumulative return quantity exceeds the accepted claim quantity'), 'Accepted claim quantity cap is missing');
+assert.ok(returnAdjustmentMigration.includes('Cumulative return quantity exceeds the accepted-good receipt quantity'), 'Receipt quantity cap is missing');
+assert.ok(returnAdjustmentMigration.includes('pending_review'), 'Adjustment proposals must remain pending finance review');
+assert.ok(returnAdjustmentMigration.includes('v_ledger_commission * least(v_total_returned_gross, v_ledger_gross) / v_ledger_gross'), 'Proportional adjustment must use the original receipt ledger basis');
+assert.ok(returnAdjustmentMigration.includes('FOR UPDATE'), 'Return processing must serialize quantity and cumulative adjustment checks');
+assert.ok(returnAdjustmentMigration.includes('Accepted delivery return history is immutable'), 'Return history immutability guard is missing');
+assert.ok(returnAdjustmentMigration.includes('Commission adjustment proposals are immutable'), 'Adjustment proposal immutability guard is missing');
+assert.doesNotMatch(returnAdjustmentMigration, /UPDATE\\s+public\\.ammar_commission_ledger/i, 'Return workflow must never mutate original commission ledger rows');
+assert.doesNotMatch(returnAdjustmentMigration, /INSERT\\s+INTO\\s+public\\.ammar_commission_ledger/i, 'Return workflow must never create replacement commission ledger rows');
+assert.ok(returnAdjustmentMigration.includes('ammir_record_delivery_return'), 'Authenticated return RPC wrapper is missing');
