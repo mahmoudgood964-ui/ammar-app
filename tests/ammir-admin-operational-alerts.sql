@@ -22,8 +22,8 @@ INSERT INTO public.ammir_project_rfqs(
  'cccccccc-2511-4000-8000-000000000001',
  'bbbbbbbb-2511-4000-8000-000000000001',
  'AMMIR-OPS-RFQ-001','Overdue test RFQ','CI test location',
- now()-interval '2 days','SDG','open',
- 'aaaaaaaa-2511-4000-8000-000000000002',now()-interval '3 days'
+ now()-interval '2 days','SDG','draft',
+ 'aaaaaaaa-2511-4000-8000-000000000002',NULL
 ) ON CONFLICT (id) DO NOTHING;
 
 UPDATE public.ammir_project_rfqs
