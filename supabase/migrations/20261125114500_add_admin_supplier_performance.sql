@@ -67,6 +67,7 @@ BEGIN
       d.id AS delivery_id,
       d.scheduled_at,
       d.received_at,
+      d.status,
       COALESCE(sum(di.expected_quantity), 0) AS expected_quantity,
       COALESCE(sum(di.received_quantity), 0) AS received_quantity,
       COALESCE(sum(di.damaged_quantity), 0) AS damaged_quantity,
@@ -78,7 +79,7 @@ BEGIN
     WHERE d.created_at >= v_since
       AND d.supplier_user_id IS NOT NULL
       AND d.status <> 'cancelled'
-    GROUP BY d.supplier_user_id, d.id, d.scheduled_at, d.received_at
+    GROUP BY d.supplier_user_id, d.id, d.scheduled_at, d.received_at, d.status
   ),
   delivery_stats AS (
     SELECT
@@ -106,6 +107,7 @@ BEGIN
       )::bigint AS on_time_count,
       count(*) FILTER (
         WHERE dr.item_count > 0
+          AND dr.status = 'received'
           AND dr.received_at IS NOT NULL
           AND dr.scheduled_at IS NOT NULL
           AND dr.expected_quantity > 0
