@@ -1108,6 +1108,103 @@ function providerTypeLabel(type){
       </form></section><section class="eco-card"><h3>طلبات الخدمات المفتوحة</h3><div class="eco-grid">${cards||'<div class="eco-empty">لا توجد طلبات خدمات مفتوحة.</div>'}</div></section>`;
   }
 
+  function statementCsvCell(value,key){
+    let raw=String(value??'');
+    if(!['gross_amount','rate_percent','commission_amount','adjustment_delta','net_activity'].includes(key)&&/^[\\s]*[=+\\-@]/.test(raw))raw="'"+raw;
+    return '"'+raw.replace(/"/g,'""')+'"';
+  }
+
+  function buildCommissionStatementRows(ledgerRows,adjustments,sourceLedgerRows){
+    const sources=new Map((sourceLedgerRows||[]).map(row=>[String(row.id),row]));
+    const rows=(ledgerRows||[]).map(row=>({
+      record_type:'commission',event_date:row.recorded_at,ledger_id:row.id,
+      activity_type:row.activity_type,source_type:row.source_type,source_id:row.source_id,
+      gross_amount:row.gross_amount,currency:row.currency,rate_percent:row.rate_percent,
+      commission_amount:row.commission_amount,adjustment_kind:'',adjustment_delta:'',
+      net_activity:row.commission_amount,status:row.status,reason:'',source_reference:''
+    }));
+    for(const adjustment of (adjustments||[])){
+      const source=sources.get(String(adjustment.ledger_id))||{};
+      rows.push({
+        record_type:'adjustment',event_date:adjustment.created_at,ledger_id:adjustment.ledger_id,
+        activity_type:source.activity_type||'',source_type:source.source_type||'',
+        source_id:source.source_id||'',gross_amount:'',currency:adjustment.currency,
+        rate_percent:'',commission_amount:'',adjustment_kind:adjustment.adjustment_kind,
+        adjustment_delta:adjustment.amount_delta,net_activity:adjustment.amount_delta,
+        status:source.status||'',reason:adjustment.reason,source_reference:adjustment.source_reference||''
+      });
+    }
+    return rows.sort((a,b)=>String(a.event_date||'').localeCompare(String(b.event_date||'')));
+  }
+
+  function summarizeCommissionStatement(rows){
+    const totals=new Map();
+    for(const row of rows||[]){
+      const currency=String(row.currency||'');
+      if(!currency)continue;
+      if(!totals.has(currency))totals.set(currency,{currency,commission_count:0,gross_amount:0,commission_amount:0,adjustment_delta:0,net_activity:0});
+      const total=totals.get(currency);
+      if(row.record_type==='commission'){
+        total.commission_count++;
+        total.gross_amount+=Number(row.gross_amount||0);
+        total.commission_amount+=Number(row.commission_amount||0);
+      }else if(row.record_type==='adjustment'){
+        total.adjustment_delta+=Number(row.adjustment_delta||0);
+      }
+      total.net_activity+=Number(row.net_activity||0);
+    }
+    return [...totals.values()].map(x=>Object.fromEntries(Object.entries(x).map(([k,v])=>[k,typeof v==='number'?Math.round((v+Number.EPSILON)*100)/100:v])));
+  }
+
+  async function fetchStatementPages(makeQuery){
+    const rows=[];let offset=0;
+    while(true){
+      const result=await makeQuery().range(offset,offset+999);
+      if(result.error)throw result.error;
+      const page=result.data||[];rows.push(...page);
+      if(page.length<1000)break;
+      offset+=1000;
+      if(offset>=50000)throw new Error('تجاوز كشف الحساب حد التصفح الآمن؛ يرجى تقسيم الفترة.');
+    }
+    return rows;
+  }
+
+  async function exportAccountCommissionStatement(){
+    const month=$('ecoStatementMonth')?.value||'';
+    if(!/^\\d{4}-(0[1-9]|1[0-2])$/.test(month))throw new Error('اختر شهر كشف الحساب أولاً.');
+    const [year,monthNumber]=month.split('-').map(Number);
+    const start=new Date(year,monthNumber-1,1).toISOString();
+    const end=new Date(year,monthNumber,1).toISOString();
+    const ledgerSelect='id,activity_type,source_type,source_id,gross_amount,currency,rate_percent,commission_amount,status,recorded_at,settled_at,payer_id';
+    const [ledgerRows,adjustments]=await Promise.all([
+      fetchStatementPages(()=>db.from('ammar_commission_ledger').select(ledgerSelect)
+        .eq('payer_id',user.id).gte('recorded_at',start).lt('recorded_at',end).order('recorded_at',{ascending:true})),
+      fetchStatementPages(()=>db.from('ammar_commission_adjustments').select('*')
+        .gte('created_at',start).lt('created_at',end).order('created_at',{ascending:true}))
+    ]);
+    const relatedIds=[...new Set(adjustments.map(x=>String(x.ledger_id)).filter(Boolean))];
+    const relatedRows=[];
+    for(let i=0;i<relatedIds.length;i+=100){
+      const ids=relatedIds.slice(i,i+100);
+      relatedRows.push(...await fetchStatementPages(()=>db.from('ammar_commission_ledger').select(ledgerSelect)
+        .eq('payer_id',user.id).in('id',ids)));
+    }
+    const rows=buildCommissionStatementRows(ledgerRows,adjustments,ledgerRows.concat(relatedRows));
+    const columns=['record_type','event_date','ledger_id','activity_type','source_type','source_id','gross_amount','currency','rate_percent','commission_amount','adjustment_kind','adjustment_delta','net_activity','status','reason','source_reference'];
+    const summary=summarizeCommissionStatement(rows).map(x=>({
+      record_type:'period_total',event_date:'',ledger_id:'',activity_type:'',source_type:'',source_id:'',
+      gross_amount:x.gross_amount,currency:x.currency,rate_percent:'',commission_amount:x.commission_amount,
+      adjustment_kind:'',adjustment_delta:x.adjustment_delta,net_activity:x.net_activity,
+      status:'',reason:'عدد سجلات العمولات: '+x.commission_count,source_reference:''
+    }));
+    const csv=[columns.join(','),...rows.concat(summary).map(row=>columns.map(key=>statementCsvCell(row[key],key)).join(','))].join('\\r\\n');
+    const blob=new Blob(['\\uFEFF'+csv],{type:'text/csv;charset=utf-8;'});
+    const url=URL.createObjectURL(blob),link=document.createElement('a');
+    link.href=url;link.download='ammir-commission-statement-'+month+'.csv';
+    document.body.appendChild(link);link.click();link.remove();URL.revokeObjectURL(url);
+    tell('تم إعداد كشف نشاط العمولات للفترة المحددة. الكشف لا يثبت التحصيل أو التسوية البنكية.','success');
+  }
+
   async function agreementsHtml(){
     const [a,l]=await Promise.all([
       db.from('ammar_agreements').select('*').order('created_at',{ascending:false}).limit(100),
@@ -1149,9 +1246,8 @@ function providerTypeLabel(type){
       return `<div class="eco-row"><div><strong>${money(x.gross_amount,x.currency)}</strong> · عمولة أصلية ${money(x.commission_amount,x.currency)} · التعديلات ${money(delta,x.currency)} · الصافي ${money(net,x.currency)}<div class="muted">${esc(x.activity_type)} · ${esc(x.source_type)}:${esc(x.source_id)} · ${esc(new Date(x.recorded_at).toLocaleDateString('ar'))}</div></div><span class="eco-pill">${esc(x.status)}</span></div>`;
     }).join('');
     const totals=[...statementTotals.entries()].map(([currency,m])=>`<article class="eco-card"><strong>${esc(currency)}</strong><p>عدد السجلات: ${m.count}</p><p>إجمالي أساس المعاملات: ${money(m.gross,currency)}</p><p>العمولة الأصلية: ${money(m.base,currency)}</p><p>صافي التعديلات: ${money(m.adjustments,currency)}</p><p><strong>صافي العمولة المسجلة: ${money(m.net,currency)}</strong></p></article>`).join('');
-    const statementCsvRows=ledgerRows.map(x=>{const delta=adjustmentTotals.get(x.id)||0;return [x.id,x.recorded_at,x.activity_type,x.source_type,x.source_id,x.gross_amount,x.currency,x.rate_percent,x.commission_amount,delta,Number(x.commission_amount||0)+delta,x.status,x.settled_at];});
-    const statementCsv=[['ledger_id','recorded_at','activity_type','source_type','source_id','gross_amount','currency','rate_percent','original_commission','adjustment_delta','net_commission','ledger_status','settled_at'],...statementCsvRows].map(row=>row.map(v=>{const s=String(v??'');return /[",\\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s;}).join(',')).join('\\r\\n');
-    const statementExport=`<button class="btn light" type="button" data-statement-export="${encodeURIComponent(statementCsv)}">تنزيل كشف CSV</button>`;
+    const currentStatementMonth=new Date().toISOString().slice(0,7);
+    const statementExport=`<div class="eco-form"><div><label for="ecoStatementMonth">شهر الكشف</label><input id="ecoStatementMonth" type="month" value="${currentStatementMonth}"></div><div class="wide"><button class="btn light" type="button" data-statement-export>تنزيل كشف الشهر CSV</button></div></div>`;
     const adjustmentsHtml=adjustmentRows.map(x=>`<div class="eco-row"><div>${esc(x.adjustment_kind)} · ${money(x.amount_delta,x.currency)}<div class="muted">${esc(x.reason)} · ${esc(new Date(x.created_at).toLocaleDateString('ar'))}</div></div><span class="eco-pill">تعديل مسجل</span></div>`).join('');
     return `<section class="eco-card eco-subsection"><h3>الاتفاقات</h3><div class="eco-grid">${agreements||'<div class="eco-empty">لا توجد اتفاقات موثقة.</div>'}</div></section><section class="eco-card eco-subsection"><h3>كشف حساب العمولات</h3><p class="muted">كشف قراءة فقط للفترة المتاحة في السجلات المحمّلة (حتى 500 قيد). يفصل بين قيمة المعاملات والعمولة الأصلية والتعديلات وصافي العمولة.</p><div class="eco-actions">${statementExport}</div><div class="eco-grid">${totals||'<div class="eco-empty">لا توجد قيود عمولات لهذا الحساب.</div>'}</div><h4>تفاصيل القيود</h4>${ledger||'<p class="muted">لا توجد عمولات مسجلة لهذا الحساب.</p>'}<h4>سجل التعديلات</h4>${adjustmentsHtml||'<p class="muted">لا توجد تعديلات مسجلة.</p>'}</section><div class="eco-note">هذا كشف محاسبي للعمولات المسجلة وليس فاتورة ضريبية أو إثبات تحصيل نقدي أو تسوية بنكية. حالة «مدفوع» تعكس حالة دفتر عَمِّر فقط؛ ولا يجوز اعتبارها مطابقة بنكية دون مستند من جهة الدفع.</div>`;
   }
@@ -1191,12 +1287,7 @@ function providerTypeLabel(type){
   async function click(e){
     const t=e.target.closest('[data-eco-tab]');if(t){chooseTab(t.dataset.ecoTab);return;}
     if(e.target.closest('[data-revenue-export]')){exportRevenueCsv();return;}
-    const statementExportButton=e.target.closest('[data-statement-export]');
-    if(statementExportButton){
-      const csv=decodeURIComponent(statementExportButton.dataset.statementExport||'');
-      const blob=new Blob(['\\uFEFF',csv],{type:'text/csv;charset=utf-8;'});
-      const url=URL.createObjectURL(blob);const link=document.createElement('a');link.href=url;link.download='ammir-commission-statement.csv';document.body.appendChild(link);link.click();link.remove();URL.revokeObjectURL(url);return;
-    }
+    if(e.target.closest('[data-statement-export]')){exportAccountCommissionStatement().catch(err=>tell('تعذر إنشاء كشف الحساب: '+(err.message||'خطأ'),'error'));return;}
     const adminButton=e.target.closest('[data-admin-review]');
     if(adminButton){handleAdminClick(adminButton).catch(err=>tell('تعذر حفظ قرار التحقق: '+(err.message||'خطأ'),'error'));return;}
     const b=e.target.closest('[data-eco-provider-chat],[data-eco-action],[data-eco-buy],[data-eco-contact],[data-eco-toggle-product],[data-eco-open-chat],[data-eco-accept-quote],[data-eco-submit-quote],[data-eco-advance],[data-eco-order-chat],[data-eco-create-agreement],[data-eco-service-offer],[data-eco-accept-service],[data-eco-service-chat],[data-eco-service-agreement],[data-eco-complete-service],[data-eco-accept-agreement],[data-eco-submit-review],[data-eco-quote-chat],[data-eco-agreement-chat],[data-eco-reply],[data-eco-clear-reply],[data-eco-pin],[data-eco-unpin],[data-eco-report],[data-eco-forward],[data-eco-archive],[data-eco-block],[data-eco-presence-toggle],[data-eco-location],[data-eco-to-task],[data-eco-to-change],[data-eco-unblock]');
