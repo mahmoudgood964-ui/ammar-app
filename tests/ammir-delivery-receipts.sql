@@ -354,6 +354,7 @@ BEGIN
     v_ledger_gross_before numeric(20,2);
     v_ledger_commission_before numeric(20,2);
     v_return_claim_id uuid;
+    v_second_return_claim_id uuid;
     v_return_id_one uuid;
     v_return_id_two uuid;
     v_return_replay uuid;
@@ -495,6 +496,18 @@ BEGIN
       RAISE EXCEPTION 'Return idempotency replay did not return the original return id';
     END IF;
 
+    v_failed := false;
+    BEGIN
+      PERFORM public.ammir_record_delivery_return(
+        v_return_claim_id,0.5,
+        (SELECT idempotency_key FROM public.ammir_project_delivery_returns WHERE id=v_return_id_one),
+        'Changed payload on a previously used return idempotency key.'
+      );
+    EXCEPTION WHEN OTHERS THEN
+      v_failed := true;
+    END;
+    IF NOT v_failed THEN RAISE EXCEPTION 'Changed return payload reused an existing idempotency key'; END IF;
+
     SELECT count(*),coalesce(sum(a.adjustment_amount),0)
       INTO v_adjustment_count,v_adjustment_total
     FROM public.ammar_commission_adjustments a
@@ -545,7 +558,42 @@ BEGIN
       v_failed := true;
     END;
     IF NOT v_failed THEN RAISE EXCEPTION 'Unrelated user unexpectedly accepted a delivery return'; END IF;
+
+    -- A second accepted claim cannot return the same receipt units again.
     PERFORM set_config('request.jwt.claim.sub',v_owner::text,true);
+    v_second_return_claim_id := public.ammir_submit_delivery_claim(
+      v_delivery_a,
+      (SELECT id FROM public.ammir_project_delivery_receipt_items
+       WHERE receipt_id=v_receipt_a AND delivery_item_id=v_item_a LIMIT 1),
+      'quality',1,
+      'A separate overlapping claim is used to verify the receipt-line return cap.'
+    );
+    PERFORM public.ammir_transition_delivery_claim(v_second_return_claim_id,'under_review',null);
+    PERFORM public.ammir_transition_delivery_claim(
+      v_second_return_claim_id,'accepted','Accepted for review only; all units already returned.'
+    );
+    PERFORM set_config('request.jwt.claim.sub',v_supplier::text,true);
+    v_failed := false;
+    BEGIN
+      PERFORM public.ammir_record_delivery_return(
+        v_second_return_claim_id,0.1,gen_random_uuid(),
+        'Supplier cannot accept a physical return on behalf of the project.'
+      );
+    EXCEPTION WHEN OTHERS THEN
+      v_failed := true;
+    END;
+    IF NOT v_failed THEN RAISE EXCEPTION 'Assigned supplier unexpectedly accepted a physical return'; END IF;
+    PERFORM set_config('request.jwt.claim.sub',v_owner::text,true);
+    v_failed := false;
+    BEGIN
+      PERFORM public.ammir_record_delivery_return(
+        v_second_return_claim_id,0.1,gen_random_uuid(),
+        'Overlapping claims cannot return the same receipt quantity twice.'
+      );
+    EXCEPTION WHEN OTHERS THEN
+      v_failed := true;
+    END;
+    IF NOT v_failed THEN RAISE EXCEPTION 'Cumulative returns across claims exceeded the receipt-line quantity'; END IF;
 
     SELECT l.status,l.gross_amount,l.commission_amount
       INTO v_original_status,v_original_gross,v_original_commission
