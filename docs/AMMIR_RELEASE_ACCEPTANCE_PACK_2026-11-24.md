@@ -205,3 +205,10 @@ The comparison validates UUIDs before querying, loads only referenced ledger IDs
 This is a comparison aid, not bank connectivity, cash-settlement proof, a ledger status update, or a payment operation. No financial rows, statuses, rules, payment milestones, or production database objects are modified. Automated fixtures cover quoted CSV fields, BOM/line endings, adjusted-amount matching, duplicates, unknown/malformed IDs, amount mismatch, currency mismatch, invalid amount format, and the read-only boundary.
 
 Exact application/test head `1b26297b94c731d1c4169fd827a59c5b209abe06` passed [push CI #45516437658](https://github.com/mahmoudgood964-ui/ammar-app/actions/runs/45516437658) and [pull-request CI #45516442539](https://github.com/mahmoudgood964-ui/ammar-app/actions/runs/45516442539), both SUCCESS (39/39 workflow steps). Manual testing with a real provider/bank export remains open because no external settlement file has yet been supplied.
+
+
+## 11. UTC month-boundary regression and latest CI
+
+The monthly payer statement now constructs period boundaries with `Date.UTC` and labels the month selector as UTC. This avoids a device-local timezone shifting the first or last hours of a selected month into an adjacent reporting period. Static regression checks assert both UTC boundaries and the visible timezone label.
+
+Exact latest PR head `330944aa7a826bc69b27f3ccf6d5f9b881797d00` passed [GitHub Actions run #45516582618](https://github.com/mahmoudgood964-ui/ammar-app/actions/runs/45516582618), SUCCESS (39/39 steps). The same run applies the revenue migrations only to its disposable PostgreSQL CI database; production Supabase remains unchanged. Vercel preview builds remain blocked by the free-tier build-rate limit, and real-account/device acceptance is still outstanding.
