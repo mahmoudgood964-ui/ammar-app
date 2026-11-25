@@ -186,6 +186,23 @@ assert.equal(settlementResults[0].expected_amount,40,'Settlement report must com
 assert.equal(settlementResults[1].status,'duplicate_ledger','Duplicate ledger references must be flagged');
 assert.equal(settlementResults[2].status,'duplicate_ledger','Every row for a duplicate ledger reference must be flagged');
 assert.equal(settlementResults[3].status,'unknown_ledger','Unknown ledger references must be flagged, not accepted');
+
+const exceptionResults=reconciliationSandbox.buildSettlementReconciliation(
+  [
+    {ledger_id:'44444444-4444-4444-8444-444444444444',amount:'29.00',currency:'SDG'},
+    {ledger_id:'55555555-5555-4555-8555-555555555555',amount:'15.00',currency:'USD'},
+    {ledger_id:'66666666-6666-4666-8666-666666666666',amount:'1,000.00',currency:'SDG'}
+  ],
+  [
+    {id:'44444444-4444-4444-8444-444444444444',currency:'SDG',commission_amount:30,status:'due'},
+    {id:'55555555-5555-4555-8555-555555555555',currency:'SDG',commission_amount:15,status:'paid'},
+    {id:'66666666-6666-4666-8666-666666666666',currency:'SDG',commission_amount:1000,status:'paid'}
+  ],
+  []
+);
+assert.equal(exceptionResults[0].status,'amount_mismatch','Different settlement amounts must be flagged');
+assert.equal(exceptionResults[1].status,'currency_mismatch','Different settlement currencies must be flagged');
+assert.equal(exceptionResults[2].status,'invalid_row','Amounts with thousands separators must be rejected by the declared CSV format');
 assert.ok(moduleSource.includes("filter(id=>/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id))"),'Reconciliation must validate UUIDs before sending them to PostgreSQL');
 const invalidIdResults=reconciliationSandbox.buildSettlementReconciliation(
   [{ledger_id:'not-a-uuid',amount:'1.00',currency:'SDG'}],
@@ -202,6 +219,9 @@ assert.ok(moduleSource.includes('id="ecoReconciliationFile"'),'Admin revenue das
 assert.ok(moduleSource.includes("if(e.target.id==='ecoReconciliationFile'"),'Settlement CSV input must be processed through the change handler');
 assert.ok(moduleSource.includes("eq('payer_id',user.id)")&&moduleSource.includes(".in('ledger_id',chunk)"),'Reconciliation must fetch the ledger and its append-only adjustments by exact IDs');
 assert.ok(moduleSource.includes('لا تعدّل هذه اللوحة قواعد العمولة أو القيود المالية'),'Reconciliation UI must disclose its read-only financial boundary');
+assert.ok(moduleSource.includes('لا تستنتج أن القيود الغائبة غير مدفوعة'),'Reconciliation UI must not infer missing report rows are unpaid');
+assert.ok(moduleSource.includes('function processSettlementFile(file)'),'Reconciliation must process reports without a server upload');
+
 const revenueQueryTrace = [];
 revenueCsvSandbox.db = {
   from(table) {
