@@ -212,3 +212,10 @@ Exact application/test head `1b26297b94c731d1c4169fd827a59c5b209abe06` passed [p
 The monthly payer statement now constructs period boundaries with `Date.UTC` and labels the month selector as UTC. This avoids a device-local timezone shifting the first or last hours of a selected month into an adjacent reporting period. Static regression checks assert both UTC boundaries and the visible timezone label.
 
 Exact latest PR head `330944aa7a826bc69b27f3ccf6d5f9b881797d00` passed [GitHub Actions run #45516582618](https://github.com/mahmoudgood964-ui/ammar-app/actions/runs/45516582618), SUCCESS (39/39 steps). The same run applies the revenue migrations only to its disposable PostgreSQL CI database; production Supabase remains unchanged. Vercel preview builds remain blocked by the free-tier build-rate limit, and real-account/device acceptance is still outstanding.
+
+
+## 12. Commission statement behavioral regression coverage
+
+The browser validation script now executes the pure statement helpers against fixtures in two currencies. It verifies that commission and adjustment events remain separate rows, signed reductions/increases are aggregated by currency without cross-currency netting, source references survive, CSV text formula prefixes are neutralized, and signed numeric adjustment values remain numeric.
+
+Exact application/test head `e1b5f566aeb66086304ac35f98f043eb143196fb` passed [GitHub Actions run #45516995078](https://github.com/mahmoudgood964-ui/ammar-app/actions/runs/45516995078), SUCCESS (39/39 steps). An immediately preceding test-only attempt failed because it duplicated fixture variable declarations; the duplicate block was removed, and the corrected exact head passed. No application authorization or production database logic was changed by that correction.
