@@ -440,3 +440,34 @@ assert.ok(moduleSource.includes('statementTotals'), 'Payer statement currency to
 assert.ok(moduleSource.includes('data-statement-export'), 'Payer statement CSV export control is missing');
 assert.ok(moduleSource.includes('net_commission_amount') || moduleSource.includes('net_commission'), 'Payer statement must calculate net commission after adjustments');
 assert.ok(moduleSource.includes('ليس فاتورة ضريبية') || moduleSource.includes('إثبات تحصيل نقدي'), 'Payer statement must disclose that it is not tax invoice or cash-settlement evidence');
+
+const statementHelperStart = moduleSource.indexOf('function statementCsvCell');
+const statementHelperEnd = moduleSource.indexOf('async function fetchStatementPages', statementHelperStart);
+assert.ok(statementHelperStart >= 0 && statementHelperEnd > statementHelperStart, 'Commission statement helpers are missing');
+const statementSandbox = {};
+vm.runInNewContext(
+  moduleSource.slice(statementHelperStart, statementHelperEnd) +
+    '\\n globalThis.buildCommissionStatementRows = buildCommissionStatementRows;' +
+    '\\n globalThis.summarizeCommissionStatement = summarizeCommissionStatement;' +
+    '\\n globalThis.statementCsvCell = statementCsvCell;',
+  statementSandbox
+);
+const statementLedger = [
+  {id:'l1',recorded_at:'2026-11-02T10:00:00Z',activity_type:'market_materials',source_type:'project_delivery',source_id:'d1:SDG',gross_amount:1000,currency:'SDG',rate_percent:5,commission_amount:50,status:'due'},
+  {id:'l2',recorded_at:'2026-11-03T10:00:00Z',activity_type:'contracting',source_type:'project_service_award',source_id:'a1:USD',gross_amount:200,currency:'USD',rate_percent:5,commission_amount:10,status:'paid'}
+];
+const statementAdjustments = [
+  {id:'a1',ledger_id:'l1',created_at:'2026-11-04T10:00:00Z',adjustment_kind:'partial_refund',amount_delta:-15,currency:'SDG',reason:'Partial reversal',source_reference:'refund-1'},
+  {id:'a2',ledger_id:'l2',created_at:'2026-11-05T10:00:00Z',adjustment_kind:'fee_increase',amount_delta:2,currency:'USD',reason:'Fee correction',source_reference:'correction-1'}
+];
+const statementRows = statementSandbox.buildCommissionStatementRows(statementLedger,statementAdjustments,statementLedger);
+const statementTotals = statementSandbox.summarizeCommissionStatement(statementRows);
+assert.equal(statementRows.length,4,'Statement must include each commission and adjustment as separate rows');
+assert.equal(statementRows[2].record_type,'adjustment','Statement rows must be chronologically ordered');
+assert.equal(statementRows[2].source_reference,'refund-1','Adjustment source reference must be retained');
+assert.equal(statementTotals.length,2,'Statement totals must never combine different currencies');
+assert.equal(statementTotals.find(x=>x.currency==='SDG').net_activity,35,'SDG net activity must include its negative adjustment');
+assert.equal(statementTotals.find(x=>x.currency==='USD').net_activity,12,'USD net activity must include its positive adjustment');
+assert.equal(statementSandbox.statementCsvCell('=SUM(A1:A2)','reason'),'"\'=SUM(A1:A2)"','CSV text cells must be guarded against formula injection');
+assert.equal(statementSandbox.statementCsvCell(-15,'adjustment_delta'),'"-15"','Signed numeric adjustments must remain numeric in CSV');
+
