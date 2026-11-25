@@ -14,7 +14,7 @@
 
   let db=null,user=null,supplier=null,provider=null,products=[],myProducts=[],projects=[],serviceProviders=[];
   let tab='market',activeConversation=null,messageChannel=null,refreshTimer=null,presenceTimer=null,mounted=false;
-  let replyToMessageId=null,availableConversations=[],showLastSeen=true,isAdmin=false;
+  let replyToMessageId=null,availableConversations=[],showLastSeen=true,isAdmin=false,revenueRows=[],revenueAdjustments=[];
 
   function styles(){
     if($('ammarEcosystemStyles'))return;
@@ -101,6 +101,7 @@
           <button class="eco-tab" type="button" data-eco-tab="agreements">الاتفاقات</button>
           <button class="eco-tab" type="button" data-eco-tab="partners">دليل الجهات</button>
           <button id="ecoAdminTab" class="eco-tab" type="button" data-eco-tab="admin" hidden>إدارة عَمِّر</button>
+          <button id="ecoRevenueTab" class="eco-tab" type="button" data-eco-tab="revenue" hidden>الإيرادات</button>
         </div>
         <div id="ecoNotice" class="message" role="status" aria-live="polite"></div>
         <div id="ecoPanel"><div class="eco-empty">جارٍ تحميل سوق عَمِّر...</div></div>
@@ -120,6 +121,9 @@
       }
       if(e.target.id==='ecoChatFilter')filterChatList();
       if(e.target.id==='ecoProviderCategoryFilter')filterServiceProviders();
+      if(e.target.id==='ecoReconciliationFile'&&e.target.files?.[0]){
+        processSettlementFile(e.target.files[0]).catch(err=>tell('تعذرت مطابقة كشف التسوية: '+(err.message||'خطأ'),'error')).finally(()=>{e.target.value='';});
+      }
       const report=e.target.closest('[data-admin-report-status]');
       if(report)handleAdminReportChange(report).catch(err=>tell(err.message,'error'));
       const dispute=e.target.closest('[data-admin-dispute-status]');
@@ -210,6 +214,9 @@
     }else if(tab==='admin'){
       if(!isAdmin)throw new Error('ليست لديك صلاحية إدارة عَمِّر');
       panel.innerHTML=await adminDashboardHtml();
+    }else if(tab==='revenue'){
+      if(!isAdmin)throw new Error('ليست لديك صلاحية إدارة الإيرادات');
+      panel.innerHTML=await revenueDashboardHtml();
     }
   }
 
@@ -301,9 +308,232 @@
     grid.innerHTML=partnerCards(rows);
   }
 
+  async function loadRevenueAdjustments(ledgerRows){
+    const ids=(ledgerRows||[]).map(row=>row.id).filter(Boolean);
+    const loaded=[];
+    const chunkSize=200,pageSize=1000;
+    for(let i=0;i<ids.length;i+=chunkSize){
+      const chunk=ids.slice(i,i+chunkSize);
+      let offset=0,total=null;
+      while(total===null||offset<total){
+        const result=await db.from('ammar_commission_adjustments')
+          .select('id,ledger_id,adjustment_kind,amount_delta,currency,reason,source_reference,idempotency_key,created_by,created_at',{count:'exact'})
+          .in('ledger_id',chunk)
+          .order('created_at',{ascending:false})
+          .range(offset,offset+pageSize-1);
+        if(result.error)throw result.error;
+        if(total===null)total=result.count??(result.data||[]).length;
+        const page=result.data||[];
+        loaded.push(...page);
+        offset+=page.length;
+        if(page.length===0)break;
+      }
+    }
+    return loaded;
+  }
+
+  async function revenueDashboardHtml(){
+    if(!isAdmin)throw new Error('صلاحية إدارة الإيرادات مطلوبة');
+    const [ledger,rules]=await Promise.all([
+      db.from('ammar_commission_ledger')
+        .select('id,activity_type,source_type,source_id,gross_amount,currency,rate_percent,commission_amount,payer_id,status,recorded_at,settled_at',{count:'exact'})
+        .order('recorded_at',{ascending:false}).limit(2000),
+      db.from('ammar_commission_rules')
+        .select('activity_type,rate_percent,payer_side,is_active,effective_from')
+        .order('activity_type')
+    ]);
+    if(ledger.error)throw ledger.error;
+    if(rules.error)throw rules.error;
+    revenueRows=ledger.data||[];
+    revenueAdjustments=await loadRevenueAdjustments(revenueRows);
+    const adjustedRows=revenueAdjustmentSummary(revenueRows,revenueAdjustments);
+    const rulesRows=rules.data||[];
+    const fmt=(value,currency)=>new Intl.NumberFormat('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}).format(Number(value||0))+' '+esc(currency||'SDG');
+    const sum=(rows,key)=>rows.reduce((n,x)=>n+Number(x[key]||0),0);
+    const currencies=[...new Set(revenueRows.map(x=>x.currency||'SDG'))];
+    const statuses=['due','recorded','paid','refunded','void'];
+    const statusLabels={due:'مستحق',recorded:'مسجل',paid:'مدفوع/مسوّى وفق الدفتر',refunded:'مسترد',void:'ملغى'};
+    const adjustmentLabels={partial_refund:'استرداد جزئي',full_reversal:'عكس كامل',fee_increase:'زيادة عمولة',fee_decrease:'تخفيض عمولة'};
+    const activityLabels={market_materials:'توريد مواد البناء',contracting:'المقاولات',maintenance:'الصيانة',engineering:'الهندسة',other:'خدمات أخرى'};
+    const metrics=currencies.map(currency=>{
+      const rows=adjustedRows.filter(x=>(x.currency||'SDG')===currency);
+      const active=rows.filter(x=>!['void','refunded'].includes(x.status));
+      const due=rows.filter(x=>x.status==='due'||x.status==='recorded');
+      const paid=rows.filter(x=>x.status==='paid');
+      return {
+        currency,gmv:sum(active,'gross_amount'),
+        baseCommission:sum(active,'commission_amount'),
+        adjustmentDelta:sum(active,'adjustment_delta'),
+        netCommission:sum(active,'net_commission_amount'),
+        paidBase:sum(paid,'commission_amount'),
+        dueNet:sum(due,'net_commission_amount'),
+        count:rows.length
+      };
+    });
+    const statusCards=statuses.map(status=>{
+      const rows=adjustedRows.filter(x=>x.status===status);
+      const net=rows.reduce((n,x)=>n+Number(x.net_commission_amount||0),0);
+      const currencySet=[...new Set(rows.map(x=>x.currency||'SDG'))];
+      const netText=currencySet.length===1?' · صافي العمولة: '+fmt(net,currencySet[0]):'';
+      return '<article class="eco-card"><span class="eco-meta">'+statusLabels[status]+'</span><h2>'+rows.length+'</h2><p>عدد السجلات ضمن البيانات المحمّلة'+netText+'</p></article>';
+    }).join('');
+    const rulesHtml=rulesRows.map(x=>'<article class="eco-card"><strong>'+esc(activityLabels[x.activity_type]||x.activity_type)+'</strong><div class="eco-price">'+Number(x.rate_percent).toFixed(2)+'%</div><p>الطرف الدافع: '+(x.payer_side==='customer'?'العميل':'المورد / مقدم الخدمة')+'</p><span class="eco-pill">'+(x.is_active?'مفعّلة':'غير مفعّلة')+'</span></article>').join('');
+    const rowsHtml=adjustedRows.slice(0,100).map(x=>'<tr><td>'+esc(new Date(x.recorded_at).toLocaleString('ar'))+'</td><td>'+esc(activityLabels[x.activity_type]||x.activity_type)+'</td><td>'+esc(x.source_type)+' · '+esc(String(x.source_id||'').slice(0,12))+'</td><td>'+fmt(x.gross_amount,x.currency)+'</td><td>'+Number(x.rate_percent||0).toFixed(2)+'%</td><td>'+fmt(x.commission_amount,x.currency)+'</td><td>'+fmt(x.adjustment_delta,x.currency)+'</td><td><strong>'+fmt(x.net_commission_amount,x.currency)+'</strong></td><td>'+esc(statusLabels[x.status]||x.status)+'</td></tr>').join('');
+    const adjustmentRows=revenueAdjustments.slice(0,100).map(x=>'<tr><td>'+esc(new Date(x.created_at).toLocaleString('ar'))+'</td><td>'+esc(adjustmentLabels[x.adjustment_kind]||x.adjustment_kind)+'</td><td>'+fmt(x.amount_delta,x.currency)+'</td><td>'+esc(x.reason)+'</td><td>'+esc(x.source_reference||'—')+'</td><td>'+esc(short(x.ledger_id))+'</td></tr>').join('');
+    const totalAdjustmentCount=revenueAdjustments.length;
+    return `
+      <div class="eco-note"><strong>محرك الإيرادات — قراءة إدارية فقط.</strong> قيمة المعاملات ليست إيراد عَمِّر. صافي العمولة أدناه = العمولة الأصلية + مجموع التعديلات الملحقة بسجلها. تبقى قيود الدفتر الأصلية كما هي. حالة "مدفوع/مسوّى" تخص السجل الأصلي ولا تعني أن أي تعديل لاحق قد تم تحصيله أو تسويته بنكياً.</div>
+      <div class="eco-header"><div><h2>محرك الإيرادات</h2><p>دفتر العمولات، أثر الاستردادات والتعديلات، وقواعد الرسوم.</p></div><div class="eco-actions"><button class="btn light" type="button" data-revenue-export>تصدير دفتر الإيرادات والتعديلات CSV</button><button class="btn quiet" type="button" data-eco-action="refresh">تحديث</button></div></div>
+      <div class="eco-note">تم تحميل ${revenueRows.length} من أصل ${ledger.count??revenueRows.length} سجل عمولة (حد العرض 2,000)، مع ${totalAdjustmentCount} تعديلاً مرتبطاً بهذه السجلات. الأرقام تخص السجلات المحمّلة فقط وليست كشفاً مالياً مدققاً.</div>
+      <section class="eco-subsection"><h3>الملخص المالي بعد التعديلات — حسب العملة</h3>
+        <div class="eco-grid">${metrics.length?metrics.map(m=>'<article class="eco-card"><strong>'+esc(m.currency)+'</strong><div class="eco-meta"><span class="eco-pill">السجلات: '+m.count+'</span></div><p>قيمة المعاملات غير الملغاة (GMV): <strong>'+fmt(m.gmv,m.currency)+'</strong></p><p>العمولة الأصلية: <strong>'+fmt(m.baseCommission,m.currency)+'</strong></p><p>صافي أثر التعديلات: <strong>'+fmt(m.adjustmentDelta,m.currency)+'</strong></p><p>صافي العمولة بعد التعديلات: <strong>'+fmt(m.netCommission,m.currency)+'</strong></p><p>العمولة الأصلية بحالة مدفوع: <strong>'+fmt(m.paidBase,m.currency)+'</strong></p><p>صافي المستحق/المسجل: <strong>'+fmt(m.dueNet,m.currency)+'</strong></p></article>').join(''):'<div class="eco-empty">لا توجد سجلات عمولات بعد.</div>'}</div>
+      </section>
+      <section class="eco-subsection"><h3>حالات دفتر العمولات</h3><div class="eco-grid">${statusCards}</div></section>
+      <section class="eco-subsection"><h3>قواعد العمولة الحالية</h3><div class="eco-grid">${rulesHtml||'<div class="eco-empty">لا توجد قواعد.</div>'}</div><p class="hint">القواعد المعروضة إعدادات قائمة حالياً، وليست توصية بتطبيق النسبة نفسها على النقل أو التمويل أو الإعلانات أو الاشتراكات.</p></section>
+      <section class="eco-subsection"><h3>أحدث سجلات العمولات — حتى 100</h3><div style="overflow:auto"><table style="width:100%;border-collapse:collapse;min-width:980px;font-size:12px"><thead><tr><th>التاريخ</th><th>النشاط</th><th>المصدر</th><th>قيمة الصفقة</th><th>النسبة</th><th>العمولة الأصلية</th><th>صافي التعديلات</th><th>العمولة بعد التعديل</th><th>الحالة</th></tr></thead><tbody>${rowsHtml||'<tr><td colspan="9">لا توجد سجلات</td></tr>'}</tbody></table></div></section>
+      <section class="eco-subsection"><h3>سجل الاستردادات وتعديلات العمولات — حتى 100</h3><div style="overflow:auto"><table style="width:100%;border-collapse:collapse;min-width:760px;font-size:12px"><thead><tr><th>التاريخ</th><th>النوع</th><th>قيمة التعديل</th><th>السبب</th><th>مرجع خارجي</th><th>مرجع العمولة</th></tr></thead><tbody>${adjustmentRows||'<tr><td colspan="6">لا توجد تعديلات مرتبطة بالسجلات المحمّلة</td></tr>'}</tbody></table></div></section>
+      <section class="eco-subsection"><h3>مطابقة كشف مزود الدفع أو البنك</h3><p class="muted">ارفع ملف CSV يحتوي الأعمدة الإلزامية <code>ledger_id,amount,currency</code>، ويمكن إضافة <code>external_reference,settled_at</code>. اكتب المبلغ كرقم عشري بخانتين كحد أقصى دون فواصل آلاف. تتم المقارنة مع صافي العمولة بعد التعديلات بهامش 0.01، محلياً في جلسة المدير فقط؛ لا يُرفع الملف ولا تُعدّل حالة أي قيد.</p><div class="eco-form"><div class="wide"><label for="ecoReconciliationFile">ملف كشف التسوية CSV (حد أقصى 10 ميجابايت)</label><input id="ecoReconciliationFile" type="file" accept=".csv,text/csv"></div></div><div id="ecoReconciliationResults" class="eco-subsection"><p class="muted">لم يتم تحميل كشف خارجي بعد.</p></div></section>
+      <div class="eco-note">التعديلات تُعرض كسجل مستقل ولا تغيّر العمولة الأصلية. المطابقة هنا مقارنة حسابية للصفوف الموجودة في الملف فقط؛ لا تستنتج أن القيود الغائبة غير مدفوعة، ولا تُعامل كتحصيل نقدي أو تسوية بنكية. لا تعدّل هذه اللوحة قواعد العمولة أو القيود المالية.</div>
+    `;
+  }
+
+  function revenueCsvCell(value,key){
+    let raw=String(value??'');
+    if(!['gross_amount','rate_percent','commission_amount','adjustment_delta','net_commission_amount'].includes(key)&&/^[\s]*[=+\-@]/.test(raw))raw="'"+raw;
+    return '"'+raw.replace(/"/g,'""')+'"';
+  }
+
+  function revenueAdjustmentSummary(ledgerRows,adjustmentRows){
+    const totals=new Map();
+    const currencies=new Map();
+    for(const adjustment of (adjustmentRows||[])){
+      const key=String(adjustment.ledger_id||'');
+      if(!key)continue;
+      const currency=String(adjustment.currency||'');
+      if(currencies.has(key)&&currencies.get(key)!==currency)throw new Error('عملة التعديل لا تطابق عملة سجل العمولة');
+      currencies.set(key,currency);
+      totals.set(key,(totals.get(key)||0)+Number(adjustment.amount_delta||0));
+    }
+    return (ledgerRows||[]).map(row=>{
+      const key=String(row.id||'');
+      const delta=Math.round(((totals.get(key)||0)+Number.EPSILON)*100)/100;
+      if(currencies.has(key)&&currencies.get(key)!==String(row.currency||''))throw new Error('عملة التعديل لا تطابق عملة سجل العمولة');
+      const net=Math.round((Number(row.commission_amount||0)+delta+Number.EPSILON)*100)/100;
+      return {...row,adjustment_delta:delta,net_commission_amount:net};
+    });
+  }
+
+  function exportRevenueCsv(){
+    if(!isAdmin)return;
+    const columns=['record_type','id','ledger_id','adjustment_kind','adjustment_delta','net_commission_amount','activity_type','source_type','source_id','gross_amount','currency','rate_percent','commission_amount','payer_id','status','reason','source_reference','recorded_at','settled_at','created_at'];
+    const ledgerRows=revenueAdjustmentSummary(revenueRows,revenueAdjustments).map(row=>({
+      record_type:'ledger',id:row.id,ledger_id:row.id,adjustment_kind:'',adjustment_delta:row.adjustment_delta,
+      net_commission_amount:row.net_commission_amount,activity_type:row.activity_type,source_type:row.source_type,
+      source_id:row.source_id,gross_amount:row.gross_amount,currency:row.currency,rate_percent:row.rate_percent,
+      commission_amount:row.commission_amount,payer_id:row.payer_id,status:row.status,reason:'',
+      source_reference:'',recorded_at:row.recorded_at,settled_at:row.settled_at,created_at:''
+    }));
+    const adjustmentRows=revenueAdjustments.map(row=>({
+      record_type:'adjustment',id:row.id,ledger_id:row.ledger_id,adjustment_kind:row.adjustment_kind,
+      adjustment_delta:row.amount_delta,net_commission_amount:'',activity_type:'',source_type:'',source_id:'',
+      gross_amount:'',currency:row.currency,rate_percent:'',commission_amount:'',payer_id:'',status:'',
+      reason:row.reason,source_reference:row.source_reference,recorded_at:'',settled_at:'',created_at:row.created_at
+    }));
+    const csv=[columns.join(','),...ledgerRows.concat(adjustmentRows).map(row=>columns.map(key=>revenueCsvCell(row[key],key)).join(','))].join('\r\n');
+    const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8;'});
+    const url=URL.createObjectURL(blob),link=document.createElement('a');
+    link.href=url;link.download='ammir-revenue-ledger-and-adjustments.csv';document.body.appendChild(link);link.click();link.remove();URL.revokeObjectURL(url);
+  }
+
+  function parseSettlementCsv(input){
+    const source=String(input||'').replace(/^\uFEFF/,'');
+    const records=[];let row=[],field='',quoted=false;
+    for(let i=0;i<source.length;i++){
+      const ch=source[i];
+      if(quoted){
+        if(ch==='"'&&source[i+1]==='"'){field+='"';i++;}
+        else if(ch==='"')quoted=false;
+        else field+=ch;
+      }else if(ch==='"'&&field==='')quoted=true;
+      else if(ch===','){row.push(field);field='';}
+      else if(ch==='\n'||ch==='\r'){
+        if(ch==='\r'&&source[i+1]==='\n')i++;
+        row.push(field);field='';
+        if(row.some(x=>String(x).trim()!==''))records.push(row);
+        row=[];
+      }else field+=ch;
+    }
+    if(quoted)throw new Error('ملف CSV يحتوي على حقل نصي غير مغلق بعلامة اقتباس.');
+    row.push(field);if(row.some(x=>String(x).trim()!==''))records.push(row);
+    if(records.length<2)throw new Error('ملف التسوية فارغ أو لا يحتوي على بيانات.');
+    const headers=records.shift().map(x=>String(x).trim().toLowerCase());
+    for(const required of ['ledger_id','amount','currency'])if(!headers.includes(required))throw new Error('عمود مطلوب مفقود: '+required);
+    return records.map(values=>Object.fromEntries(headers.map((key,index)=>[key,String(values[index]??'').trim()])));
+  }
+
+  function buildSettlementReconciliation(reportRows,ledgerRows,adjustmentRows){
+    const adjusted=revenueAdjustmentSummary(ledgerRows,adjustmentRows);
+    const ledgerMap=new Map(adjusted.map(row=>[String(row.id),row]));
+    const counts=new Map();
+    for(const row of reportRows||[]){
+      const id=String(row.ledger_id||'').trim();
+      if(id)counts.set(id,(counts.get(id)||0)+1);
+    }
+    return (reportRows||[]).map((row,index)=>{
+      const ledgerId=String(row.ledger_id||'').trim();
+      const rawAmount=String(row.amount??'').trim();
+      const amountValid=/^\d+(?:\.\d{1,2})?$/.test(rawAmount);
+      const reportedAmount=amountValid?Number(rawAmount):null;
+      const currency=String(row.currency||'').trim().toUpperCase();
+      const ledger=ledgerMap.get(ledgerId);
+      let status='matched',reason='';
+      const validLedgerId=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(ledgerId);
+      if(!validLedgerId||!amountValid||!currency){status='invalid_row';reason='معرّف القيد أو المبلغ أو العملة غير صالح';}
+      else if(counts.get(ledgerId)>1){status='duplicate_ledger';reason='معرّف القيد مكرر في ملف الجهة الخارجية';}
+      else if(!ledger){status='unknown_ledger';reason='لم يُعثر على قيد مطابق ضمن صلاحيات الإدارة';}
+      else if(currency!==String(ledger.currency||'').trim().toUpperCase()){status='currency_mismatch';reason='العملة في الملف تختلف عن عملة دفتر عَمِّر';}
+      else if(Math.abs(reportedAmount-Number(ledger.net_commission_amount||0))>0.01){status='amount_mismatch';reason='المبلغ الخارجي لا يساوي صافي العمولة بعد التعديلات';}
+      return {
+        row_number:index+2,status,reason,ledger_id:ledgerId,external_reference:String(row.external_reference||''),
+        reported_amount:reportedAmount,expected_amount:ledger?Number(ledger.net_commission_amount||0):null,
+        currency,ledger_currency:ledger?.currency||'',ledger_status:ledger?.status||'',settled_at:String(row.settled_at||'')
+      };
+    });
+  }
+
+  function settlementReconciliationHtml(results){
+    const labels={matched:'متطابق حسابياً',amount_mismatch:'اختلاف مبلغ',currency_mismatch:'اختلاف عملة',unknown_ledger:'قيد غير معروف',duplicate_ledger:'قيد مكرر',invalid_row:'صف غير صالح'};
+    const counts={};for(const row of results||[])counts[row.status]=(counts[row.status]||0)+1;
+    const summary=Object.entries(labels).map(([key,label])=>'<article class="eco-card"><span class="eco-meta">'+label+'</span><h3>'+(counts[key]||0)+'</h3></article>').join('');
+    const rows=(results||[]).map(row=>'<tr><td>'+row.row_number+'</td><td>'+esc(labels[row.status]||row.status)+'</td><td>'+esc(row.ledger_id)+'</td><td>'+esc(row.external_reference||'—')+'</td><td>'+ (row.reported_amount===null?'—':fmt(row.reported_amount,row.currency))+'</td><td>'+ (row.expected_amount===null?'—':fmt(row.expected_amount,row.ledger_currency))+'</td><td>'+esc(row.ledger_status||'—')+'</td><td>'+esc(row.reason||'—')+'</td></tr>').join('');
+    return '<div class="eco-grid">'+summary+'</div><div class="eco-note">المطابقة حسابية فقط. لا تغيّر حالة الدفتر، ولا تسجّل التحصيل أو التسوية، ولا تثبت انتقال الأموال.</div><div style="overflow:auto"><table style="width:100%;border-collapse:collapse;min-width:850px;font-size:12px"><thead><tr><th>صف الملف</th><th>النتيجة</th><th>معرّف القيد</th><th>مرجع خارجي</th><th>المبلغ الخارجي</th><th>المبلغ المتوقع</th><th>حالة الدفتر</th><th>التفصيل</th></tr></thead><tbody>'+ (rows||'<tr><td colspan="8">لا توجد صفوف</td></tr>')+'</tbody></table></div>';
+  }
+
+  async function processSettlementFile(file){
+    if(!isAdmin)throw new Error('صلاحية المدير مطلوبة.');
+    if(!file||file.size>10*1024*1024)throw new Error('اختر ملف CSV لا يتجاوز 10 ميجابايت.');
+    const reportRows=parseSettlementCsv(await file.text());
+    const ids=[...new Set(reportRows.map(row=>String(row.ledger_id||'').trim()).filter(id=>/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id)))];
+    const ledgerRows=[];
+    for(let i=0;i<ids.length;i+=100){
+      const chunk=ids.slice(i,i+100);
+      ledgerRows.push(...await fetchStatementPages(()=>db.from('ammar_commission_ledger').select('*').in('id',chunk)));
+    }
+    const adjustmentRows=[];
+    for(let i=0;i<ids.length;i+=100){
+      const chunk=ids.slice(i,i+100);
+      adjustmentRows.push(...await fetchStatementPages(()=>db.from('ammar_commission_adjustments').select('*').in('ledger_id',chunk)));
+    }
+    const results=buildSettlementReconciliation(reportRows,ledgerRows,adjustmentRows);
+    const target=$('ecoReconciliationResults');
+    if(target)target.innerHTML=settlementReconciliationHtml(results);
+    const matched=results.filter(x=>x.status==='matched').length;
+    tell('اكتملت المقارنة: '+matched+' من '+results.length+' صفاً متطابق حسابياً. لم تتغير أي حالة مالية.','success');
+  }
+
   async function adminDashboardHtml(){
     if(!isAdmin)throw new Error('صلاحية المدير مطلوبة');
-    const [s,p,r,d,e,c]=await Promise.all([
+    const [s,p,r,d,e,c,a,sp]=await Promise.all([
       db.from('ammar_market_suppliers')
         .select('id,business_name,owner_id,contact_name,contact_phone,whatsapp_phone,governorate,city,status,is_verified,brands,delivery_mode,delivery_coverage,created_at')
         .order('created_at',{ascending:false}).limit(100),
@@ -317,10 +547,12 @@
       db.from('ammar_provider_verification_events')
         .select('id,entity_type,entity_id,business_name_snapshot,decision,reason,evidence_reference,actor_id,created_at')
         .order('created_at',{ascending:false}).limit(20),
-      db.from('ammar_commission_rules').select('activity_type,rate_percent,payer_side,is_active,effective_from').order('activity_type')
+      db.from('ammar_commission_rules').select('activity_type,rate_percent,payer_side,is_active,effective_from').order('activity_type'),
+      db.rpc('ammar_admin_list_operational_alerts',{p_limit:100}),
+      db.rpc('ammar_admin_supplier_performance',{p_since:new Date(Date.now()-90*24*60*60*1000).toISOString()})
     ]);
-    for(const x of [s,p,r,d,e,c])if(x.error)throw x.error;
-    const suppliers=s.data||[],providers=p.data||[],reports=r.data||[],disputes=d.data||[],events=e.data||[],commissionRules=c.data||[];
+    for(const x of [s,p,r,d,e,c,a,sp])if(x.error)throw x.error;
+    const suppliers=s.data||[],providers=p.data||[],reports=r.data||[],disputes=d.data||[],events=e.data||[],commissionRules=c.data||[],operationalAlerts=a.data||[],supplierPerformance=sp.data||[];
     const activeCommissionRules=commissionRules.filter(x=>x.is_active);
     const pendingProviders=[...suppliers.map(x=>({...x,_type:'supplier'})),...providers.map(x=>({...x,_type:'service_provider'}))]
       .filter(x=>!x.is_verified||x.status==='suspended');
@@ -345,6 +577,14 @@
       </section>
       <section class="eco-subsection"><h3>مراجعة البلاغات على الرسائل</h3>
         ${adminReportCards(reports)}
+      </section>
+      <section class="eco-subsection"><h3>التنبيهات التشغيلية: طلبات عروض الأسعار والتسليمات</h3>
+        <p class="hint">عرض محدود للطلبات التي تجاوزت موعدها والتسليمات المتأخرة أو المسجلة كاستثناء. هذه التنبيهات للمتابعة ولا تمنح الإدارة صلاحية تعديل سجلات المشروع أو التوريد.</p>
+        ${adminOperationalAlertCards(operationalAlerts)}
+      </section>
+      <section class="eco-subsection"><h3>أداء الموردين والمقاولين — آخر 90 يوماً</h3>
+        <p class="hint">مؤشرات مجمعة من دعوات عروض الأسعار وسجلات التسليم الفعلية. لا تُعرض أسماء المشاريع أو تفاصيلها هنا. النسبة غير المتاحة تعني عدم كفاية العينة، وليست صفراً.</p>
+        ${adminSupplierPerformanceCards(supplierPerformance)}
       </section>
       <section class="eco-subsection"><h3>مراجعة النزاعات التجارية</h3>
         ${adminDisputeCards(disputes)}
@@ -402,6 +642,37 @@
             <option value="dismissed" ${r.report_status==='dismissed'?'selected':''}>مرفوض</option>
           </select>
         </label>
+      </article>`;
+    }).join('');
+  }
+
+  function adminSupplierPerformanceCards(rows){
+    if(!rows.length)return '<div class="eco-empty">لا توجد بيانات تشغيلية كافية خلال الفترة المحددة.</div>';
+    const pct=v=>v===null||v===undefined?'غير متاح':Number(v).toFixed(1)+'%';
+    const kind=v=>['contractor','service_provider','engineering','maintenance'].includes(String(v||'').toLowerCase())?'مقاول / مقدم خدمة':'مورد';
+    return '<div class="eco-grid">'+rows.map(x=>`<article class="eco-card">
+      <h4>${esc(x.provider_name||'مقدم خدمة')}</h4>
+      <div class="eco-meta"><span class="eco-pill">${kind(x.provider_kind)}</span><span class="eco-pill">دعوات: ${Number(x.rfq_invitation_count||0)}</span><span class="eco-pill">تسليمات: ${Number(x.delivery_count||0)}</span></div>
+      <div class="eco-grid">
+        <div><small>الاستجابة لطلبات الأسعار</small><div class="eco-price">${pct(x.rfq_response_rate)}</div><p>${Number(x.rfq_response_count||0)} من ${Number(x.rfq_invitation_count||0)} · متوسط ${x.average_response_hours===null?'—':Number(x.average_response_hours).toFixed(1)+' ساعة'}</p></div>
+        <div><small>اكتمال التسليمات</small><div class="eco-price">${pct(x.delivery_completion_rate)}</div><p>${Number(x.completed_delivery_count||0)} من ${Number(x.delivery_count||0)} تسليم</p></div>
+        <div><small>الالتزام بموعد التسليم</small><div class="eco-price">${pct(x.on_time_delivery_rate)}</div><p>${Number(x.on_time_delivery_count||0)} من التسليمات المكتملة ذات الموعد المحدد</p></div>
+      </div>
+    </article>`).join('')+'</div>';
+  }
+
+  function adminOperationalAlertCards(rows){
+    if(!rows.length)return '<div class="eco-empty">لا توجد طلبات عروض أسعار أو تسليمات متأخرة حالياً</div>';
+    return rows.map(x=>{
+      const isRfq=x.alert_kind==='rfq';
+      const relatedLabel=isRfq?'عروض مستلمة':'بنود تحتاج متابعة';
+      const due=x.due_at?new Date(x.due_at).toLocaleString('ar',{dateStyle:'medium',timeStyle:isRfq?'short':undefined}):'غير محدد';
+      return `<article class="eco-card">
+        <div class="eco-meta"><span class="eco-pill">${isRfq?'طلب عروض أسعار متأخر':'تسليم يحتاج متابعة'}</span><span class="eco-pill">${esc(x.status)}</span></div>
+        <h4>${esc(x.subject||x.reference_code)}</h4>
+        <p>${esc(x.project_title)} · ${esc(x.reference_code)}</p>
+        <p>${esc(x.attention_reason)}</p>
+        <p class="muted">الموعد: ${esc(due)} · ${relatedLabel}: ${Number(x.related_count||0)}</p>
       </article>`;
     }).join('');
   }
@@ -968,12 +1239,128 @@ function providerTypeLabel(type){
       </form></section><section class="eco-card"><h3>طلبات الخدمات المفتوحة</h3><div class="eco-grid">${cards||'<div class="eco-empty">لا توجد طلبات خدمات مفتوحة.</div>'}</div></section>`;
   }
 
+  function statementCsvCell(value,key){
+    let raw=String(value??'');
+    if(!['gross_amount','rate_percent','commission_amount','adjustment_delta','net_activity'].includes(key)&&/^[\s]*[=+\-@]/.test(raw))raw="'"+raw;
+    return '"'+raw.replace(/"/g,'""')+'"';
+  }
+
+  function buildCommissionStatementRows(ledgerRows,adjustments,sourceLedgerRows){
+    const sources=new Map((sourceLedgerRows||[]).map(row=>[String(row.id),row]));
+    const rows=(ledgerRows||[]).map(row=>({
+      record_type:'commission',event_date:row.recorded_at,ledger_id:row.id,
+      activity_type:row.activity_type,source_type:row.source_type,source_id:row.source_id,
+      gross_amount:row.gross_amount,currency:row.currency,rate_percent:row.rate_percent,
+      commission_amount:row.commission_amount,adjustment_kind:'',adjustment_delta:'',
+      net_activity:row.commission_amount,status:row.status,reason:'',source_reference:''
+    }));
+    for(const adjustment of (adjustments||[])){
+      const source=sources.get(String(adjustment.ledger_id))||{};
+      rows.push({
+        record_type:'adjustment',event_date:adjustment.created_at,ledger_id:adjustment.ledger_id,
+        activity_type:source.activity_type||'',source_type:source.source_type||'',
+        source_id:source.source_id||'',gross_amount:'',currency:adjustment.currency,
+        rate_percent:'',commission_amount:'',adjustment_kind:adjustment.adjustment_kind,
+        adjustment_delta:adjustment.amount_delta,net_activity:adjustment.amount_delta,
+        status:source.status||'',reason:adjustment.reason,source_reference:adjustment.source_reference||''
+      });
+    }
+    return rows.sort((a,b)=>String(a.event_date||'').localeCompare(String(b.event_date||'')));
+  }
+
+  function summarizeCommissionStatement(rows){
+    const totals=new Map();
+    for(const row of rows||[]){
+      const currency=String(row.currency||'');
+      if(!currency)continue;
+      if(!totals.has(currency))totals.set(currency,{currency,commission_count:0,gross_amount:0,commission_amount:0,adjustment_delta:0,net_activity:0});
+      const total=totals.get(currency);
+      if(row.record_type==='commission'){
+        total.commission_count++;
+        total.gross_amount+=Number(row.gross_amount||0);
+        total.commission_amount+=Number(row.commission_amount||0);
+      }else if(row.record_type==='adjustment'){
+        total.adjustment_delta+=Number(row.adjustment_delta||0);
+      }
+      total.net_activity+=Number(row.net_activity||0);
+    }
+    return [...totals.values()].map(x=>Object.fromEntries(Object.entries(x).map(([k,v])=>[k,typeof v==='number'?Math.round((v+Number.EPSILON)*100)/100:v])));
+  }
+
+  async function fetchStatementPages(makeQuery){
+    const rows=[];let offset=0;
+    while(true){
+      const result=await makeQuery().range(offset,offset+999);
+      if(result.error)throw result.error;
+      const page=result.data||[];rows.push(...page);
+      if(page.length<1000)break;
+      offset+=1000;
+      if(offset>=50000)throw new Error('تجاوز كشف الحساب حد التصفح الآمن؛ يرجى تقسيم الفترة.');
+    }
+    return rows;
+  }
+
+  async function exportAccountCommissionStatement(){
+    const month=$('ecoStatementMonth')?.value||'';
+    if(!/^\d{4}-(0[1-9]|1[0-2])$/.test(month))throw new Error('اختر شهر كشف الحساب أولاً.');
+    const [year,monthNumber]=month.split('-').map(Number);
+    // Statement periods use UTC calendar boundaries so users in different time zones receive identical exports.
+    const start=new Date(Date.UTC(year,monthNumber-1,1)).toISOString();
+    const end=new Date(Date.UTC(year,monthNumber,1)).toISOString();
+    const ledgerSelect='id,activity_type,source_type,source_id,gross_amount,currency,rate_percent,commission_amount,status,recorded_at,settled_at,payer_id';
+    const [ledgerRows,adjustments]=await Promise.all([
+      fetchStatementPages(()=>db.from('ammar_commission_ledger').select(ledgerSelect)
+        .eq('payer_id',user.id).gte('recorded_at',start).lt('recorded_at',end).order('recorded_at',{ascending:true})),
+      fetchStatementPages(()=>db.from('ammar_commission_adjustments').select('*')
+        .gte('created_at',start).lt('created_at',end).order('created_at',{ascending:true}))
+    ]);
+    const relatedIds=[...new Set(adjustments.map(x=>String(x.ledger_id)).filter(Boolean))];
+    const relatedRows=[];
+    for(let i=0;i<relatedIds.length;i+=100){
+      const ids=relatedIds.slice(i,i+100);
+      relatedRows.push(...await fetchStatementPages(()=>db.from('ammar_commission_ledger').select(ledgerSelect)
+        .eq('payer_id',user.id).in('id',ids)));
+    }
+    const rows=buildCommissionStatementRows(ledgerRows,adjustments,ledgerRows.concat(relatedRows));
+    const columns=['record_type','event_date','ledger_id','activity_type','source_type','source_id','gross_amount','currency','rate_percent','commission_amount','adjustment_kind','adjustment_delta','net_activity','status','reason','source_reference'];
+    const summary=summarizeCommissionStatement(rows).map(x=>({
+      record_type:'period_total',event_date:'',ledger_id:'',activity_type:'',source_type:'',source_id:'',
+      gross_amount:x.gross_amount,currency:x.currency,rate_percent:'',commission_amount:x.commission_amount,
+      adjustment_kind:'',adjustment_delta:x.adjustment_delta,net_activity:x.net_activity,
+      status:'',reason:'عدد سجلات العمولات: '+x.commission_count,source_reference:''
+    }));
+    const csv=[columns.join(','),...rows.concat(summary).map(row=>columns.map(key=>statementCsvCell(row[key],key)).join(','))].join('\r\n');
+    const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8;'});
+    const url=URL.createObjectURL(blob),link=document.createElement('a');
+    link.href=url;link.download='ammir-commission-statement-'+month+'.csv';
+    document.body.appendChild(link);link.click();link.remove();URL.revokeObjectURL(url);
+    tell('تم إعداد كشف نشاط العمولات للفترة المحددة. الكشف لا يثبت التحصيل أو التسوية البنكية.','success');
+  }
+
   async function agreementsHtml(){
     const [a,l]=await Promise.all([
       db.from('ammar_agreements').select('*').order('created_at',{ascending:false}).limit(100),
-      db.from('ammar_commission_ledger').select('gross_amount,currency,commission_amount,status,recorded_at').eq('payer_id',user.id).order('recorded_at',{ascending:false}).limit(30)
+      db.from('ammar_commission_ledger').select('id,activity_type,source_type,source_id,gross_amount,currency,rate_percent,commission_amount,status,recorded_at,settled_at').eq('payer_id',user.id).order('recorded_at',{ascending:false}).limit(500)
     ]);
     if(a.error)throw a.error;if(l.error)throw l.error;
+    const ledgerRows=l.data||[];
+    const ledgerIds=ledgerRows.map(x=>x.id);
+    let adjustmentRows=[];
+    if(ledgerIds.length){
+      const adjustments=await db.from('ammar_commission_adjustments').select('id,ledger_id,adjustment_kind,amount_delta,currency,reason,source_reference,created_at').in('ledger_id',ledgerIds).order('created_at',{ascending:false}).limit(1000);
+      if(adjustments.error)throw adjustments.error;
+      adjustmentRows=adjustments.data||[];
+    }
+    const adjustmentTotals=new Map();
+    adjustmentRows.forEach(x=>adjustmentTotals.set(x.ledger_id,(adjustmentTotals.get(x.ledger_id)||0)+Number(x.amount_delta||0)));
+    const statementTotals=new Map();
+    ledgerRows.forEach(x=>{
+      const currency=String(x.currency||'');
+      const m=statementTotals.get(currency)||{count:0,gross:0,base:0,adjustments:0,net:0};
+      const delta=adjustmentTotals.get(x.id)||0;
+      m.count++;m.gross+=Number(x.gross_amount||0);m.base+=Number(x.commission_amount||0);m.adjustments+=delta;m.net+=Number(x.commission_amount||0)+delta;
+      statementTotals.set(currency,m);
+    });
     const agreements=(a.data||[]).map(x=>`
       <article class="eco-card">
         <h3>${esc(x.title)}</h3>
@@ -985,8 +1372,16 @@ function providerTypeLabel(type){
           <button class="btn light" type="button" data-eco-agreement-chat="${esc(x.id)}" data-other="${esc(x.client_id===user.id?x.provider_id:x.client_id)}">مراسلة حول الاتفاق</button>
         </div>
       </article>`).join('');
-    const ledger=(l.data||[]).map(x=>`<div class="eco-row"><div>${money(x.gross_amount,x.currency)} · عمولة ${money(x.commission_amount,x.currency)}</div><span class="eco-pill">${esc(x.status)}</span></div>`).join('');
-    return `<section class="eco-card eco-subsection"><h3>الاتفاقات</h3><div class="eco-grid">${agreements||'<div class="eco-empty">لا توجد اتفاقات موثقة.</div>'}</div></section><section class="eco-card"><h3>سجل العمولات المستحقة</h3>${ledger||'<p class="muted">لا توجد عمولات مسجلة لهذا الحساب.</p>'}</section><div class="eco-note">العمولات هنا سجلات محاسبية فقط؛ لا ينفذ عَمِّر تحصيلاً أو حيازة أموال أو تحويلات بنكية.</div>`;
+    const ledger=ledgerRows.map(x=>{
+      const delta=adjustmentTotals.get(x.id)||0;
+      const net=Number(x.commission_amount||0)+delta;
+      return `<div class="eco-row"><div><strong>${money(x.gross_amount,x.currency)}</strong> · عمولة أصلية ${money(x.commission_amount,x.currency)} · التعديلات ${money(delta,x.currency)} · الصافي ${money(net,x.currency)}<div class="muted">${esc(x.activity_type)} · ${esc(x.source_type)}:${esc(x.source_id)} · ${esc(new Date(x.recorded_at).toLocaleDateString('ar'))}</div></div><span class="eco-pill">${esc(x.status)}</span></div>`;
+    }).join('');
+    const totals=[...statementTotals.entries()].map(([currency,m])=>`<article class="eco-card"><strong>${esc(currency)}</strong><p>عدد السجلات: ${m.count}</p><p>إجمالي أساس المعاملات: ${money(m.gross,currency)}</p><p>العمولة الأصلية: ${money(m.base,currency)}</p><p>صافي التعديلات: ${money(m.adjustments,currency)}</p><p><strong>صافي العمولة المسجلة: ${money(m.net,currency)}</strong></p></article>`).join('');
+    const currentStatementMonth=new Date().toISOString().slice(0,7);
+    const statementExport=`<div class="eco-form"><div><label for="ecoStatementMonth">شهر الكشف (UTC)</label><input id="ecoStatementMonth" type="month" value="${currentStatementMonth}"></div><div class="wide"><button class="btn light" type="button" data-statement-export>تنزيل كشف الشهر CSV</button></div></div>`;
+    const adjustmentsHtml=adjustmentRows.map(x=>`<div class="eco-row"><div>${esc(x.adjustment_kind)} · ${money(x.amount_delta,x.currency)}<div class="muted">${esc(x.reason)} · ${esc(new Date(x.created_at).toLocaleDateString('ar'))}</div></div><span class="eco-pill">تعديل مسجل</span></div>`).join('');
+    return `<section class="eco-card eco-subsection"><h3>الاتفاقات</h3><div class="eco-grid">${agreements||'<div class="eco-empty">لا توجد اتفاقات موثقة.</div>'}</div></section><section class="eco-card eco-subsection"><h3>كشف حساب العمولات</h3><p class="muted">ملخص الشاشة يعرض أحدث 500 قيد فقط، وقد لا يمثل كامل الرصيد التاريخي. ملف CSV أدناه يُنشأ مستقلاً للشهر المختار، ويجلب قيود العمولة والتعديلات على دفعات متتابعة ضمن صلاحيات حسابك.</p><div class="eco-actions">${statementExport}</div><div class="eco-grid">${totals||'<div class="eco-empty">لا توجد قيود عمولات لهذا الحساب.</div>'}</div><h4>تفاصيل القيود</h4>${ledger||'<p class="muted">لا توجد عمولات مسجلة لهذا الحساب.</p>'}<h4>سجل التعديلات</h4>${adjustmentsHtml||'<p class="muted">لا توجد تعديلات مسجلة.</p>'}</section><div class="eco-note">هذا كشف محاسبي للعمولات المسجلة وليس فاتورة ضريبية أو إثبات تحصيل نقدي أو تسوية بنكية. حالة «مدفوع» تعكس حالة دفتر عَمِّر فقط؛ ولا يجوز اعتبارها مطابقة بنكية دون مستند من جهة الدفع.</div>`;
   }
 
   async function startConversation(other,context,contextId,subject){
@@ -1023,6 +1418,8 @@ function providerTypeLabel(type){
 
   async function click(e){
     const t=e.target.closest('[data-eco-tab]');if(t){chooseTab(t.dataset.ecoTab);return;}
+    if(e.target.closest('[data-revenue-export]')){exportRevenueCsv();return;}
+    if(e.target.closest('[data-statement-export]')){exportAccountCommissionStatement().catch(err=>tell('تعذر إنشاء كشف الحساب: '+(err.message||'خطأ'),'error'));return;}
     const adminButton=e.target.closest('[data-admin-review]');
     if(adminButton){handleAdminClick(adminButton).catch(err=>tell('تعذر حفظ قرار التحقق: '+(err.message||'خطأ'),'error'));return;}
     const b=e.target.closest('[data-eco-provider-chat],[data-eco-action],[data-eco-buy],[data-eco-contact],[data-eco-toggle-product],[data-eco-open-chat],[data-eco-accept-quote],[data-eco-submit-quote],[data-eco-advance],[data-eco-order-chat],[data-eco-create-agreement],[data-eco-service-offer],[data-eco-accept-service],[data-eco-service-chat],[data-eco-service-agreement],[data-eco-complete-service],[data-eco-accept-agreement],[data-eco-submit-review],[data-eco-quote-chat],[data-eco-agreement-chat],[data-eco-reply],[data-eco-clear-reply],[data-eco-pin],[data-eco-unpin],[data-eco-report],[data-eco-forward],[data-eco-archive],[data-eco-block],[data-eco-presence-toggle],[data-eco-location],[data-eco-to-task],[data-eco-to-change],[data-eco-unblock]');
@@ -1263,8 +1660,28 @@ function providerTypeLabel(type){
     window.openAmmarEcosystem=open;
   }
 
+  function resetAccountState(){
+    if(refreshTimer)clearInterval(refreshTimer);
+    if(presenceTimer)clearInterval(presenceTimer);
+    refreshTimer=null;presenceTimer=null;
+    if(messageChannel&&db)db.removeChannel(messageChannel).catch(()=>{});
+    messageChannel=null;
+    user=null;supplier=null;provider=null;
+    products=[];myProducts=[];projects=[];serviceProviders=[];
+    availableConversations=[];revenueRows=[];revenueAdjustments=[];
+    activeConversation=null;replyToMessageId=null;
+    tab='market';showLastSeen=true;isAdmin=false;
+    if($('ecoAdminTab'))$('ecoAdminTab').hidden=true;
+    if($('ecoRevenueTab'))$('ecoRevenueTab').hidden=true;
+    if($('ecoPanel'))$('ecoPanel').replaceChildren();
+    document.querySelectorAll('[data-eco-unread]').forEach(b=>{b.textContent='0';b.hidden=true;});
+    $('ammarEcosystemView')?.classList.remove('active');
+  }
+
   function start(sessionUser){
-    user=sessionUser;if(!user)return;mount();if(!mounted)return;
+    if(!sessionUser)return;
+    if(user&&user.id!==sessionUser.id)resetAccountState();
+    user=sessionUser;mount();if(!mounted)return;
     db.from('ammar_user_presence').select('show_last_seen').eq('user_id',user.id).maybeSingle()
       .then(r=>{if(!r.error&&r.data)showLastSeen=r.data.show_last_seen!==false;})
       .finally(()=>db.rpc('ammar_set_presence',{p_show_last_seen:showLastSeen}).then(()=>{}).catch(()=>{}));
@@ -1274,7 +1691,8 @@ function providerTypeLabel(type){
       db.rpc('is_admin').then(result=>{
         isAdmin=!result.error&&result.data===true;
         const adminTab=$('ecoAdminTab');if(adminTab)adminTab.hidden=!isAdmin;
-        if(!isAdmin&&tab==='admin')tab='market';
+        const revenueTab=$('ecoRevenueTab');if(revenueTab)revenueTab.hidden=!isAdmin;
+        if(!isAdmin&&['admin','revenue'].includes(tab))tab='market';
       })
     ]).then(()=>render()).catch(err=>{
       const p=$('ecoPanel');
@@ -1292,12 +1710,7 @@ function providerTypeLabel(type){
     db.auth.onAuthStateChange((event,session)=>{
       if(session?.user)start(session.user);
       else{
-        user=null;activeConversation=null;isAdmin=false;
-        if($('ecoAdminTab'))$('ecoAdminTab').hidden=true;
-        if(refreshTimer)clearInterval(refreshTimer);
-        if(presenceTimer)clearInterval(presenceTimer);
-        if(messageChannel)db.removeChannel(messageChannel).catch(()=>{});
-        $('ammarEcosystemView')?.classList.remove('active');
+        resetAccountState();
       }
     });
     db.auth.getSession().then(r=>{if(r.data?.session?.user)start(r.data.session.user);}).catch(err=>console.warn('AMMIR ecosystem auth:',err.message));

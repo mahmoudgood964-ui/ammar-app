@@ -19,12 +19,34 @@ LANGUAGE sql
 STABLE
 SECURITY DEFINER
 SET search_path = ''
-AS $$
+AS $function$
  SELECT EXISTS (
    SELECT 1 FROM public.profiles
    WHERE id = (SELECT auth.uid()) AND role = 'admin'
  )
-$$;
+$function$;
+
+-- Match the production profiles RLS contract; tests must not run against an
+-- unprotected profiles fixture.
+ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY profiles_insert ON public.profiles
+FOR INSERT TO authenticated
+WITH CHECK (id = (SELECT auth.uid()) AND role = 'client');
+
+CREATE POLICY profiles_read ON public.profiles
+FOR SELECT TO authenticated
+USING (id = (SELECT auth.uid()) OR (SELECT public.is_admin()));
+
+CREATE POLICY profiles_update ON public.profiles
+FOR UPDATE TO authenticated
+USING (id = (SELECT auth.uid()) OR (SELECT public.is_admin()))
+WITH CHECK (
+  (id = (SELECT auth.uid()) AND role = 'client')
+  OR (SELECT public.is_admin())
+);
+
+GRANT SELECT, INSERT, UPDATE ON public.profiles TO authenticated;
 CREATE TABLE public.projects (
  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
  client_id uuid NOT NULL REFERENCES auth.users(id),

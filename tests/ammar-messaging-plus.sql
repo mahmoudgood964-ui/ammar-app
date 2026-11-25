@@ -125,6 +125,36 @@ SELECT public.ammar_start_conversation(
   'محادثة المشروع'
 ) AS project_conversation_id \gset
 
+SELECT set_config('ammar.test.project_conversation_id', :'project_conversation_id', false);
+
+-- A member of two conversations must not pin a message from one into the other.
+DO $ammar_pin_scope_test$
+DECLARE
+  v_denied boolean := false;
+BEGIN
+  BEGIN
+    INSERT INTO public.ammar_pinned_messages(conversation_id,message_id,pinned_by)
+    VALUES (
+      current_setting('ammar.test.project_conversation_id', true)::uuid,
+      current_setting('ammar.test.source_message_id', true)::uuid,
+      auth.uid()
+    );
+  EXCEPTION WHEN insufficient_privilege THEN
+    v_denied := true;
+  END;
+  IF NOT v_denied THEN
+    RAISE EXCEPTION 'Cross-conversation message pin was not rejected';
+  END IF;
+  IF EXISTS (
+    SELECT 1 FROM public.ammar_pinned_messages
+    WHERE conversation_id=current_setting('ammar.test.project_conversation_id', true)::uuid
+      AND message_id=current_setting('ammar.test.source_message_id', true)::uuid
+  ) THEN
+    RAISE EXCEPTION 'Cross-conversation pin row was persisted';
+  END IF;
+END
+$ammar_pin_scope_test$;
+
 INSERT INTO public.ammar_messages(conversation_id,sender_id,message_type,body)
 VALUES (:'project_conversation_id','11111111-1111-4111-8111-111111111111','text','أضف هذه الملاحظة إلى قائمة مهام المشروع.')
 RETURNING id AS project_message_id \gset

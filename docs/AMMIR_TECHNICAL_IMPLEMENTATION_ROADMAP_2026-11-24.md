@@ -72,8 +72,8 @@ Build a unified revenue model around the existing commission tables:
 - Revenue event: immutable source reference, service category, payer, beneficiary, currency, gross basis, fee basis, rate or fixed fee, tax treatment, status, idempotency key and timestamps.
 - Ledger entry: accrued, due, paid/settled, overdue, waived, disputed, reversed or refunded.
 - Fee policy version: effective dates, market/country, customer segment, service type, payer side, minimum/maximum fee and approval history.
-- Statement: period-based supplier/provider statement with source transaction links and downloadable invoice/statement.
-- Reconciliation: compare AMMIR ledger with partner settlement reports; never mark a fee paid merely because an order is complete.
+- Statement: period-based supplier/provider commission activity statement with source transaction links and downloadable CSV. Tax invoices remain a separate, jurisdiction-specific capability requiring legal/accounting review.
+- Reconciliation: compare AMMIR ledger with partner settlement reports; never mark a fee paid merely because an order is complete. This remains blocked until an actual bank/payment-partner report format and evidence source are selected.
 
 Do not overwrite historical commission rows when policy changes. New policy versions apply only to eligible transactions after their effective date. Use database constraints and transactional RPCs for idempotency and reversals. Do not let the browser calculate or authoritatively set payable fees.
 
@@ -209,7 +209,8 @@ No new market launch based solely on registrations or app downloads. Require ver
 | P0.5 | Auth leaked-password protection review | Supabase Auth settings | Setting enabled and tested without changing confirmation/SMTP |
 | P1.1 | Map current commission trigger/RPC lifecycle and source references | Existing commission tables | No duplicate/incorrect accrual paths |
 | P1.2 | Revenue ledger gap analysis and event taxonomy | P1.1 | Signed schema design; no production DDL yet |
-| P1.3 | Supplier commission statement and reconciliation UI | P1.2 | Statement ties to immutable ledger entries |
+| P1.3a | Read-only monthly payer commission statement and CSV export | Existing ledger + append-only adjustments | Implemented on PR #14; UTC month boundaries, payer RLS and per-currency totals; awaiting real-account acceptance |
+| P1.3b | External settlement reconciliation | Bank/payment-partner settlement report format + legal/accounting review | Match by stable reference, currency and amount; unmatched/partial/duplicate cases reviewed; never auto-mark paid without evidence |
 | P2.1 | Logistics partner and cost model pilot | Real carrier quotes | Delivered jobs and positive unit economics |
 | P2.2 | Optional supplier business tools pilot | Supplier interviews | Paid conversion and retention measured |
 | P2.3 | Sponsored placement experiment | Sufficient organic inventory | Ads clearly labelled; no ranking integrity harm |
@@ -245,3 +246,12 @@ This creates the accounting spine needed for logistics, inspections, subscriptio
 
 ---
 **Owner decision required before any new production migration:** approve the detailed revenue event taxonomy, fee payer and settlement method for each new stream. Existing production rules remain unchanged until then.
+
+
+## 10.1 Release 1 execution update — 2026-11-25
+
+The feature branch now contains a payer-facing monthly commission activity statement and CSV export. It reports commission ledger rows and append-only adjustment events separately, includes per-currency period totals, source transaction references, adjustment reasons, and an explicit UTC reporting period. The UI is read-only and relies on the existing payer/admin RLS policy.
+
+The latest application/test head passed GitHub Actions run #45516582618 (39/39 steps). This run uses disposable CI PostgreSQL; it does not apply migrations to production. PR #14 remains open and draft. No production deployment or production migration has occurred.
+
+**Still not implemented:** external settlement reconciliation, tax invoices, bank matching, and cash-collection confirmation. These cannot be responsibly fabricated: they require a real settlement-report schema/sample, a stable external transaction reference, a designated reconciliation operator, and review of local accounting/tax requirements. Until those inputs exist, AMMIR must not infer cash settlement from an order or ledger status.

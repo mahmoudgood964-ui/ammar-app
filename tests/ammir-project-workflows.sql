@@ -24,6 +24,17 @@ DECLARE
   v_delivery_item_a uuid;
   v_delivery_item_b uuid;
   v_evidence uuid;
+  v_service_rfq uuid;
+  v_service_rfq_item uuid;
+  v_service_invite uuid;
+  v_service_quote uuid;
+  v_service_quote_item uuid;
+  v_service_award uuid;
+  v_service_ledger_id uuid;
+  v_before_gross numeric(14,2);
+  v_before_rate numeric(5,2);
+  v_before_commission numeric(14,2);
+  v_before_payer uuid;
   v_total numeric(20,2);
   v_failed boolean;
   v_count integer;
@@ -279,6 +290,236 @@ BEGIN
   WHERE schemaname='public' AND tablename='ammir_project_rfq_quotes'
     AND policyname='ammir_rfq_quotes_update_provider';
   IF v_count<>1 THEN RAISE EXCEPTION 'Provider draft quote policy is missing'; END IF;
+
+  -- Commission-trigger regression tests run only after the revenue migrations are installed.
+  IF to_regprocedure('app_private.ammir_sync_project_delivery_commission()') IS NOT NULL
+     AND to_regprocedure('app_private.ammir_record_project_service_award_commission()') IS NOT NULL THEN
+    INSERT INTO public.ammar_commission_rules(activity_type,rate_percent,payer_side,is_active,effective_from)
+    VALUES
+      ('engineering',5.00,'provider',true,now()),
+      ('market_materials',5.00,'provider',true,now())
+    ON CONFLICT (activity_type) DO UPDATE
+      SET rate_percent=EXCLUDED.rate_percent,
+          payer_side=EXCLUDED.payer_side,
+          is_active=true,
+          effective_from=EXCLUDED.effective_from;
+
+    -- Partial-receipt regression: commission follows the quantity actually received,
+    -- not the full awarded/expected quantity. A clean partial receipt has an outstanding
+    -- balance but no missing/damaged quantity; those exceptions use the exception status.
+    UPDATE public.ammir_project_delivery_items
+      SET received_quantity=3,missing_quantity=0
+      WHERE id=v_delivery_item_a;
+    UPDATE public.ammir_project_deliveries
+      SET status='partially_received'
+      WHERE id=v_delivery_a;
+
+    SELECT id INTO v_service_ledger_id
+    FROM public.ammar_commission_ledger
+    WHERE source_type='project_delivery'
+      AND source_id=v_delivery_a::text||':SDG'
+      AND gross_amount=330.00
+      AND commission_amount=16.50
+      AND status='due';
+
+    IF v_service_ledger_id IS NULL THEN
+      RAISE EXCEPTION 'Partial receipt did not create commission on received quantity only';
+    END IF;
+
+    UPDATE public.ammir_project_delivery_items
+      SET received_quantity=2,missing_quantity=0
+      WHERE id=v_delivery_item_a;
+
+    IF NOT EXISTS (
+      SELECT 1 FROM public.ammar_commission_ledger
+      WHERE id=v_service_ledger_id
+        AND gross_amount=220.00
+        AND commission_amount=11.00
+        AND status='due'
+    ) THEN
+      RAISE EXCEPTION 'Partial receipt quantity change did not synchronize the non-paid commission';
+    END IF;
+
+    -- Delivery trigger: create a commission, settle it, then mutate the source.
+    -- The paid ledger row must remain byte-for-byte stable through the upsert and void paths.
+    UPDATE public.ammir_project_delivery_items
+      SET received_quantity=5,missing_quantity=1
+      WHERE id=v_delivery_item_b;
+    UPDATE public.ammir_project_deliveries SET status='exception'
+      WHERE id=v_delivery_b;
+
+    SELECT id,gross_amount,rate_percent,commission_amount,payer_id
+      INTO v_service_ledger_id,v_before_gross,v_before_rate,v_before_commission,v_before_payer
+    FROM public.ammar_commission_ledger
+    WHERE source_type='project_delivery'
+      AND source_id=v_delivery_b::text||':SDG';
+    IF v_service_ledger_id IS NULL THEN
+      RAISE EXCEPTION 'Delivery commission trigger did not create its ledger row';
+    END IF;
+
+    -- A non-paid source edit must synchronize the still-open commission row.
+    UPDATE public.ammir_project_delivery_items
+      SET received_quantity=4,missing_quantity=2
+      WHERE id=v_delivery_item_b;
+
+    IF NOT EXISTS (
+      SELECT 1 FROM public.ammar_commission_ledger
+      WHERE id=v_service_ledger_id AND status <> 'paid'
+        AND gross_amount=480.00 AND commission_amount=24.00
+    ) THEN
+      RAISE EXCEPTION 'Non-paid delivery edit did not synchronize the commission ledger';
+    END IF;
+
+    -- Snapshot the synchronized values, then settle the row.
+    SELECT gross_amount,rate_percent,commission_amount,payer_id
+      INTO v_before_gross,v_before_rate,v_before_commission,v_before_payer
+    FROM public.ammar_commission_ledger WHERE id=v_service_ledger_id;
+
+    UPDATE public.ammar_commission_ledger
+      SET status='paid',settled_at=now()
+      WHERE id=v_service_ledger_id;
+
+    UPDATE public.ammir_project_delivery_items
+      SET received_quantity=3,missing_quantity=3
+      WHERE id=v_delivery_item_b;
+
+    IF NOT EXISTS (
+      SELECT 1 FROM public.ammar_commission_ledger
+      WHERE id=v_service_ledger_id AND status='paid'
+        AND gross_amount=v_before_gross AND rate_percent=v_before_rate
+        AND commission_amount=v_before_commission AND payer_id=v_before_payer
+    ) THEN
+      RAISE EXCEPTION 'Paid delivery commission was changed by a source-trigger upsert';
+    END IF;
+
+    -- Removing a delivery line after settlement must not rewrite or void its paid row.
+    DELETE FROM public.ammir_project_delivery_items WHERE id=v_delivery_item_b;
+    IF NOT EXISTS (
+      SELECT 1 FROM public.ammar_commission_ledger
+      WHERE id=v_service_ledger_id AND status='paid'
+        AND gross_amount=v_before_gross AND currency='SDG'
+        AND rate_percent=v_before_rate AND commission_amount=v_before_commission
+        AND payer_id=v_before_payer
+    ) THEN
+      RAISE EXCEPTION 'Removing a delivery item rewrote a paid commission row';
+    END IF;
+
+    UPDATE public.ammir_project_deliveries SET status='cancelled' WHERE id=v_delivery_b;
+    IF NOT EXISTS (
+      SELECT 1 FROM public.ammar_commission_ledger
+      WHERE id=v_service_ledger_id AND status='paid'
+        AND gross_amount=v_before_gross AND commission_amount=v_before_commission
+    ) THEN
+      RAISE EXCEPTION 'Paid delivery commission was voided or rewritten by the delivery status trigger';
+    END IF;
+
+    -- Service-award trigger: an award already fulfilled through delivery must not
+    -- also create a second service-award commission entry.
+    UPDATE public.ammir_project_awards
+      SET status='accepted',accepted_at=now()
+      WHERE id=v_award_b;
+    UPDATE public.ammir_project_awards
+      SET status='completed'
+      WHERE id=v_award_b;
+
+    IF EXISTS (
+      SELECT 1 FROM public.ammar_commission_ledger
+      WHERE source_type='project_service_award'
+        AND source_id LIKE v_award_b::text || ':%'
+    ) THEN
+      RAISE EXCEPTION 'Award with an existing delivery created a duplicate service-award commission';
+    END IF;
+
+    -- Service-award trigger: use a separate RFQ so the existing split awards remain intact.
+    INSERT INTO public.ammir_project_rfqs(
+      project_id,boq_version_id,reference_code,title,scope_description,
+      delivery_location,currency,status,created_by
+    ) VALUES (
+      v_project,v_boq,'AMMIR-SVC-'||replace(gen_random_uuid()::text,'-',''),
+      'Engineering service commission test','Isolated engineering award regression',
+      'CI test location','SDG','draft',v_owner
+    ) RETURNING id INTO v_service_rfq;
+
+    INSERT INTO public.ammir_project_rfq_items(
+      rfq_id,project_id,boq_item_id,item_code,description,specification,unit,quantity,sort_order
+    ) VALUES (
+      v_service_rfq,v_project,v_boq_item,'SVC-01','Engineering service','Site engineering review','job',2,1
+    ) RETURNING id INTO v_service_rfq_item;
+
+    UPDATE public.ammir_project_rfqs SET status='open' WHERE id=v_service_rfq;
+
+    INSERT INTO public.ammir_project_rfq_invites(
+      rfq_id,project_id,provider_user_id,provider_type,provider_name_snapshot,invited_by,status
+    ) VALUES (
+      v_service_rfq,v_project,v_supplier_b,'service_provider',
+      'Verified Engineering Provider',v_owner,'invited'
+    ) RETURNING id INTO v_service_invite;
+    UPDATE public.ammir_project_rfq_invites
+      SET status='accepted',responded_at=now() WHERE id=v_service_invite;
+
+    INSERT INTO public.ammir_project_rfq_quotes(
+      rfq_id,project_id,provider_user_id,currency,transport_cost,loading_cost,taxes,other_costs,status
+    ) VALUES(v_service_rfq,v_project,v_supplier_b,'SDG',0,0,0,0,'draft')
+    RETURNING id INTO v_service_quote;
+
+    INSERT INTO public.ammir_project_rfq_quote_items(
+      quote_id,rfq_item_id,project_id,quoted_quantity,unit_rate,availability_status
+    ) VALUES(v_service_quote,v_service_rfq_item,v_project,2,120,'confirmed')
+    RETURNING id INTO v_service_quote_item;
+
+    UPDATE public.ammir_project_rfq_quotes
+      SET status='submitted',submitted_at=now() WHERE id=v_service_quote;
+
+    INSERT INTO public.ammir_project_awards(
+      rfq_id,project_id,supplier_user_id,award_reference,status,terms,created_by
+    ) VALUES(
+      v_service_rfq,v_project,v_supplier_b,'AMMIR-SVC-AWD-'||replace(gen_random_uuid()::text,'-',''),
+      'draft','CI paid service award protection',v_owner
+    ) RETURNING id INTO v_service_award;
+
+    INSERT INTO public.ammir_project_award_items(
+      award_id,project_id,rfq_item_id,quote_item_id,awarded_quantity,unit_rate,currency
+    ) VALUES(v_service_award,v_project,v_service_rfq_item,v_service_quote_item,2,120,'SDG');
+
+    UPDATE public.ammir_project_awards SET status='issued',issued_at=now()
+      WHERE id=v_service_award;
+    UPDATE public.ammir_project_awards SET status='accepted',accepted_at=now()
+      WHERE id=v_service_award;
+    UPDATE public.ammir_project_awards SET status='completed'
+      WHERE id=v_service_award;
+
+    SELECT id,gross_amount,rate_percent,commission_amount,payer_id
+      INTO v_service_ledger_id,v_before_gross,v_before_rate,v_before_commission,v_before_payer
+    FROM public.ammar_commission_ledger
+    WHERE source_type='project_service_award'
+      AND source_id=v_service_award::text||':SDG';
+    IF v_service_ledger_id IS NULL THEN
+      RAISE EXCEPTION 'Service-award commission trigger did not create its ledger row';
+    END IF;
+
+    UPDATE public.ammar_commission_ledger
+      SET status='paid',settled_at=now()
+      WHERE id=v_service_ledger_id;
+
+    -- The production state guard correctly forbids reopening a completed award.
+    -- Disable only that guard in this isolated transaction to simulate a retried
+    -- completion event; keep the commission trigger enabled and test its paid-row guard.
+    ALTER TABLE public.ammir_project_awards
+      DISABLE TRIGGER ammir_guard_award_header_state_trigger;
+    UPDATE public.ammir_project_awards SET status='accepted' WHERE id=v_service_award;
+    ALTER TABLE public.ammir_project_awards
+      ENABLE TRIGGER ammir_guard_award_header_state_trigger;
+    UPDATE public.ammir_project_awards SET status='completed' WHERE id=v_service_award;
+
+    IF NOT EXISTS (
+      SELECT 1 FROM public.ammar_commission_ledger
+      WHERE id=v_service_ledger_id AND status='paid'
+        AND gross_amount=v_before_gross AND rate_percent=v_before_rate
+        AND commission_amount=v_before_commission AND payer_id=v_before_payer
+    ) THEN
+      RAISE EXCEPTION 'Paid service-award commission was changed by a retried completion trigger';
+    END IF;
+  END IF;
 
   RAISE NOTICE 'AMMIR PROJECT BOQ/RFQ/AWARD/DELIVERY TESTS PASSED';
 END

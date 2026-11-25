@@ -22,6 +22,10 @@ const workflowProviderGates = fs.readFileSync('supabase/migrations/2026111309200
 const workflowState = fs.readFileSync('supabase/migrations/20261113093000_ammir_workflow_state_guards.sql', 'utf8');
 const workflowIndexes = fs.readFileSync('supabase/migrations/20261113094000_ammir_workflow_fk_indexes.sql', 'utf8');
 const workflowGuards = fs.readFileSync('supabase/migrations/20261113100000_ammir_execution_state_guards.sql', 'utf8');
+const operationalAlertsMigration = fs.readFileSync('supabase/migrations/20261125103000_add_admin_operational_alerts.sql', 'utf8');
+const operationalAlertsTests = fs.readFileSync('tests/ammir-admin-operational-alerts.sql', 'utf8');
+const supplierPerformanceMigration = fs.readFileSync('supabase/migrations/20261125114500_add_admin_supplier_performance.sql', 'utf8');
+const supplierPerformanceTests = fs.readFileSync('tests/ammir-admin-supplier-performance.sql', 'utf8');
 const workflowTests = fs.readFileSync('tests/ammir-project-workflows.sql', 'utf8');
 
 
@@ -31,6 +35,229 @@ inlineScripts.forEach((match, index) => {
   new vm.Script(match[1], { filename: 'index.html:inline-script-' + (index + 1) });
 });
 new vm.Script(moduleSource, { filename: 'ammar-marketplace.js' });
+
+const revenueExportStart = moduleSource.indexOf('async function loadRevenueAdjustments(');
+const revenueExportEnd = moduleSource.indexOf('async function adminDashboardHtml()', revenueExportStart);
+assert.ok(revenueExportStart >= 0 && revenueExportEnd > revenueExportStart, 'Revenue CSV export helpers are missing');
+const revenueCsvSandbox = {};
+vm.runInNewContext(
+  moduleSource.slice(revenueExportStart, revenueExportEnd) + String.fromCharCode(10) + 'globalThis.revenueCsvCell=revenueCsvCell;globalThis.revenueAdjustmentSummary=revenueAdjustmentSummary;globalThis.loadRevenueAdjustments=loadRevenueAdjustments;',
+  revenueCsvSandbox
+);
+assert.equal(
+  revenueCsvSandbox.revenueCsvCell('=HYPERLINK("https://evil.example")', 'source_id'),
+  '"\'=HYPERLINK(""https://evil.example"")"',
+  'CSV export must neutralize spreadsheet formulas in text fields'
+);
+assert.equal(
+  revenueCsvSandbox.revenueCsvCell('@SUM(A1:A2)', 'source_id'),
+  '"\'@SUM(A1:A2)"',
+  'CSV export must neutralize formula-like text beginning with @'
+);
+assert.equal(
+  revenueCsvSandbox.revenueCsvCell('  =SUM(A1:A2)', 'source_id'),
+  '"' + String.fromCharCode(39) + '  =SUM(A1:A2)"',
+  'CSV export must neutralize formulas preceded by whitespace'
+);
+assert.equal(
+  revenueCsvSandbox.revenueCsvCell('-5.00', 'commission_amount'),
+  '"-5.00"',
+  'CSV export must preserve numeric values as numeric text'
+);
+assert.equal(
+  revenueCsvSandbox.revenueCsvCell('-12.50', 'adjustment_delta'),
+  '"-12.50"',
+  'CSV export must preserve negative adjustment amounts as numeric text'
+);
+assert.equal(
+  revenueCsvSandbox.revenueCsvCell('-2.50', 'net_commission_amount'),
+  '"-2.50"',
+  'CSV export must preserve negative adjusted commission as numeric text'
+);
+assert.ok(
+  moduleSource.includes("if(!isAdmin)throw new Error('ليست لديك صلاحية إدارة الإيرادات')"),
+  'Revenue dashboard must enforce the admin guard before loading data'
+);
+
+assert.ok(
+  moduleSource.includes("db.rpc('is_admin').then(result=>"),
+  'Admin UI privilege state must come from the server-side is_admin RPC'
+);
+assert.ok(
+  moduleSource.includes("const revenueTab=$('ecoRevenueTab');if(revenueTab)revenueTab.hidden=!isAdmin;"),
+  'Revenue navigation must be hidden for non-admin sessions'
+);
+assert.ok(
+  moduleSource.includes("if(!isAdmin&&['admin','revenue'].includes(tab))tab='market';"),
+  'Non-admin sessions must be redirected away from admin and revenue panels'
+);
+assert.ok(
+  moduleSource.includes("if($('ecoRevenueTab'))$('ecoRevenueTab').hidden=true;"),
+  'Revenue navigation must be hidden when the session is cleared'
+);
+const summarizedRevenue = revenueCsvSandbox.revenueAdjustmentSummary(
+  [
+    {id:'ledger-a',currency:'SDG',commission_amount:50.00,status:'due'},
+    {id:'ledger-b',currency:'USD',commission_amount:25.00,status:'paid'}
+  ],
+  [
+    {ledger_id:'ledger-a',currency:'SDG',amount_delta:-10.00},
+    {ledger_id:'ledger-a',currency:'SDG',amount_delta:-5.00},
+    {ledger_id:'ledger-a',currency:'SDG',amount_delta:3.00},
+    {ledger_id:'ledger-b',currency:'USD',amount_delta:-2.50},
+    {ledger_id:'unloaded-ledger',currency:'SDG',amount_delta:-99.00}
+  ]
+);
+assert.equal(summarizedRevenue[0].adjustment_delta,-12.00,'Revenue summary must net all append-only adjustments for the ledger');
+assert.equal(summarizedRevenue[0].net_commission_amount,38.00,'Revenue summary must calculate original commission plus adjustments');
+assert.equal(summarizedRevenue[0].commission_amount,50.00,'Revenue summary must preserve the immutable original commission amount');
+assert.equal(summarizedRevenue[1].adjustment_delta,-2.50,'Revenue summary must keep currency-specific ledger adjustments separate');
+assert.equal(summarizedRevenue[1].net_commission_amount,22.50,'Revenue summary must calculate adjusted commission for each ledger row');
+assert.throws(
+  () => revenueCsvSandbox.revenueAdjustmentSummary(
+    [{id:'ledger-c',currency:'SDG',commission_amount:10}],
+    [{ledger_id:'ledger-c',currency:'USD',amount_delta:-1}]
+  ),
+  /عملة التعديل لا تطابق عملة سجل العمولة/,
+  'Revenue summary must reject an adjustment whose currency differs from its ledger row'
+);
+assert.ok(moduleSource.includes("db.from('ammar_commission_adjustments')"),'Revenue dashboard must load append-only adjustment rows');
+assert.ok(moduleSource.includes("record_type:'adjustment'"),'Revenue CSV must include adjustment event rows separately from ledger rows');
+assert.ok(moduleSource.includes('net_commission_amount'),'Revenue dashboard and export must expose adjusted net commission');
+
+const statementStart=moduleSource.indexOf('function statementCsvCell(');
+const statementEnd=moduleSource.indexOf('async function agreementsHtml()',statementStart);
+assert.ok(statementStart>=0&&statementEnd>statementStart,'Period-based commission statement helpers are missing');
+const monthlyStatementSandbox={};
+vm.runInNewContext(
+  moduleSource.slice(statementStart,statementEnd)+String.fromCharCode(10)+
+  'globalThis.statementCsvCell=statementCsvCell;globalThis.buildCommissionStatementRows=buildCommissionStatementRows;globalThis.summarizeCommissionStatement=summarizeCommissionStatement;',
+  monthlyStatementSandbox
+);
+assert.equal(
+  monthlyStatementSandbox.statementCsvCell('=HYPERLINK("https://bad.example")','reason'),
+  '"\'=HYPERLINK(""https://bad.example"")"',
+  'Commission statement CSV must neutralize spreadsheet formula injection in text fields'
+);
+assert.equal(
+  monthlyStatementSandbox.statementCsvCell('-12.50','adjustment_delta'),
+  '"-12.50"',
+  'Commission statement CSV must preserve signed numeric adjustment values'
+);
+const monthlyStatementRows=monthlyStatementSandbox.buildCommissionStatementRows(
+  [{id:'ledger-1',recorded_at:'2026-11-03T10:00:00Z',activity_type:'market_materials',source_type:'market_request',source_id:'req-1',gross_amount:1000,currency:'SDG',rate_percent:5,commission_amount:50,status:'due'}],
+  [{id:'adj-1',ledger_id:'ledger-1',created_at:'2026-11-12T10:00:00Z',adjustment_kind:'partial_refund',amount_delta:-10,currency:'SDG',reason:'Refund correction',source_reference:'bank-ref-1'}],
+  [{id:'ledger-1',activity_type:'market_materials',source_type:'market_request',source_id:'req-1',status:'due'}]
+);
+assert.equal(monthlyStatementRows.length,2,'Statement must include commission and its adjustment as separate dated events');
+assert.equal(monthlyStatementRows[1].source_id,'req-1','Adjustment statement row must retain its source transaction reference');
+assert.equal(monthlyStatementRows[1].net_activity,-10,'Adjustment statement row must retain its signed net activity');
+const monthlyStatementTotals=monthlyStatementSandbox.summarizeCommissionStatement(monthlyStatementRows);
+assert.equal(monthlyStatementTotals[0].gross_amount,1000,'Statement summary must total gross transaction basis');
+assert.equal(monthlyStatementTotals[0].commission_amount,50,'Statement summary must preserve original commission');
+assert.equal(monthlyStatementTotals[0].adjustment_delta,-10,'Statement summary must total signed adjustments separately');
+assert.equal(monthlyStatementTotals[0].net_activity,40,'Statement summary must calculate net period activity');
+assert.ok(moduleSource.includes("gte('recorded_at',start).lt('recorded_at',end)"),'Statement ledger query must be restricted to the selected month');
+assert.ok(moduleSource.includes("gte('created_at',start).lt('created_at',end)"),'Statement adjustment query must be restricted to the selected month');
+assert.ok(moduleSource.includes(".eq('payer_id',user.id)"),'Statement ledger query must remain scoped to the signed-in payer');
+assert.ok(moduleSource.includes('async function fetchStatementPages(makeQuery)'), 'Statement export must paginate rather than silently truncate at a fixed row limit');
+assert.ok(moduleSource.includes("link.download='ammir-commission-statement-'+month+'.csv'"),'Statement export filename must identify its reporting month');
+assert.ok(moduleSource.includes("data-statement-export>تنزيل كشف الشهر CSV"),'Statement export must be a month-selected action, not embedded CSV data in HTML');
+
+const reconciliationStart=moduleSource.indexOf('function parseSettlementCsv(');
+const reconciliationEnd=moduleSource.indexOf('async function adminDashboardHtml()',reconciliationStart);
+assert.ok(reconciliationStart>=0&&reconciliationEnd>reconciliationStart,'Read-only settlement reconciliation helpers are missing');
+const reconciliationSandbox={revenueAdjustmentSummary:revenueCsvSandbox.revenueAdjustmentSummary};
+vm.runInNewContext(
+  moduleSource.slice(reconciliationStart,reconciliationEnd)+String.fromCharCode(10)+
+  'globalThis.parseSettlementCsv=parseSettlementCsv;globalThis.buildSettlementReconciliation=buildSettlementReconciliation;',
+  reconciliationSandbox
+);
+const settlementCsv=String.fromCharCode(0xfeff)+'ledger_id,amount,currency,external_reference'+String.fromCharCode(13,10)+'11111111-1111-4111-8111-111111111111,40.00,SDG,"BANK, REF 1"'+String.fromCharCode(13,10)+'22222222-2222-4222-8222-222222222222,20.00,SDG,ref-2'+String.fromCharCode(13,10)+'22222222-2222-4222-8222-222222222222,20.00,SDG,ref-3'+String.fromCharCode(13,10)+'33333333-3333-4333-8333-333333333333,10.00,USD,ref-4'+String.fromCharCode(13,10);
+const parsedSettlement=reconciliationSandbox.parseSettlementCsv(settlementCsv);
+assert.equal(parsedSettlement.length,4,'Settlement CSV parser must preserve all data rows');
+assert.equal(parsedSettlement[0].external_reference,'BANK, REF 1','Settlement CSV parser must preserve quoted commas');
+const settlementResults=reconciliationSandbox.buildSettlementReconciliation(
+  parsedSettlement,
+  [
+    {id:'11111111-1111-4111-8111-111111111111',currency:'SDG',commission_amount:50,status:'paid'},
+    {id:'22222222-2222-4222-8222-222222222222',currency:'SDG',commission_amount:25,status:'due'}
+  ],
+  [{ledger_id:'11111111-1111-4111-8111-111111111111',currency:'SDG',amount_delta:-10}]
+);
+assert.equal(settlementResults[0].status,'matched','Settlement report must match net commission after adjustments');
+assert.equal(settlementResults[0].expected_amount,40,'Settlement report must compare against adjusted commission, not original amount');
+assert.equal(settlementResults[1].status,'duplicate_ledger','Duplicate ledger references must be flagged');
+assert.equal(settlementResults[2].status,'duplicate_ledger','Every row for a duplicate ledger reference must be flagged');
+assert.equal(settlementResults[3].status,'unknown_ledger','Unknown ledger references must be flagged, not accepted');
+
+const exceptionResults=reconciliationSandbox.buildSettlementReconciliation(
+  [
+    {ledger_id:'44444444-4444-4444-8444-444444444444',amount:'29.00',currency:'SDG'},
+    {ledger_id:'55555555-5555-4555-8555-555555555555',amount:'15.00',currency:'USD'},
+    {ledger_id:'66666666-6666-4666-8666-666666666666',amount:'1,000.00',currency:'SDG'}
+  ],
+  [
+    {id:'44444444-4444-4444-8444-444444444444',currency:'SDG',commission_amount:30,status:'due'},
+    {id:'55555555-5555-4555-8555-555555555555',currency:'SDG',commission_amount:15,status:'paid'},
+    {id:'66666666-6666-4666-8666-666666666666',currency:'SDG',commission_amount:1000,status:'paid'}
+  ],
+  []
+);
+assert.equal(exceptionResults[0].status,'amount_mismatch','Different settlement amounts must be flagged');
+assert.equal(exceptionResults[1].status,'currency_mismatch','Different settlement currencies must be flagged');
+assert.equal(exceptionResults[2].status,'invalid_row','Amounts with thousands separators must be rejected by the declared CSV format');
+assert.ok(moduleSource.includes("filter(id=>/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id))"),'Reconciliation must validate UUIDs before sending them to PostgreSQL');
+const invalidIdResults=reconciliationSandbox.buildSettlementReconciliation(
+  [{ledger_id:'not-a-uuid',amount:'1.00',currency:'SDG'}],
+  [],
+  []
+);
+assert.equal(invalidIdResults[0].status,'invalid_row','Malformed ledger UUIDs must be rejected before database lookup');
+assert.throws(
+  ()=>reconciliationSandbox.parseSettlementCsv('ledger_id,amount'+String.fromCharCode(10)+'11111111-1111-4111-8111-111111111111,2'),
+  /عمود مطلوب مفقود: currency/,
+  'Settlement CSV parser must reject files without required currency column'
+);
+assert.ok(moduleSource.includes('id="ecoReconciliationFile"'),'Admin revenue dashboard must expose a settlement CSV input');
+assert.ok(moduleSource.includes("if(e.target.id==='ecoReconciliationFile'"),'Settlement CSV input must be processed through the change handler');
+assert.ok(moduleSource.includes("eq('payer_id',user.id)")&&moduleSource.includes(".in('ledger_id',chunk)"),'Reconciliation must fetch the ledger and its append-only adjustments by exact IDs');
+assert.ok(moduleSource.includes('لا تعدّل هذه اللوحة قواعد العمولة أو القيود المالية'),'Reconciliation UI must disclose its read-only financial boundary');
+assert.ok(moduleSource.includes('لا تستنتج أن القيود الغائبة غير مدفوعة'),'Reconciliation UI must not infer missing report rows are unpaid');
+assert.ok(moduleSource.includes('function processSettlementFile(file)'),'Reconciliation must process reports without a server upload');
+
+const revenueQueryTrace = [];
+revenueCsvSandbox.db = {
+  from(table) {
+    assert.equal(table,'ammar_commission_adjustments','Revenue adjustment loader must query the append-only adjustments table');
+    return {
+      select() {
+        const query = {ids:[]};
+        query.in = function(field,ids) { assert.equal(field,'ledger_id'); this.ids=ids; return this; };
+        query.order = function(field,options) { assert.equal(field,'created_at'); assert.equal(options.ascending,false); return this; };
+        query.range = async function(from,to) {
+          revenueQueryTrace.push({ids:this.ids.slice(),from,to});
+          const total=this.ids.length===200?1001:1;
+          const count=from===0?Math.min(1000,total):Math.max(0,total-from);
+          return {count:total,data:Array.from({length:count},(_,index)=>({
+            id:'adjustment-'+this.ids[0]+'-'+(from+index),
+            ledger_id:this.ids[0],currency:'SDG',amount_delta:-0.01
+          }))};
+        };
+        return query;
+      }
+    };
+  }
+};
+const pagedAdjustments = await revenueCsvSandbox.loadRevenueAdjustments(
+  Array.from({length:201},(_,index)=>({id:'ledger-'+index}))
+);
+assert.equal(pagedAdjustments.length,1002,'Revenue adjustment loader must fetch every adjustment page for every ledger ID chunk');
+assert.equal(revenueQueryTrace.length,3,'Revenue adjustment loader must paginate and split large ledger ID sets');
+assert.deepEqual(revenueQueryTrace.map(x=>x.ids.length),[200,200,1],'Revenue adjustment loader must use bounded ID chunks');
+assert.deepEqual(revenueQueryTrace.map(x=>x.from),[0,1000,0],'Revenue adjustment loader must request subsequent pages without skipping rows');
+
+
 
 assert.match(html, /window\.ammarSupabase\s*=\s*client/, 'Expose the existing authenticated Supabase client');
 assert.match(html, /<script src="\/ammar-marketplace\.js"><\/script>/, 'Load the ecosystem browser module');
@@ -132,6 +359,25 @@ assert.ok(verificationMigration.includes('SET search_path ='), 'Admin verificati
 assert.ok(trustTests.includes('Supplier self-verification or self-suspension was not blocked'), 'Trust regression tests are missing');
 assert.ok(trustTests.includes('Non-admin was able to approve a supplier'), 'Non-admin privilege-escalation test is missing');
 assert.ok(trustTests.includes('AMMIR TRUST AND ADMIN ACCESS TESTS PASSED'), 'Trust/admin integration test completion marker is missing');
+assert.ok(moduleSource.includes("db.from('ammar_disputes')"), 'Admin dashboard must load commercial disputes');
+assert.ok(moduleSource.includes('${adminDisputeCards(disputes)}'), 'Admin dashboard must render the commercial dispute queue');
+assert.ok(moduleSource.includes('async function handleAdminDisputeChange(select)'), 'Admin dispute status handler is missing');
+assert.ok(moduleSource.includes("if(!isAdmin)throw new Error('ليست لديك صلاحية إدارة عَمِّر')"), 'Admin dispute handler must enforce the local admin guard');
+assert.ok(moduleSource.includes("resolved_at:['resolved','rejected'].includes(select.value)"), 'Admin dispute closure must record its resolution timestamp');
+assert.ok(trustTests.includes('An unrelated account can read a commercial dispute'), 'Commercial dispute isolation regression is missing');
+assert.ok(trustTests.includes('Administrator could not resolve the commercial dispute'), 'Admin dispute resolution regression is missing');
+assert.ok(operationalAlertsMigration.includes('public.ammar_admin_list_operational_alerts'), 'Admin operational alerts RPC is missing');
+assert.ok(operationalAlertsMigration.includes('auth.uid() IS NULL OR NOT public.is_admin()'), 'Admin operational alerts RPC must reject non-admin callers');
+assert.ok(operationalAlertsMigration.includes("r.status IN ('open','closing')"), 'Overdue RFQ filter is missing');
+assert.ok(operationalAlertsMigration.includes("d.status IN ('planned','dispatched','partially_received','exception')"), 'Delivery follow-up filter is missing');
+assert.ok(operationalAlertsMigration.includes('REVOKE ALL ON FUNCTION public.ammar_admin_list_operational_alerts(integer) FROM PUBLIC, anon'), 'Anon execution must be revoked for admin alerts');
+assert.ok(moduleSource.includes("db.rpc('ammar_admin_list_operational_alerts',{p_limit:100})"), 'Admin dashboard must call the bounded operational alerts RPC');
+assert.ok(moduleSource.includes('${adminOperationalAlertCards(operationalAlerts)}'), 'Admin dashboard must render operational alert cards');
+assert.ok(moduleSource.includes('function adminOperationalAlertCards(rows)'), 'Operational alert renderer is missing');
+assert.ok(operationalAlertsTests.includes('An unrelated authenticated account executed the admin alerts RPC'), 'Non-admin RPC denial test is missing');
+assert.ok(operationalAlertsTests.includes('AMMIR ADMIN OPERATIONAL ALERTS TESTS PASSED'), 'Operational alert integration test marker is missing');
+
+
 
 
 assert.ok(providerGateMigration.includes('s.is_verified = true'), 'Market purchase verification gate is missing');
@@ -221,7 +467,7 @@ assert.ok(pwaManifest.icons.some(icon => icon.src === '/icon-512.png' && icon.si
 assert.ok(identityCss.includes("url('/icon.svg')"), 'The app brand mark must use the canonical AMMIR seal');
 assert.ok(identityCss.includes(':focus-visible'), 'Keyboard-visible focus treatment is missing');
 assert.ok(serviceWorker.includes('/icon-512.png'), 'The 512px install icon must be cached in the app shell');
-assert.ok(serviceWorker.includes('ammir-shell-v9-identity-first-load'), 'Service worker cache must be versioned for the new identity assets');
+assert.match(serviceWorker, /const CACHE_NAME=['"]ammir-shell-v\d+-[a-z0-9-]+['"]/i, 'Service worker cache must use a versioned AMMIR shell cache name');
 assert.ok(!serviceWorker.includes("html.replace('</head>'"), 'Service worker must not rewrite HTML to inject identity assets; first-load HTML must declare them directly');
 
 console.log('AMMIR static application and migration checks passed.');
@@ -230,3 +476,82 @@ assert.match(html, /function passwordPolicyError\(password\)/, 'Password policy 
 assert.match(html, /password\.length<12/, 'Signup and recovery must require at least 12 characters');
 assert.match(html, /classes<3/, 'Password policy must require three character classes');
 assert.match(html, /minlength="12"/, 'Password inputs must expose the 12-character minimum');
+
+assert.ok(moduleSource.includes('ammar_commission_adjustments'), 'Payer statement must include append-only commission adjustments');
+assert.ok(moduleSource.includes(".eq('payer_id',user.id)"), 'Payer statement must be scoped to the authenticated payer');
+assert.ok(moduleSource.includes('statementTotals'), 'Payer statement currency totals are missing');
+assert.ok(moduleSource.includes('data-statement-export'), 'Payer statement CSV export control is missing');
+assert.ok(moduleSource.includes('net_commission_amount') || moduleSource.includes('net_commission'), 'Payer statement must calculate net commission after adjustments');
+assert.ok(moduleSource.includes('ليس فاتورة ضريبية') || moduleSource.includes('إثبات تحصيل نقدي'), 'Payer statement must disclose that it is not tax invoice or cash-settlement evidence');
+
+const statementHelperStart = moduleSource.indexOf('function statementCsvCell');
+const statementHelperEnd = moduleSource.indexOf('async function fetchStatementPages', statementHelperStart);
+assert.ok(statementHelperStart >= 0 && statementHelperEnd > statementHelperStart, 'Commission statement helpers are missing');
+const statementSandbox = {};
+vm.runInNewContext(
+  moduleSource.slice(statementHelperStart, statementHelperEnd) +
+    '\n globalThis.buildCommissionStatementRows = buildCommissionStatementRows;' +
+    '\n globalThis.summarizeCommissionStatement = summarizeCommissionStatement;' +
+    '\n globalThis.statementCsvCell = statementCsvCell;',
+  statementSandbox
+);
+const statementLedger = [
+  {id:'l1',recorded_at:'2026-11-02T10:00:00Z',activity_type:'market_materials',source_type:'project_delivery',source_id:'d1:SDG',gross_amount:1000,currency:'SDG',rate_percent:5,commission_amount:50,status:'due'},
+  {id:'l2',recorded_at:'2026-11-03T10:00:00Z',activity_type:'contracting',source_type:'project_service_award',source_id:'a1:USD',gross_amount:200,currency:'USD',rate_percent:5,commission_amount:10,status:'paid'}
+];
+const statementAdjustments = [
+  {id:'a1',ledger_id:'l1',created_at:'2026-11-04T10:00:00Z',adjustment_kind:'partial_refund',amount_delta:-15,currency:'SDG',reason:'Partial reversal',source_reference:'refund-1'},
+  {id:'a2',ledger_id:'l2',created_at:'2026-11-05T10:00:00Z',adjustment_kind:'fee_increase',amount_delta:2,currency:'USD',reason:'Fee correction',source_reference:'correction-1'}
+];
+const statementRows = statementSandbox.buildCommissionStatementRows(statementLedger,statementAdjustments,statementLedger);
+const statementTotals = statementSandbox.summarizeCommissionStatement(statementRows);
+assert.equal(statementRows.length,4,'Statement must include each commission and adjustment as separate rows');
+assert.equal(statementRows[2].record_type,'adjustment','Statement rows must be chronologically ordered');
+assert.equal(statementRows[2].source_reference,'refund-1','Adjustment source reference must be retained');
+assert.equal(statementTotals.length,2,'Statement totals must never combine different currencies');
+assert.equal(statementTotals.find(x=>x.currency==='SDG').net_activity,35,'SDG net activity must include its negative adjustment');
+assert.equal(statementTotals.find(x=>x.currency==='USD').net_activity,12,'USD net activity must include its positive adjustment');
+const priorMonthLedger = [
+  {id:'old-l1',recorded_at:'2026-10-31T23:59:59Z',activity_type:'market_materials',source_type:'project_delivery',source_id:'delivery-old',gross_amount:900,currency:'SDG',rate_percent:5,commission_amount:45,status:'due'}
+];
+const currentMonthAdjustment = [
+  {id:'a3',ledger_id:'old-l1',created_at:'2026-11-01T00:00:00Z',adjustment_kind:'partial_refund',amount_delta:-5,currency:'SDG',reason:'Adjustment in selected month',source_reference:'nov-refund'}
+];
+const periodRows = statementSandbox.buildCommissionStatementRows([],currentMonthAdjustment,priorMonthLedger);
+assert.equal(periodRows.length,1,'A current-period adjustment must appear even when its original commission belongs to a prior month');
+assert.equal(periodRows[0].source_id,'delivery-old','Prior-period source metadata must be resolved for a current-period adjustment');
+assert.equal(periodRows[0].source_reference,'nov-refund','Current-period adjustment must retain its external source reference');
+const periodTotals = statementSandbox.summarizeCommissionStatement(periodRows);
+assert.equal(periodTotals[0].gross_amount,0,'An adjustment-only period must not duplicate prior-period GMV');
+assert.equal(periodTotals[0].commission_count,0,'An adjustment-only period must not count a prior-period commission as a new commission');
+assert.equal(periodTotals[0].net_activity,-5,'An adjustment-only period total must include the adjustment delta');
+assert.equal(statementSandbox.statementCsvCell('=SUM(A1:A2)','reason'),'"\'=SUM(A1:A2)"','CSV text cells must be guarded against formula injection');
+assert.equal(statementSandbox.statementCsvCell(-15,'adjustment_delta'),'"-15"','Signed numeric adjustments must remain numeric in CSV');
+
+
+assert.ok(moduleSource.includes('Date.UTC(year,monthNumber-1,1)'), 'Monthly statement start must use a UTC calendar boundary');
+assert.ok(moduleSource.includes('Date.UTC(year,monthNumber,1)'), 'Monthly statement end must use a UTC calendar boundary');
+assert.ok(moduleSource.includes('شهر الكشف (UTC)'), 'Monthly statement timezone must be disclosed in the UI');
+assert.ok(moduleSource.includes("if(!/^\\d{4}-(0[1-9]|1[0-2])$/.test(month))"), 'Monthly statement must validate YYYY-MM using a real digit escape');
+assert.doesNotMatch(moduleSource, /if\(!\/\^\\\\d\{4\}/, 'Monthly statement must not use an escaped literal backslash instead of a digit class');
+
+
+const accountResetStart = moduleSource.indexOf('function resetAccountState(){');
+const accountResetEnd = moduleSource.indexOf('function start(sessionUser)', accountResetStart);
+assert.ok(accountResetStart >= 0 && accountResetEnd > accountResetStart, 'Account-scoped reset helper must exist before session startup');
+const accountResetBody = moduleSource.slice(accountResetStart, accountResetEnd);
+for (const stateName of ['supplier=null','provider=null','products=[]','myProducts=[]','projects=[]','serviceProviders=[]','availableConversations=[]','revenueRows=[]','revenueAdjustments=[]','activeConversation=null','replyToMessageId=null','tab=\'market\'','isAdmin=false']) {
+  assert.ok(accountResetBody.includes(stateName), 'Account switch reset must clear ' + stateName);
+}
+assert.ok(accountResetBody.includes('db.removeChannel(messageChannel)'), 'Account reset must detach the previous user realtime channel');
+assert.ok(accountResetBody.includes("$('ecoPanel').replaceChildren()"), 'Account reset must clear rendered account-specific content');
+assert.ok(moduleSource.includes('if(user&&user.id!==sessionUser.id)resetAccountState();'), 'Switching directly between signed-in accounts must clear the previous account state');
+assert.match(moduleSource, /onAuthStateChange\(\(event,session\)=>\{[\s\S]*?else\{\s*resetAccountState\(\);/, 'Sign-out events must clear account-scoped state');
+
+
+assert.ok(supplierPerformanceMigration.includes('SECURITY DEFINER') && supplierPerformanceMigration.includes('public.is_admin()'), 'Supplier performance RPC must be guarded inside the database');
+assert.ok(supplierPerformanceMigration.includes('SECURITY INVOKER'), 'Exposed supplier performance wrapper must use SECURITY INVOKER');
+assert.ok(!supplierPerformanceMigration.includes('project_title') && !supplierPerformanceMigration.includes('reference_code'), 'Supplier performance RPC must not return project-specific details');
+assert.ok(supplierPerformanceTests.includes('non-admin unexpectedly received supplier performance'), 'Supplier performance test must verify non-admin denial');
+assert.ok(moduleSource.includes('ammar_admin_supplier_performance'), 'Admin supplier performance dashboard must call the guarded RPC');
+assert.ok(moduleSource.includes('adminSupplierPerformanceCards'), 'Admin supplier performance cards must render the aggregate metrics');

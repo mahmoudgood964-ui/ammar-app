@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - feature/ammar-market-messaging
+      - feature/ammir-revenue-engine-v1
       - launch/ammir-trust-hardening
       - fix/ammir-android-pwa-install
   pull_request:
@@ -48,6 +49,10 @@ jobs:
         env:
           PGPASSWORD: postgres
         run: psql -h 127.0.0.1 -U postgres -d ammar_test -v ON_ERROR_STOP=1 -f supabase/migrations/202611120007_ammar_messaging_plus.sql
+      - name: Harden pinned-message conversation scope
+        env:
+          PGPASSWORD: postgres
+        run: psql -h 127.0.0.1 -U postgres -d ammar_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261125091500_harden_pinned_message_conversation_scope.sql
       - name: Apply AMMIR storage and Realtime migration
         env:
           PGPASSWORD: postgres
@@ -128,6 +133,18 @@ jobs:
         env:
           PGPASSWORD: postgres
         run: psql -h 127.0.0.1 -U postgres -d ammar_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261117083000_move_authenticated_definer_rpcs_to_app_private.sql
+      - name: Add bounded AMMIR admin operational alerts RPC
+        env:
+          PGPASSWORD: postgres
+        run: psql -h 127.0.0.1 -U postgres -d ammar_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261125103000_add_admin_operational_alerts.sql
+      - name: Add aggregate AMMIR supplier performance RPC
+        env:
+          PGPASSWORD: postgres
+        run: psql -h 127.0.0.1 -U postgres -d ammar_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261125114500_add_admin_supplier_performance.sql
+      - name: Test aggregate AMMIR supplier performance authorization and data contract
+        env:
+          PGPASSWORD: postgres
+        run: psql -h 127.0.0.1 -U postgres -d ammar_test -v ON_ERROR_STOP=1 -f tests/ammir-admin-supplier-performance.sql
       - name: Verify AMMIR private RPC wrappers and access
         env:
           PGPASSWORD: postgres
@@ -138,5 +155,39 @@ jobs:
         run: |
           psql -h 127.0.0.1 -U postgres -d ammar_test -v ON_ERROR_STOP=1 -f tests/ammir-private-rpc-smoke.sql
           psql -h 127.0.0.1 -U postgres -d ammar_test -v ON_ERROR_STOP=1 -f tests/ammar-trust-admin.sql
+      - name: Test AMMIR account role isolation after final RLS hardening
+        env:
+          PGPASSWORD: postgres
+        run: psql -h 127.0.0.1 -U postgres -d ammar_test -v ON_ERROR_STOP=1 -f tests/ammir-account-role-isolation.sql
+      - name: Test AMMIR admin operational alert authorization
+        env:
+          PGPASSWORD: postgres
+        run: psql -h 127.0.0.1 -U postgres -d ammar_test -v ON_ERROR_STOP=1 -f tests/ammir-admin-operational-alerts.sql
+      - name: Install AMMIR project award and delivery commission triggers
+        env:
+          PGPASSWORD: postgres
+        run: psql -h 127.0.0.1 -U postgres -d ammar_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261117222827_add_project_award_and_delivery_commission_ledger.sql
+      - name: Apply AMMIR append-only commission adjustments migration
+        env:
+          PGPASSWORD: postgres
+        run: psql -h 127.0.0.1 -U postgres -d ammar_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261124211500_add_ammir_commission_adjustments.sql
+      - name: Protect paid AMMIR commission ledger rows
+        env:
+          PGPASSWORD: postgres
+        run: psql -h 127.0.0.1 -U postgres -d ammar_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261124230000_protect_paid_commission_ledger_rows.sql
+      - name: Re-run project workflows against paid commission triggers
+        env:
+          PGPASSWORD: postgres
+        run: psql -h 127.0.0.1 -U postgres -d ammar_test -v ON_ERROR_STOP=1 -f tests/ammir-project-workflows.sql
+      - name: Test AMMIR revenue engine schema and authorization
+        env:
+          PGPASSWORD: postgres
+        run: psql -h 127.0.0.1 -U postgres -d ammar_test -v ON_ERROR_STOP=1 -f tests/ammir-revenue-engine.sql
+      - name: Test concurrent AMMIR commission reductions
+        env:
+          PGPASSWORD: postgres
+        run: bash tests/ammir-revenue-concurrency.sh
       - name: Validate browser code and migration wiring
         run: node tests/check-ammar-app.mjs
+      - name: Test AMMIR service worker lifecycle and cache boundaries
+        run: node tests/ammir-service-worker.test.mjs

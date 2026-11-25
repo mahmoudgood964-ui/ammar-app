@@ -1,0 +1,60 @@
+# AMMIR Revenue Engine — Commission Controls v1
+
+**Status:** drafted in feature branch; database migration has not been applied to production.  
+**Migration:** `20261124211500_add_ammir_commission_adjustments.sql`
+
+## Audit findings from the live schema
+- The commission ledger currently stores the original commission amount and a status; it has no adjustment/reversal relationship.
+- Delivery commission is synchronized from delivery and delivery-item changes. Its upsert can update the financial amount of a row whose status is already `paid`, while retaining the paid status. This is an accounting integrity defect.
+- Delivery status transitions outside the received states can set unpaid rows to `void`, but paid rows remain marked paid; there is no linked compensating adjustment.
+- Award completion can create a commission row when no delivery exists. If a delivery is present, that award path intentionally skips the commission to avoid duplication.
+- Ledger uniqueness currently exists on request_id and (source_type, source_id). The current design is source-level, not a complete journal of corrections.
+- Current ledger RLS lets a payer see their own row and administrators see all. Existing transaction events are request-scoped and are not a financial adjustment journal.
+- No live commission ledger rows were returned during this audit, so there is no historical commission balance to reconcile at this point in time.
+
+## What this migration adds
+- An append-only `ammar_commission_adjustments` table linked to the existing commission ledger.
+- Four explicit adjustment kinds: partial refund, full reversal, fee increase, fee decrease.
+- Signed adjustment amounts; reduction types are negative, increase is positive.
+- Required reason and globally unique idempotency key. Currency and idempotency-key inputs must be trimmed (no leading/trailing whitespace); whitespace-only or padded keys/currencies are rejected by both RPC validation and table constraints.
+- Currency matching and a row lock on the original commission record to prevent concurrent over-adjustment.
+- A full reversal must equal the remaining commission balance; a reduction cannot exceed that balance.
+- Retry-safe behavior: replaying the same idempotency key and payload returns the original adjustment ID; reusing the key with a different payload is rejected.
+- Immutable records: UPDATE and DELETE are rejected. Corrections must be new compensating adjustments.
+- Payer/admin read access through RLS; only the administrator RPC can insert adjustments.
+
+## Explicit limits
+- This does not mark a commission as cash-refunded or settle a bank/payment-provider transaction.
+- It does not alter the original commission ledger row or its status.
+- It does not modify the 5% active rules.
+- It does not create wallet, escrow, lending, payout, payment-custody, or bank milestone behavior.
+- It does not yet automatically create adjustments when a delivery is edited after commission settlement. That trigger change needs its own reviewed patch and acceptance tests so that delivery workflows are not broken.
+- Payer-facing monthly commission activity statements and a read-only CSV comparison against external settlement reports are implemented in PR #14's feature branch. This is not a live payment-provider integration, does not persist imported reports, does not mark ledger entries paid, and does not prove bank settlement. Durable reconciliation batches, provider API integrations, settlement evidence, and any status transitions remain separate future work requiring their own controls and explicit approval.
+
+## Required test cases before applying
+1. Non-admin cannot call the adjustment RPC.
+2. Admin can record a valid partial refund; signed delta is negative.
+3. Admin can record a valid fee increase; signed delta is positive.
+4. A full reversal must equal the remaining balance.
+5. Cumulative reductions cannot exceed the original commission less prior adjustments.
+6. Currency mismatch is rejected.
+7. Replaying the same idempotency key and payload returns the same ID without inserting another row.
+8. Reusing an idempotency key with different payload is rejected.
+9. UPDATE and DELETE are rejected.
+10. Payer can read adjustments for their own commission row; unrelated payer cannot; admin can read all.
+11. Concurrent reductions cannot drive net commission below zero.
+12. Original commission row, status, project payment milestones, and payment events remain unchanged.
+
+## Follow-up critical fix — implemented in the feature branch, not production
+The feature-branch migration `20261124230000_protect_paid_commission_ledger_rows.sql` replaces the two delivery/award commission trigger functions so their upserts cannot rewrite a ledger row whose status is `paid`. Paid rows also remain paid when source delivery state changes or delivery records/items are removed. The regression suite verifies the original paid amount, gross basis, currency, rate, payer, and status remain unchanged through those source mutations and through an award-completion retry.
+
+This fix is present only in PR #14's feature branch. It has passed disposable PostgreSQL CI tests but has **not** been applied to production. Once merged and safely migrated, later differences must be captured as append-only adjustment entries and separately reconciled against payment-provider/bank records. The adjustment journal itself does not prove cash was refunded or collected.
+
+
+## Monthly payer statement period-edge regression — 2026-11-25
+
+The feature-branch statement tests now cover an adjustment created during the selected reporting month even when its source commission ledger row was recorded in a previous month. The expected statement includes the adjustment event, preserves source metadata and external reference, does not duplicate the prior month's GMV or original commission, and includes only the signed adjustment delta in current-period net activity.
+
+The month validator was corrected and a regression assertion was added for the accepted `YYYY-MM` format. The exact tested feature-branch head is `3b14d0a542adb308ca8b3734b81648f6adf25021`; [GitHub Actions run #45580772729](https://github.com/mahmoudgood964-ui/ammar-app/actions/runs/45580772729) completed SUCCESS with all 35 workflow steps green. CI uses disposable PostgreSQL and static/browser tests; it does not touch production Supabase.
+
+The statement remains an activity report, not an invoice or proof of cash collection. Real payer/admin account acceptance, physical-device acceptance, exact-head preview, and local accounting/legal review remain open. PR #14 remains open/draft; neither migration is applied to production. No commission rates, payment milestones, production financial rows, or production settings were changed.
