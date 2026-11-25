@@ -129,3 +129,6 @@ Every implementation must include: migration (if needed), regression test, secur
 - [ ] Authenticated buyer/supplier acceptance and evidence upload review remain pending.
 - [x] Return recording and proportional commission adjustment proposals are implemented in a feature migration; adjustment proposals remain pending human finance review and do not move money.
 - [ ] Finance approval authority, credit-note issuance, refunds, and payment-provider settlement remain unimplemented pending signed policy and legal/finance review.
+- [x] Latest hardened proportional-return stack passed GitHub Actions PostgreSQL integration run `45585118923` on commit `76a19171ef88be62bcc6029b519a4b5bf5f35ed6`: migration application, receipt/claims/returns SQL regressions, private RPC permissions, public RPC smoke tests, and browser/migration wiring all succeeded.
+- [x] Hardened adjustment records to require an explicitly recorded award-item currency (no invented SDG fallback) and restricted adjustment-amount SELECT visibility to administrators; both checks were included in run `45585118923`.
+- [ ] PRs #16–#19 remain open Draft dependencies; merge/rebase sequence and authenticated buyer/supplier acceptance are still pending. PR #20 remains Draft and is not deployed to production.
