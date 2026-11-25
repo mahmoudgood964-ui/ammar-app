@@ -29,6 +29,17 @@ The test was corrected on this feature branch to assert a versioned AMMIR shell 
 - [ ] Re-run both push and PR CI on the corrected workflow head; do not mark this finding accepted until both pass.
 - [ ] Production remains unchanged; the additive migration must go through PR review and an explicit production rollout decision.
 
+## 2B. Account isolation and session reset hardening (2026-11-25)
+
+- [x] The marketplace ecosystem now clears account-scoped in-memory state on sign-out and direct account switching: supplier/provider context, product/project/service arrays, conversations, revenue rows/adjustments, selected conversation, tab state, timers, realtime channel, notification badges, and rendered panel contents.
+- [x] Static regression assertions verify the reset helper, direct account-switch path, and sign-out handler.
+- [x] The disposable CI database fixture now enables RLS on `profiles` and mirrors the production `profiles_insert`, `profiles_read`, and `profiles_update` policies; this corrects a previous fixture omission that made the role-isolation test meaningless.
+- [x] Added a final-schema account role-isolation test: a normal authenticated account cannot promote itself to admin or change another account's role.
+- [x] The pinned-message cross-conversation regression test now runs after the corrective migration, and the migration uses the public membership wrapper that exists at that point in the migration sequence.
+- [x] Latest feature-branch push CI [#45584197191](https://github.com/mahmoudgood964-ui/ammar-app/actions/runs/45584197191) and PR CI [#45584206581](https://github.com/mahmoudgood964-ui/ammar-app/actions/runs/45584206581) both completed SUCCESS on commit `3616ff4e7264e6726f7e02c617c87d5723aaea53`.
+- [ ] Real-device Android sign-out/account-switch and authenticated multi-account session tests remain manual release gates.
+- [ ] Production rollout of the additive pinned-message policy migration remains pending PR review and explicit release approval; no production migration was applied.
+
 ## 3. Release 0 — production acceptance checklist
 
 ### PWA offline-shell hardening (2026-11-25)
