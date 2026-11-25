@@ -22,6 +22,17 @@ The test was corrected on this feature branch to assert a versioned AMMIR shell 
 
 ## 3. Release 0 — production acceptance checklist
 
+### PWA offline-shell hardening (2026-11-25)
+
+- [x] Service worker cache is restricted to the public application shell allowlist; arbitrary same-origin dynamic/private GET endpoints are not cached.
+- [x] Cross-origin requests (including Supabase API requests) are not intercepted.
+- [x] Non-GET requests are not intercepted or queued.
+- [x] Only root/index navigation is eligible for offline shell fallback; successful HTML responses refresh the shell cache.
+- [x] Cache version advanced to `ammir-shell-v11-shell-only`; activation removes older service-worker caches.
+- [x] Node VM lifecycle tests cover install, activation, cache cleanup, online navigation, offline root fallback, shell assets, POST exclusion, cross-origin exclusion, and dynamic same-origin endpoint exclusion. Push CI run #45582041692 completed these tests successfully.
+- [ ] Physical Android install, account-switch/logout cache inspection, and weak-network upload/retry/reconnect tests remain manual release gates. CI simulation is not a substitute for a real device.
+
+
 ### A. Buyer / supplier / unrelated account
 
 Use three consenting, non-production test accounts: buyer A, verified supplier B, unrelated account C. Do not use real customer data.
@@ -46,7 +57,7 @@ Use three consenting, non-production test accounts: buyer A, verified supplier B
 
 ### C. Physical Android and weak network
 
-Test at least one real Android device, not only desktop emulation.
+Automated service-worker lifecycle and cache-boundary tests now pass in CI, but they do not simulate a real browser profile, authenticated account switching, uploads, or radio/network transitions. Test at least one real Android device, not only desktop emulation.
 
 - [ ] Fresh install / first page load / add-to-home-screen.
 - [ ] Sign-in, session persistence, refresh, sign-out and recovery.
