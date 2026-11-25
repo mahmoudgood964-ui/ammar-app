@@ -5,7 +5,8 @@ BEGIN;
 INSERT INTO auth.users(id,email) VALUES
 ('aaaaaaaa-1000-4000-8000-000000000001','trust-owner@ammir.test'),
 ('aaaaaaaa-1000-4000-8000-000000000002','trust-admin@ammir.test'),
-('aaaaaaaa-1000-4000-8000-000000000003','message-sender@ammir.test')
+('aaaaaaaa-1000-4000-8000-000000000003','message-sender@ammir.test'),
+('aaaaaaaa-1000-4000-8000-000000000004','unrelated-user@ammir.test')
 ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO public.profiles(id,role) VALUES
@@ -202,6 +203,92 @@ BEGIN
 END
 $test$;
 
+-- Commercial dispute access: transaction parties and administrators can review;
+-- unrelated authenticated accounts cannot read or change the case.
+RESET ROLE;
+INSERT INTO public.ammar_market_requests(
+  buyer_id,supplier_id,status,buyer_note,currency
+) VALUES (
+  'aaaaaaaa-1000-4000-8000-000000000003',
+  current_setting('ammir.test.supplier_id')::uuid,
+  'accepted','Admin dispute-access regression fixture','SDG'
+) RETURNING id AS dispute_request_id \\gset
+SELECT set_config('ammir.test.dispute_request_id', :'dispute_request_id', false);
+
+SET ROLE authenticated;
+SELECT set_config('request.jwt.claim.sub','aaaaaaaa-1000-4000-8000-000000000003',false);
+INSERT INTO public.ammar_disputes(request_id,raised_by,reason)
+VALUES (
+  current_setting('ammir.test.dispute_request_id')::uuid,
+  auth.uid(),
+  'Regression test for commercial dispute access'
+) RETURNING id AS dispute_id \\gset
+SELECT set_config('ammir.test.dispute_id', :'dispute_id', false);
+
+DO $test$
+DECLARE v_count integer;
+BEGIN
+  SELECT count(*) INTO v_count
+  FROM public.ammar_disputes
+  WHERE id=current_setting('ammir.test.dispute_id')::uuid;
+  IF v_count <> 1 THEN
+    RAISE EXCEPTION 'The buyer could not read its own commercial dispute';
+  END IF;
+END
+$test$;
+
+RESET ROLE;
+SET ROLE authenticated;
+SELECT set_config('request.jwt.claim.sub','aaaaaaaa-1000-4000-8000-000000000004',false);
+DO $test$
+DECLARE v_count integer;
+BEGIN
+  SELECT count(*) INTO v_count
+  FROM public.ammar_disputes
+  WHERE id=current_setting('ammir.test.dispute_id')::uuid;
+  IF v_count <> 0 THEN
+    RAISE EXCEPTION 'An unrelated account can read a commercial dispute';
+  END IF;
+END
+$test$;
+
+RESET ROLE;
+SET ROLE authenticated;
+SELECT set_config('request.jwt.claim.sub','aaaaaaaa-1000-4000-8000-000000000002',false);
+DO $test$
+DECLARE v_count integer;
+BEGIN
+  SELECT count(*) INTO v_count
+  FROM public.ammar_disputes
+  WHERE id=current_setting('ammir.test.dispute_id')::uuid;
+  IF v_count <> 1 THEN
+    RAISE EXCEPTION 'Administrator cannot review the commercial dispute';
+  END IF;
+
+  UPDATE public.ammar_disputes
+  SET status='under_review',
+      resolution_note='Administrator review started'
+  WHERE id=current_setting('ammir.test.dispute_id')::uuid;
+
+  GET DIAGNOSTICS v_count = ROW_COUNT;
+  IF v_count <> 1 THEN
+    RAISE EXCEPTION 'Administrator could not move the dispute into review';
+  END IF;
+
+  UPDATE public.ammar_disputes
+  SET status='resolved',
+      resolution_note='Regression test: resolution recorded by administrator',
+      resolved_at=now()
+  WHERE id=current_setting('ammir.test.dispute_id')::uuid;
+
+  GET DIAGNOSTICS v_count = ROW_COUNT;
+  IF v_count <> 1 THEN
+    RAISE EXCEPTION 'Administrator could not resolve the commercial dispute';
+  END IF;
+END
+$test$;
+
+RESET ROLE;
 RESET ROLE;
 ROLLBACK;
 
