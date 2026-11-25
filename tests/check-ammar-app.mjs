@@ -169,25 +169,32 @@ vm.runInNewContext(
   'globalThis.parseSettlementCsv=parseSettlementCsv;globalThis.buildSettlementReconciliation=buildSettlementReconciliation;',
   reconciliationSandbox
 );
-const settlementCsv=String.fromCharCode(0xfeff)+'ledger_id,amount,currency,external_reference'+String.fromCharCode(13,10)+'l-1,40.00,SDG,"BANK, REF 1"'+String.fromCharCode(13,10)+'l-2,20.00,SDG,ref-2'+String.fromCharCode(13,10)+'l-2,20.00,SDG,ref-3'+String.fromCharCode(13,10)+'unknown-1,10.00,USD,ref-4'+String.fromCharCode(13,10);
+const settlementCsv=String.fromCharCode(0xfeff)+'ledger_id,amount,currency,external_reference'+String.fromCharCode(13,10)+'11111111-1111-4111-8111-111111111111,40.00,SDG,"BANK, REF 1"'+String.fromCharCode(13,10)+'22222222-2222-4222-8222-222222222222,20.00,SDG,ref-2'+String.fromCharCode(13,10)+'22222222-2222-4222-8222-222222222222,20.00,SDG,ref-3'+String.fromCharCode(13,10)+'33333333-3333-4333-8333-333333333333,10.00,USD,ref-4'+String.fromCharCode(13,10);
 const parsedSettlement=reconciliationSandbox.parseSettlementCsv(settlementCsv);
 assert.equal(parsedSettlement.length,4,'Settlement CSV parser must preserve all data rows');
 assert.equal(parsedSettlement[0].external_reference,'BANK, REF 1','Settlement CSV parser must preserve quoted commas');
 const settlementResults=reconciliationSandbox.buildSettlementReconciliation(
   parsedSettlement,
   [
-    {id:'l-1',currency:'SDG',commission_amount:50,status:'paid'},
-    {id:'l-2',currency:'SDG',commission_amount:25,status:'due'}
+    {id:'11111111-1111-4111-8111-111111111111',currency:'SDG',commission_amount:50,status:'paid'},
+    {id:'22222222-2222-4222-8222-222222222222',currency:'SDG',commission_amount:25,status:'due'}
   ],
-  [{ledger_id:'l-1',currency:'SDG',amount_delta:-10}]
+  [{ledger_id:'11111111-1111-4111-8111-111111111111',currency:'SDG',amount_delta:-10}]
 );
 assert.equal(settlementResults[0].status,'matched','Settlement report must match net commission after adjustments');
 assert.equal(settlementResults[0].expected_amount,40,'Settlement report must compare against adjusted commission, not original amount');
 assert.equal(settlementResults[1].status,'duplicate_ledger','Duplicate ledger references must be flagged');
 assert.equal(settlementResults[2].status,'duplicate_ledger','Every row for a duplicate ledger reference must be flagged');
 assert.equal(settlementResults[3].status,'unknown_ledger','Unknown ledger references must be flagged, not accepted');
+assert.ok(moduleSource.includes("filter(id=>/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id))"),'Reconciliation must validate UUIDs before sending them to PostgreSQL');
+const invalidIdResults=reconciliationSandbox.buildSettlementReconciliation(
+  [{ledger_id:'not-a-uuid',amount:'1.00',currency:'SDG'}],
+  [],
+  []
+);
+assert.equal(invalidIdResults[0].status,'invalid_row','Malformed ledger UUIDs must be rejected before database lookup');
 assert.throws(
-  ()=>reconciliationSandbox.parseSettlementCsv('ledger_id,amount'+String.fromCharCode(10)+'l-1,2'),
+  ()=>reconciliationSandbox.parseSettlementCsv('ledger_id,amount'+String.fromCharCode(10)+'11111111-1111-4111-8111-111111111111,2'),
   /عمود مطلوب مفقود: currency/,
   'Settlement CSV parser must reject files without required currency column'
 );
