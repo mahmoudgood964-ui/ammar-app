@@ -22,6 +22,8 @@ const workflowProviderGates = fs.readFileSync('supabase/migrations/2026111309200
 const workflowState = fs.readFileSync('supabase/migrations/20261113093000_ammir_workflow_state_guards.sql', 'utf8');
 const workflowIndexes = fs.readFileSync('supabase/migrations/20261113094000_ammir_workflow_fk_indexes.sql', 'utf8');
 const workflowGuards = fs.readFileSync('supabase/migrations/20261113100000_ammir_execution_state_guards.sql', 'utf8');
+const operationalAlertsMigration = fs.readFileSync('supabase/migrations/20261125103000_add_admin_operational_alerts.sql', 'utf8');
+const operationalAlertsTests = fs.readFileSync('tests/ammir-admin-operational-alerts.sql', 'utf8');
 const workflowTests = fs.readFileSync('tests/ammir-project-workflows.sql', 'utf8');
 
 
@@ -362,6 +364,17 @@ assert.ok(moduleSource.includes("if(!isAdmin)throw new Error('ليست لديك 
 assert.ok(moduleSource.includes("resolved_at:['resolved','rejected'].includes(select.value)"), 'Admin dispute closure must record its resolution timestamp');
 assert.ok(trustTests.includes('An unrelated account can read a commercial dispute'), 'Commercial dispute isolation regression is missing');
 assert.ok(trustTests.includes('Administrator could not resolve the commercial dispute'), 'Admin dispute resolution regression is missing');
+assert.ok(operationalAlertsMigration.includes('public.ammar_admin_list_operational_alerts'), 'Admin operational alerts RPC is missing');
+assert.ok(operationalAlertsMigration.includes('auth.uid() IS NULL OR NOT public.is_admin()'), 'Admin operational alerts RPC must reject non-admin callers');
+assert.ok(operationalAlertsMigration.includes("r.status IN ('open','closing')"), 'Overdue RFQ filter is missing');
+assert.ok(operationalAlertsMigration.includes("d.status IN ('planned','dispatched','partially_received','exception')"), 'Delivery follow-up filter is missing');
+assert.ok(operationalAlertsMigration.includes('REVOKE ALL ON FUNCTION public.ammar_admin_list_operational_alerts(integer) FROM anon'), 'Anon execution must be revoked for admin alerts');
+assert.ok(moduleSource.includes("db.rpc('ammar_admin_list_operational_alerts',{p_limit:100})"), 'Admin dashboard must call the bounded operational alerts RPC');
+assert.ok(moduleSource.includes('${adminOperationalAlertCards(operationalAlerts)}'), 'Admin dashboard must render operational alert cards');
+assert.ok(moduleSource.includes('function adminOperationalAlertCards(rows)'), 'Operational alert renderer is missing');
+assert.ok(operationalAlertsTests.includes('An unrelated authenticated account executed the admin alerts RPC'), 'Non-admin RPC denial test is missing');
+assert.ok(operationalAlertsTests.includes('AMMIR ADMIN OPERATIONAL ALERTS TESTS PASSED'), 'Operational alert integration test marker is missing');
+
 
 
 
