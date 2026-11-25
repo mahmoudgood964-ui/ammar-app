@@ -533,7 +533,7 @@
 
   async function adminDashboardHtml(){
     if(!isAdmin)throw new Error('صلاحية المدير مطلوبة');
-    const [s,p,r,d,e,c,a]=await Promise.all([
+    const [s,p,r,d,e,c,a,sp]=await Promise.all([
       db.from('ammar_market_suppliers')
         .select('id,business_name,owner_id,contact_name,contact_phone,whatsapp_phone,governorate,city,status,is_verified,brands,delivery_mode,delivery_coverage,created_at')
         .order('created_at',{ascending:false}).limit(100),
@@ -548,10 +548,11 @@
         .select('id,entity_type,entity_id,business_name_snapshot,decision,reason,evidence_reference,actor_id,created_at')
         .order('created_at',{ascending:false}).limit(20),
       db.from('ammar_commission_rules').select('activity_type,rate_percent,payer_side,is_active,effective_from').order('activity_type'),
-      db.rpc('ammar_admin_list_operational_alerts',{p_limit:100})
+      db.rpc('ammar_admin_list_operational_alerts',{p_limit:100}),
+      db.rpc('ammar_admin_supplier_performance',{p_since:new Date(Date.now()-90*24*60*60*1000).toISOString()})
     ]);
-    for(const x of [s,p,r,d,e,c,a])if(x.error)throw x.error;
-    const suppliers=s.data||[],providers=p.data||[],reports=r.data||[],disputes=d.data||[],events=e.data||[],commissionRules=c.data||[],operationalAlerts=a.data||[];
+    for(const x of [s,p,r,d,e,c,a,sp])if(x.error)throw x.error;
+    const suppliers=s.data||[],providers=p.data||[],reports=r.data||[],disputes=d.data||[],events=e.data||[],commissionRules=c.data||[],operationalAlerts=a.data||[],supplierPerformance=sp.data||[];
     const activeCommissionRules=commissionRules.filter(x=>x.is_active);
     const pendingProviders=[...suppliers.map(x=>({...x,_type:'supplier'})),...providers.map(x=>({...x,_type:'service_provider'}))]
       .filter(x=>!x.is_verified||x.status==='suspended');
@@ -580,6 +581,10 @@
       <section class="eco-subsection"><h3>التنبيهات التشغيلية: طلبات عروض الأسعار والتسليمات</h3>
         <p class="hint">عرض محدود للطلبات التي تجاوزت موعدها والتسليمات المتأخرة أو المسجلة كاستثناء. هذه التنبيهات للمتابعة ولا تمنح الإدارة صلاحية تعديل سجلات المشروع أو التوريد.</p>
         ${adminOperationalAlertCards(operationalAlerts)}
+      </section>
+      <section class="eco-subsection"><h3>أداء الموردين والمقاولين — آخر 90 يوماً</h3>
+        <p class="hint">مؤشرات مجمعة من دعوات عروض الأسعار وسجلات التسليم الفعلية. لا تُعرض أسماء المشاريع أو تفاصيلها هنا. النسبة غير المتاحة تعني عدم كفاية العينة، وليست صفراً.</p>
+        ${adminSupplierPerformanceCards(supplierPerformance)}
       </section>
       <section class="eco-subsection"><h3>مراجعة النزاعات التجارية</h3>
         ${adminDisputeCards(disputes)}
@@ -639,6 +644,21 @@
         </label>
       </article>`;
     }).join('');
+  }
+
+  function adminSupplierPerformanceCards(rows){
+    if(!rows.length)return '<div class="eco-empty">لا توجد بيانات تشغيلية كافية خلال الفترة المحددة.</div>';
+    const pct=v=>v===null||v===undefined?'غير متاح':Number(v).toFixed(1)+'%';
+    const kind=v=>['contractor','service_provider','engineering','maintenance'].includes(String(v||'').toLowerCase())?'مقاول / مقدم خدمة':'مورد';
+    return '<div class="eco-grid">'+rows.map(x=>`<article class="eco-card">
+      <h4>${esc(x.provider_name||'مقدم خدمة')}</h4>
+      <div class="eco-meta"><span class="eco-pill">${kind(x.provider_kind)}</span><span class="eco-pill">دعوات: ${Number(x.rfq_invitation_count||0)}</span><span class="eco-pill">تسليمات: ${Number(x.delivery_count||0)}</span></div>
+      <div class="eco-grid">
+        <div><small>الاستجابة لطلبات الأسعار</small><div class="eco-price">${pct(x.rfq_response_rate)}</div><p>${Number(x.rfq_response_count||0)} من ${Number(x.rfq_invitation_count||0)} · متوسط ${x.average_response_hours===null?'—':Number(x.average_response_hours).toFixed(1)+' ساعة'}</p></div>
+        <div><small>اكتمال التسليمات</small><div class="eco-price">${pct(x.delivery_completion_rate)}</div><p>${Number(x.completed_delivery_count||0)} من ${Number(x.delivery_count||0)} تسليم</p></div>
+        <div><small>الالتزام بموعد التسليم</small><div class="eco-price">${pct(x.on_time_delivery_rate)}</div><p>${Number(x.on_time_delivery_count||0)} من التسليمات المكتملة ذات الموعد المحدد</p></div>
+      </div>
+    </article>`).join('')+'</div>';
   }
 
   function adminOperationalAlertCards(rows){
