@@ -7,6 +7,7 @@ DO $test$
 DECLARE
   v_table_oid oid;
   v_rpc_oid oid;
+  v_private_rpc_oid oid;
   v_delivery_fn oid;
   v_award_fn oid;
   v_definition text;
@@ -66,17 +67,38 @@ BEGIN
     RAISE EXCEPTION 'Commission adjustment RPC is missing';
   END IF;
 
-  IF NOT (SELECT prosecdef FROM pg_proc WHERE oid=v_rpc_oid) THEN
-    RAISE EXCEPTION 'Commission adjustment RPC must be SECURITY DEFINER';
+  IF (SELECT prosecdef FROM pg_proc WHERE oid=v_rpc_oid) THEN
+    RAISE EXCEPTION 'Public commission adjustment RPC must be SECURITY INVOKER';
+  END IF;
+
+  SELECT p.oid INTO v_private_rpc_oid
+  FROM pg_proc p
+  JOIN pg_namespace n ON n.oid=p.pronamespace
+  WHERE n.nspname='app_private'
+    AND p.proname='ammar_record_commission_adjustment_impl'
+    AND pg_get_function_identity_arguments(p.oid) =
+      'p_ledger_id uuid, p_adjustment_kind text, p_amount numeric, p_currency text, p_reason text, p_idempotency_key text, p_source_reference text';
+
+  IF v_private_rpc_oid IS NULL
+     OR NOT (SELECT prosecdef FROM pg_proc WHERE oid=v_private_rpc_oid) THEN
+    RAISE EXCEPTION 'Private commission adjustment implementation must be SECURITY DEFINER';
   END IF;
 
   IF NOT EXISTS (
     SELECT 1 FROM pg_proc p
     WHERE p.oid=v_rpc_oid
       AND coalesce(array_to_string(p.proconfig,','),'') LIKE '%search_path=%'
-      AND array_to_string(p.proconfig,',') LIKE '%search_path=%'
+  ) OR NOT EXISTS (
+    SELECT 1 FROM pg_proc p
+    WHERE p.oid=v_private_rpc_oid
+      AND coalesce(array_to_string(p.proconfig,','),'') LIKE '%search_path=%'
   ) THEN
-    RAISE EXCEPTION 'Commission adjustment RPC must pin its search_path';
+    RAISE EXCEPTION 'Commission adjustment wrapper and private implementation must pin search_path';
+  END IF;
+
+  IF has_function_privilege('anon',v_private_rpc_oid,'EXECUTE')
+     OR NOT has_function_privilege('authenticated',v_private_rpc_oid,'EXECUTE') THEN
+    RAISE EXCEPTION 'Private commission adjustment implementation grants are incorrect';
   END IF;
 
   IF has_function_privilege('anon',v_rpc_oid,'EXECUTE') THEN
