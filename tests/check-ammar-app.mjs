@@ -316,6 +316,7 @@ assert.ok(returnAdjustmentMigration.includes('v_ledger_commission * least(v_tota
 assert.ok(returnAdjustmentMigration.includes('FOR UPDATE'), 'Return processing must serialize quantity and cumulative adjustment checks');
 assert.ok(returnAdjustmentMigration.includes('Accepted delivery return history is immutable'), 'Return history immutability guard is missing');
 assert.ok(returnAdjustmentMigration.includes('Commission adjustment proposals are immutable'), 'Adjustment proposal immutability guard is missing');
+assert.ok(returnAdjustmentMigration.includes('USING ((SELECT public.is_admin()))'), 'Commission adjustment amounts must remain administrator-only');
 assert.doesNotMatch(returnAdjustmentMigration, /UPDATE\s+public\.ammar_commission_ledger/i, 'Return workflow must never mutate original commission ledger rows');
 assert.doesNotMatch(returnAdjustmentMigration, /INSERT\s+INTO\s+public\.ammar_commission_ledger/i, 'Return workflow must never create replacement commission ledger rows');
 assert.ok(returnAdjustmentMigration.includes('ammir_record_delivery_return'), 'Authenticated return RPC wrapper is missing');
