@@ -107,14 +107,14 @@ function groupsForView(){
   let responded=0;const times=[];
   g.invites.forEach(i=>{const q=quoteMap.get(i.rfq_id),at=q?.submitted_at||i.responded_at;const yes=!!q||['accepted','declined'].includes(i.status)||!!i.responded_at;if(yes)responded++;const h=hours(i.invited_at,at);if(h!=null)times.push(h);});
   const valid=g.deliveries.filter(d=>d.status!=='cancelled'),today=new Date();
-  const due=valid.filter(d=>!!d.received_at||(!!dateEnd(d.scheduled_at)&&dateEnd(d.scheduled_at)<=today));
+  const due=valid.filter(d=>!!dateEnd(d.scheduled_at)&&(!!d.received_at||dateEnd(d.scheduled_at)<=today));
   const ontime=due.filter(d=>{const end=dateEnd(d.scheduled_at);return !!d.received_at&&!!end&&new Date(d.received_at)<=end&&d.status==='received';}).length;
   const goodItems=g.items.filter(x=>valid.some(d=>d.id===x.delivery_id));
   const expected=goodItems.reduce((n,x)=>n+Number(x.expected_quantity||0),0),received=goodItems.reduce((n,x)=>n+Number(x.received_quantity||0),0);
   const measured=new Set(goodItems.map(x=>x.delivery_id));
   const complete=new Set(valid.filter(d=>{const lines=goodItems.filter(x=>x.delivery_id===d.id);return lines.length>0&&lines.every(x=>Number(x.received_quantity)>=Number(x.expected_quantity)&&Number(x.damaged_quantity||0)===0&&Number(x.missing_quantity||0)===0);}).map(x=>x.id));
-  return {...g,responseRate:pct(responded,g.invites.length),responded,submitted:g.quotes.filter(x=>x.status==='submitted').length,avg:times.length?times.reduce((a,b)=>a+b,0)/times.length:null,dueCount:due.length,onTime:ontime,onTimeRate:pct(ontime,due.length),expected,received,completion:pct(received,expected),measured:measured.size,complete:complete.size};
- }).sort((a,b)=>(b.invites.length+b.deliveries.length)-(a.invites.length+a.deliveries.length));
+  return {...g,responseRate:pct(responded,g.invites.length),responded,submitted:g.quotes.filter(x=>x.status==='submitted').length,avg:times.length?times.reduce((a,b)=>a+b,0)/times.length:null,responseTimeTotal:times.reduce((a,b)=>a+b,0),responseTimeCount:times.length,dueCount:due.length,onTime:ontime,onTimeRate:pct(ontime,due.length),expected,received,completion:pct(received,expected),measured:measured.size,complete:complete.size};
+ }).sort((a,b)=>a.name.localeCompare(b.name,'ar'));
 }
 function render(){
  const select=$('perfProjectSelect');
@@ -123,7 +123,7 @@ function render(){
   $('perfIntro').textContent='تعرض هذه الصفحة بيانات المشروع المحدد فقط. لا تُدمج سجلات المشاريع المختلفة في تقييم واحد.';
  }else{select.hidden=true;$('perfIntro').textContent='ملخص خاص بحسابك من تعاملاتك المسجلة. لا تظهر أسماء المشاريع أو بيانات العملاء أو عروض الأطراف الأخرى.';}
  const gs=groupsForView(),inv=gs.reduce((n,g)=>n+g.invites.length,0),resp=gs.reduce((n,g)=>n+g.responded,0),due=gs.reduce((n,g)=>n+g.dueCount,0),ontime=gs.reduce((n,g)=>n+g.onTime,0),exp=gs.reduce((n,g)=>n+g.expected,0),rec=gs.reduce((n,g)=>n+g.received,0);
- const avg=gs.filter(g=>g.avg!=null).map(g=>g.avg),mean=avg.length?avg.reduce((a,b)=>a+b,0)/avg.length:null;
+ const responseTimeCount=gs.reduce((n,g)=>n+g.responseTimeCount,0),responseTimeTotal=gs.reduce((n,g)=>n+g.responseTimeTotal,0),mean=responseTimeCount?responseTimeTotal/responseTimeCount:null;
  const cards='<div class="perf-kpis">'+
  '<article class="perf-kpi"><small>الاستجابة لدعوات عروض الأسعار</small><strong>'+pctText(pct(resp,inv))+'</strong><span>'+fmt(resp)+' استجابة من '+fmt(inv)+' دعوة</span></article>'+
  '<article class="perf-kpi"><small>التسليم في الموعد</small><strong>'+pctText(pct(ontime,due))+'</strong><span>'+fmt(ontime)+' في الموعد من '+fmt(due)+' تسليم مستحق</span></article>'+
