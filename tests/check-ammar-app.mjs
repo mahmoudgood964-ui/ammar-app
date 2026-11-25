@@ -169,7 +169,7 @@ vm.runInNewContext(
   'globalThis.parseSettlementCsv=parseSettlementCsv;globalThis.buildSettlementReconciliation=buildSettlementReconciliation;',
   reconciliationSandbox
 );
-const settlementCsv='\\uFEFFledger_id,amount,currency,external_reference\\r\\nl-1,40.00,SDG,"BANK, REF 1"\\r\\nl-2,20.00,SDG,ref-2\\r\\nl-2,20.00,SDG,ref-3\\r\\nunknown-1,10.00,USD,ref-4\\r\\n';
+const settlementCsv=String.fromCharCode(0xfeff)+'ledger_id,amount,currency,external_reference'+String.fromCharCode(13,10)+'l-1,40.00,SDG,"BANK, REF 1"'+String.fromCharCode(13,10)+'l-2,20.00,SDG,ref-2'+String.fromCharCode(13,10)+'l-2,20.00,SDG,ref-3'+String.fromCharCode(13,10)+'unknown-1,10.00,USD,ref-4'+String.fromCharCode(13,10);
 const parsedSettlement=reconciliationSandbox.parseSettlementCsv(settlementCsv);
 assert.equal(parsedSettlement.length,4,'Settlement CSV parser must preserve all data rows');
 assert.equal(parsedSettlement[0].external_reference,'BANK, REF 1','Settlement CSV parser must preserve quoted commas');
@@ -187,7 +187,7 @@ assert.equal(settlementResults[1].status,'duplicate_ledger','Duplicate ledger re
 assert.equal(settlementResults[2].status,'duplicate_ledger','Every row for a duplicate ledger reference must be flagged');
 assert.equal(settlementResults[3].status,'unknown_ledger','Unknown ledger references must be flagged, not accepted');
 assert.throws(
-  ()=>reconciliationSandbox.parseSettlementCsv('ledger_id,amount\\nl-1,2'),
+  ()=>reconciliationSandbox.parseSettlementCsv('ledger_id,amount'+String.fromCharCode(10)+'l-1,2'),
   /عمود مطلوب مفقود: currency/,
   'Settlement CSV parser must reject files without required currency column'
 );
