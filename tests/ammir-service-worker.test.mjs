@@ -47,8 +47,8 @@ const installEvent = { waitUntil(p) { this.promise = p; } };
 listeners.install(installEvent);
 await installEvent.promise;
 assert.equal(self.skipped, true, 'install must activate the updated shell without waiting for a tab close');
-assert.ok([...cacheStore.keys()].includes('ammir-shell-v11-shell-only'), 'install must create the versioned shell cache');
-assert.ok(cacheStore.get('ammir-shell-v11-shell-only').has('/index.html'), 'install must pre-cache the offline app shell');
+assert.ok([...cacheStore.keys()].includes('ammir-shell-v12-revenue-performance'), 'install must create the versioned shell cache');
+assert.ok(cacheStore.get('ammir-shell-v12-revenue-performance').has('/index.html'), 'install must pre-cache the offline app shell');
 
 cacheStore.set('old-cache', new Map([['/private', { cached: true }]]));
 const activateEvent = { waitUntil(p) { this.promise = p; } };
@@ -65,7 +65,7 @@ listeners.fetch(navEvent);
 const navResponse = await navEvent.responsePromise;
 assert.equal(navResponse.ok, true, 'online navigation must use the network');
 await Promise.resolve();
-assert.ok(cacheStore.get('ammir-shell-v11-shell-only').has('/index.html'), 'successful root HTML must refresh the shell cache');
+assert.ok(cacheStore.get('ammir-shell-v12-revenue-performance').has('/index.html'), 'successful root HTML must refresh the shell cache');
 
 const offlineFetch = async () => { throw new Error('offline'); };
 vm.runInNewContext(source, { self, caches: cacheApi, URL, fetch: offlineFetch });
