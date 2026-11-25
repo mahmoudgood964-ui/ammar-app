@@ -1,5 +1,5 @@
-const CACHE_NAME='ammir-shell-v11-shell-only';
-const APP_SHELL=['/','/index.html','/manifest.webmanifest','/icon.svg','/icon-192.png','/icon-512.png','/ammir-identity.css','/ammar-marketplace.js'];
+const CACHE_NAME='ammir-shell-v12-revenue-performance';
+const APP_SHELL=['/','/index.html','/manifest.webmanifest','/icon.svg','/icon-192.png','/icon-512.png','/ammir-identity.css','/ammar-marketplace.js','/ammir-performance.js'];
 const APP_SHELL_PATHS=new Set(APP_SHELL);
 self.addEventListener('install',event=>{
  event.waitUntil(caches.open(CACHE_NAME).then(cache=>cache.addAll(APP_SHELL)).then(()=>self.skipWaiting()));
