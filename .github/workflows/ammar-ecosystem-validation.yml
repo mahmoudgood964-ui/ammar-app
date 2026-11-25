@@ -144,7 +144,11 @@ jobs:
         env:
           PGPASSWORD: postgres
         run: psql -h 127.0.0.1 -U postgres -d ammar_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261125020000_ammir_delivery_claims.sql
-      - name: Test AMMIR incremental delivery receipts, claims and commission immutability
+      - name: Apply AMMIR proportional return adjustment migration
+        env:
+          PGPASSWORD: postgres
+        run: psql -h 127.0.0.1 -U postgres -d ammar_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261125030000_ammir_proportional_return_adjustments.sql
+      - name: Test AMMIR incremental delivery receipts, claims, returns and commission immutability
         env:
           PGPASSWORD: postgres
         run: psql -h 127.0.0.1 -U postgres -d ammar_test -v ON_ERROR_STOP=1 -f tests/ammir-delivery-receipts.sql
