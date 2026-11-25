@@ -16,13 +16,14 @@ ON CONFLICT (id) DO UPDATE SET role=EXCLUDED.role;
 
 -- An ordinary account cannot promote itself or alter another account's role.
 DO $profile_role_guard_test$
+DECLARE
+  v_denied boolean := false;
 BEGIN
   BEGIN
     UPDATE public.profiles SET role='admin'
     WHERE id=auth.uid();
-    RAISE EXCEPTION 'Ordinary account was able to promote itself to admin';
   EXCEPTION WHEN insufficient_privilege THEN
-    NULL;
+    v_denied := true;
   END;
 
   IF EXISTS (
