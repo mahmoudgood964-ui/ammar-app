@@ -1,5 +1,5 @@
-const CACHE_NAME='ammir-shell-v10-persistent-auth';
-const APP_SHELL=['/','/index.html','/manifest.webmanifest','/icon.svg','/icon-192.png','/icon-512.png','/ammir-identity.css','/ammar-marketplace.js'];
+const CACHE_NAME='ammir-shell-v11-performance';
+const APP_SHELL=['/','/index.html','/manifest.webmanifest','/icon.svg','/icon-192.png','/icon-512.png','/ammir-identity.css','/ammar-marketplace.js','/ammir-performance.js'];
 self.addEventListener('install',event=>{
  event.waitUntil(caches.open(CACHE_NAME).then(cache=>cache.addAll(APP_SHELL)).then(()=>self.skipWaiting()));
 });
