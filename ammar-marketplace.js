@@ -1261,7 +1261,7 @@ function providerTypeLabel(type){
 
   async function exportAccountCommissionStatement(){
     const month=$('ecoStatementMonth')?.value||'';
-    if(!/^\\d{4}-(0[1-9]|1[0-2])$/.test(month))throw new Error('اختر شهر كشف الحساب أولاً.');
+    if(!/^\d{4}-(0[1-9]|1[0-2])$/.test(month))throw new Error('اختر شهر كشف الحساب أولاً.');
     const [year,monthNumber]=month.split('-').map(Number);
     // Statement periods use UTC calendar boundaries so users in different time zones receive identical exports.
     const start=new Date(Date.UTC(year,monthNumber-1,1)).toISOString();
