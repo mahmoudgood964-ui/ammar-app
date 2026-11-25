@@ -495,4 +495,6 @@ assert.equal(statementSandbox.statementCsvCell(-15,'adjustment_delta'),'"-15"','
 assert.ok(moduleSource.includes('Date.UTC(year,monthNumber-1,1)'), 'Monthly statement start must use a UTC calendar boundary');
 assert.ok(moduleSource.includes('Date.UTC(year,monthNumber,1)'), 'Monthly statement end must use a UTC calendar boundary');
 assert.ok(moduleSource.includes('شهر الكشف (UTC)'), 'Monthly statement timezone must be disclosed in the UI');
+assert.ok(moduleSource.includes("if(!/^\\d{4}-(0[1-9]|1[0-2])$/.test(month))"), 'Monthly statement must validate YYYY-MM using a real digit escape');
+assert.doesNotMatch(moduleSource, /if\(!\/\^\\\\d\{4\}/, 'Monthly statement must not use an escaped literal backslash instead of a digit class');
 
