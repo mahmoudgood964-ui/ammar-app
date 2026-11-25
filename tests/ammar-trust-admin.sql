@@ -212,7 +212,7 @@ INSERT INTO public.ammar_market_requests(
   'aaaaaaaa-1000-4000-8000-000000000003',
   current_setting('ammir.test.supplier_id')::uuid,
   'accepted','Admin dispute-access regression fixture','SDG'
-) RETURNING id AS dispute_request_id \\gset
+) RETURNING id AS dispute_request_id \gset
 SELECT set_config('ammir.test.dispute_request_id', :'dispute_request_id', false);
 
 SET ROLE authenticated;
@@ -222,7 +222,7 @@ VALUES (
   current_setting('ammir.test.dispute_request_id')::uuid,
   auth.uid(),
   'Regression test for commercial dispute access'
-) RETURNING id AS dispute_id \\gset
+) RETURNING id AS dispute_id \gset
 SELECT set_config('ammir.test.dispute_id', :'dispute_id', false);
 
 DO $test$
