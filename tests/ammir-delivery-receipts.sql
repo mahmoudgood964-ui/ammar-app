@@ -374,6 +374,20 @@ BEGIN
     END;
     IF NOT v_failed THEN RAISE EXCEPTION 'Claim quantity above the recorded rejected quantity was accepted'; END IF;
 
+    v_failed := false;
+    BEGIN
+      PERFORM public.ammir_submit_delivery_claim(
+        v_delivery_b,
+        (SELECT id FROM public.ammir_project_delivery_receipt_items
+         WHERE delivery_id=v_delivery_a AND delivery_item_id=v_item_a LIMIT 1),
+        'rejected_goods',1,
+        'A receipt item from a different delivery must not be linked to this claim.'
+      );
+    EXCEPTION WHEN OTHERS THEN
+      v_failed := true;
+    END;
+    IF NOT v_failed THEN RAISE EXCEPTION 'Claim accepted a receipt item belonging to another delivery'; END IF;
+
     v_claim_id := public.ammir_submit_delivery_claim(
       v_delivery_b,
       (SELECT id FROM public.ammir_project_delivery_receipt_items
@@ -392,8 +406,17 @@ BEGIN
     END;
     IF NOT v_failed THEN RAISE EXCEPTION 'Unrelated user unexpectedly added a claim message'; END IF;
 
-    -- The assigned supplier can respond; project managers control resolution.
+    -- The supplier may respond but cannot decide or resolve the buyer's claim.
     PERFORM set_config('request.jwt.claim.sub',v_supplier::text,true);
+    v_failed := false;
+    BEGIN
+      PERFORM public.ammir_transition_delivery_claim(v_claim_id,'accepted','Supplier cannot approve its own dispute outcome.');
+    EXCEPTION WHEN OTHERS THEN
+      v_failed := true;
+    END;
+    IF NOT v_failed THEN RAISE EXCEPTION 'Supplier unexpectedly resolved the project claim'; END IF;
+
+    -- The assigned supplier can respond; project managers control resolution.
     PERFORM public.ammir_add_delivery_claim_message(
       v_claim_id,'We acknowledge the rejection and will review the supplied batch documentation.'
     );
