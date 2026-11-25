@@ -91,16 +91,35 @@
     }, 500);
   }
 
-  function addAnalyticsLink() {
-    var adminTab = document.getElementById("ecoAdminTab");
-    if (!adminTab || adminTab.hidden || document.querySelector("[data-ammir-analytics-link]")) return;
-    var link = document.createElement("a");
-    link.href = "/admin-analytics.html";
-    link.className = "eco-tab";
-    link.setAttribute("data-ammir-analytics-link", "true");
-    link.textContent = "تحليلات الزوار";
-    link.style.textDecoration = "none";
-    adminTab.insertAdjacentElement("afterend", link);
+  var analyticsLinkCheckedUser = null;
+  var analyticsLinkChecking = false;
+
+  async function addAnalyticsLink() {
+    var db = window.ammarSupabase;
+    var user = window.ammarCurrentUser;
+    var host = document.querySelector(".top-user");
+    if (!db || !db.rpc || !user || !user.id || !host) {
+      if (!user) analyticsLinkCheckedUser = null;
+      return;
+    }
+    if (document.querySelector("[data-ammir-analytics-link]") || analyticsLinkChecking || analyticsLinkCheckedUser === user.id) return;
+    analyticsLinkChecking = true;
+    analyticsLinkCheckedUser = user.id;
+    try {
+      var result = await db.rpc("is_admin");
+      if (result.error || result.data !== true || !document.querySelector(".top-user")) return;
+      var link = document.createElement("a");
+      link.href = "/admin-analytics.html";
+      link.setAttribute("data-ammir-analytics-link", "true");
+      link.textContent = "تحليلات الزوار";
+      link.setAttribute("aria-label", "فتح لوحة تحليلات الزوار");
+      link.style.cssText = "display:inline-flex;align-items:center;white-space:nowrap;text-decoration:none;border:1px solid #cbd8d0;border-radius:9px;background:#eaf2ee;color:#174c3e;padding:7px 10px;font:700 12px Arial,sans-serif";
+      host.insertBefore(link, host.firstChild);
+    } catch (_) {
+      analyticsLinkCheckedUser = null;
+    } finally {
+      analyticsLinkChecking = false;
+    }
   }
 
   function addPrivacyButton() {
