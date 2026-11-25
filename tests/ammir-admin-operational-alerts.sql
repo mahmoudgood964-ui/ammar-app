@@ -26,6 +26,10 @@ INSERT INTO public.ammir_project_rfqs(
  'aaaaaaaa-2511-4000-8000-000000000002',now()-interval '3 days'
 ) ON CONFLICT (id) DO NOTHING;
 
+UPDATE public.ammir_project_rfqs
+SET status='open',published_at=now()
+WHERE id='cccccccc-2511-4000-8000-000000000001';
+
 INSERT INTO public.ammir_project_awards(
  id,rfq_id,project_id,supplier_user_id,award_reference,status,created_by,issued_at,accepted_at
 ) VALUES (
@@ -33,9 +37,16 @@ INSERT INTO public.ammir_project_awards(
  'cccccccc-2511-4000-8000-000000000001',
  'bbbbbbbb-2511-4000-8000-000000000001',
  'aaaaaaaa-2511-4000-8000-000000000003',
- 'AMMIR-OPS-AWARD-001','accepted',
- 'aaaaaaaa-2511-4000-8000-000000000002',now(),now()
+ 'AMMIR-OPS-AWARD-001','draft',
+ 'aaaaaaaa-2511-4000-8000-000000000002',NULL,NULL
 ) ON CONFLICT (id) DO NOTHING;
+
+UPDATE public.ammir_project_awards
+SET status='issued',issued_at=now()
+WHERE id='dddddddd-2511-4000-8000-000000000001';
+UPDATE public.ammir_project_awards
+SET status='accepted',accepted_at=now()
+WHERE id='dddddddd-2511-4000-8000-000000000001';
 
 INSERT INTO public.ammir_project_deliveries(
  id,award_id,project_id,supplier_user_id,delivery_reference,status,scheduled_at,created_by
