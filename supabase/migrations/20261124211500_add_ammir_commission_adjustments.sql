@@ -59,7 +59,7 @@ create trigger ammar_commission_adjustments_immutable
 before update or delete on public.ammar_commission_adjustments
 for each row execute function app_private.prevent_commission_adjustment_mutation();
 
-create or replace function public.ammar_record_commission_adjustment(
+create or replace function app_private.ammar_record_commission_adjustment_impl(
   p_ledger_id uuid,
   p_adjustment_kind text,
   p_amount numeric,
@@ -190,5 +190,32 @@ begin
 end;
 $function$;
 
-revoke all on function public.ammar_record_commission_adjustment(uuid,text,numeric,text,text,text,text) from public, anon;
-grant execute on function public.ammar_record_commission_adjustment(uuid,text,numeric,text,text,text,text) to authenticated;
+revoke all on function app_private.ammar_record_commission_adjustment_impl(uuid,text,numeric,text,text,text,text)
+  from public, anon, authenticated;
+grant execute on function app_private.ammar_record_commission_adjustment_impl(uuid,text,numeric,text,text,text,text)
+  to authenticated;
+
+create or replace function public.ammar_record_commission_adjustment(
+  p_ledger_id uuid,
+  p_adjustment_kind text,
+  p_amount numeric,
+  p_currency text,
+  p_reason text,
+  p_idempotency_key text,
+  p_source_reference text default null
+)
+returns uuid
+language sql
+security invoker
+set search_path = ''
+as $function$
+  select app_private.ammar_record_commission_adjustment_impl(
+    p_ledger_id, p_adjustment_kind, p_amount, p_currency,
+    p_reason, p_idempotency_key, p_source_reference
+  );
+$function$;
+
+revoke all on function public.ammar_record_commission_adjustment(uuid,text,numeric,text,text,text,text)
+  from public, anon;
+grant execute on function public.ammar_record_commission_adjustment(uuid,text,numeric,text,text,text,text)
+  to authenticated;
