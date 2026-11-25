@@ -126,7 +126,6 @@ REVOKE UPDATE, DELETE ON public.ammir_project_delivery_items FROM anon, authenti
 REVOKE ALL ON FUNCTION public.ammir_guard_delivery_item_receipt_write() FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.ammir_guard_delivery_reconciliation_state() FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.ammir_validate_delivery_item() FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public.ammir_reconcile_project_delivery(uuid,jsonb,text) FROM PUBLIC, anon, authenticated;
 
 CREATE OR REPLACE FUNCTION public.ammir_validate_delivery_item()
 RETURNS trigger
