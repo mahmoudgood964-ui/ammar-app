@@ -83,7 +83,7 @@ BEGIN
       OR (d.scheduled_at IS NOT NULL AND d.scheduled_at < CURRENT_DATE)
     )
 
-  ORDER BY due_at ASC NULLS LAST, created_at ASC
+  ORDER BY 8 ASC NULLS LAST, 9 ASC
   LIMIT LEAST(GREATEST(COALESCE(p_limit, 100), 1), 200);
 END;
 $function$;
