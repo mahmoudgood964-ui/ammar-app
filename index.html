@@ -1057,13 +1057,23 @@ function renderExecutionPanel(){
  const deliveryRows=deliveries.map(d=>{
   const evidence=(moduleData.deliveryEvidence||[]).filter(e=>e.delivery_id===d.id);
   const lines=(moduleData.deliveryItems||[]).filter(x=>x.delivery_id===d.id);
+  const receipts=(moduleData.deliveryReceipts||[]).filter(r=>r.delivery_id===d.id);
+  const receiptHistory=receipts.length?receipts.map(r=>{
+   const receiptLines=(moduleData.deliveryReceiptItems||[]).filter(x=>x.receipt_id===r.id);
+   const quantities=receiptLines.map(x=>{
+    const ai=(moduleData.awardItems||[]).find(a=>a.id===(lines.find(l=>l.id===x.delivery_item_id)||{}).award_item_id);
+    const ri=(moduleData.rfqItems||[]).find(i=>i.id===ai?.rfq_item_id);
+    return '<div class="timeline-item"><strong>'+esc(ri?.description||'بند')+'</strong><small>سليم '+esc(x.received_quantity)+' · تالف '+esc(x.damaged_quantity)+' · ناقص '+esc(x.missing_quantity)+' · مرفوض '+esc(x.rejected_quantity)+'</small>'+(x.condition_notes?'<small>'+esc(x.condition_notes)+'</small>':'')+'</div>';
+   }).join('');
+   return '<article class="timeline-item"><strong>دفعة استلام · '+esc(r.status)+'</strong><small>'+esc(dateText(r.created_at))+' · '+esc(r.created_by)+'</small>'+quantities+'</article>';
+  }).join(''):'<div class="empty">لا توجد دفعات استلام مسجلة بعد</div>';
   const evidenceHtml=evidence.length?evidence.map(e=>{
    const url=(moduleData.deliveryEvidenceUrls||{})[e.id];
    const location=e.latitude!=null&&e.longitude!=null?' · الموقع: '+esc(e.latitude)+', '+esc(e.longitude)+(e.location_accuracy_m==null?'':' (دقة '+esc(e.location_accuracy_m)+'م)'):'';
    return '<div class="timeline-item"><strong>'+esc(e.file_name)+'</strong><small>'+esc(e.caption||'إثبات مرفوع')+' · '+esc(dateText(e.created_at))+location+'</small>'+(url?'<a class="btn light" href="'+esc(url)+'" target="_blank" rel="noopener noreferrer">فتح الإثبات الآمن</a>':'<small class="muted">تعذر إنشاء رابط آمن لهذا الملف</small>')+'</div>';
   }).join(''):'<div class="empty">لم تُرفع إثباتات لهذه الشحنة بعد</div>';
   const lineHtml=lines.length?'<div class="table-wrap"><table><thead><tr><th>البند</th><th>المتوقع</th><th>سليم</th><th>تالف</th><th>ناقص</th><th>مرفوض</th></tr></thead><tbody>'+lines.map(x=>{const ai=(moduleData.awardItems||[]).find(a=>a.id===x.award_item_id);const ri=(moduleData.rfqItems||[]).find(i=>i.id===ai?.rfq_item_id);return '<tr><td>'+esc(ri?.description||'بند')+'</td><td>'+esc(x.expected_quantity)+'</td><td>'+esc(x.received_quantity)+'</td><td>'+esc(x.damaged_quantity)+'</td><td>'+esc(x.missing_quantity)+'</td><td>'+esc(x.rejected_quantity||0)+'</td></tr>';}).join('')+'</tbody></table></div>':'';
-  return '<article class="project-card"><h4>'+esc(d.delivery_reference)+'</h4><div class="meta"><span class="pill">'+esc(d.status)+'</span><span class="pill">'+esc(d.scheduled_at||'موعد غير محدد')+'</span></div><p>'+esc(d.notes||'')+'</p>'+lineHtml+'<h5>إثباتات الشحنة والاستلام</h5>'+evidenceHtml+'</article>';
+  return '<article class="project-card"><h4>'+esc(d.delivery_reference)+'</h4><div class="meta"><span class="pill">'+esc(d.status)+'</span><span class="pill">'+esc(d.scheduled_at||'موعد غير محدد')+'</span></div><p>'+esc(d.notes||'')+'</p>'+lineHtml+'<h5>سجل دفعات الاستلام</h5>'+receiptHistory+'<h5>إثباتات الشحنة والاستلام</h5>'+evidenceHtml+'</article>';
  }).join('')
  const canManage=['owner','manager','supervisor','engineer'].includes(currentProjectRole());
  const receivableDeliveries=deliveries.filter(d=>['dispatched','partially_received','exception'].includes(d.status)&&(moduleData.deliveryItems||[]).some(x=>x.delivery_id===d.id&&Number(x.expected_quantity)-Number(x.received_quantity||0)-Number(x.damaged_quantity||0)-Number(x.missing_quantity||0)-Number(x.rejected_quantity||0)>0.0005));
@@ -1389,7 +1399,7 @@ async function loadProjectModules(){
  if(!activeProject||!client)return;
  const requestId=++moduleLoadRequest,projectId=String(activeProject.id);
  moduleLoading=true;renderModulePanel();
- const map={tasks:'project_tasks',expenses:'project_expenses',quotes:'project_quotes',updates:'project_updates',documents:'project_documents',payments:'project_payments',activity:'project_activity',comments:'project_comments',members:'project_members',invitations:'project_invitations',siteReports:'project_site_reports',issues:'project_issues',changeOrders:'project_change_orders',handover:'project_handover_items',boqVersions:'ammir_project_boq_versions',boqItems:'ammir_project_boq_items',rfqs:'ammir_project_rfqs',rfqItems:'ammir_project_rfq_items',rfqInvites:'ammir_project_rfq_invites',rfqQuotes:'ammir_project_rfq_quotes',quoteItems:'ammir_project_rfq_quote_items',awards:'ammir_project_awards',awardItems:'ammir_project_award_items',deliveries:'ammir_project_deliveries',deliveryItems:'ammir_project_delivery_items',deliveryEvidence:'ammir_project_delivery_evidence',purchaseOrders:'ammir_project_purchase_orders',purchaseOrderItems:'ammir_project_purchase_order_items',paymentMilestones:'project_payment_milestones',paymentEvents:'project_payment_events'};
+ const map={tasks:'project_tasks',expenses:'project_expenses',quotes:'project_quotes',updates:'project_updates',documents:'project_documents',payments:'project_payments',activity:'project_activity',comments:'project_comments',members:'project_members',invitations:'project_invitations',siteReports:'project_site_reports',issues:'project_issues',changeOrders:'project_change_orders',handover:'project_handover_items',boqVersions:'ammir_project_boq_versions',boqItems:'ammir_project_boq_items',rfqs:'ammir_project_rfqs',rfqItems:'ammir_project_rfq_items',rfqInvites:'ammir_project_rfq_invites',rfqQuotes:'ammir_project_rfq_quotes',quoteItems:'ammir_project_rfq_quote_items',awards:'ammir_project_awards',awardItems:'ammir_project_award_items',deliveries:'ammir_project_deliveries',deliveryItems:'ammir_project_delivery_items',deliveryEvidence:'ammir_project_delivery_evidence',deliveryReceipts:'ammir_project_delivery_receipts',deliveryReceiptItems:'ammir_project_delivery_receipt_items',purchaseOrders:'ammir_project_purchase_orders',purchaseOrderItems:'ammir_project_purchase_order_items',paymentMilestones:'project_payment_milestones',paymentEvents:'project_payment_events'};
  const failures=[];
  const pairs=await Promise.all(Object.entries(map).map(async([k,t])=>{
   if(k==='invitations'&&String(activeProject.client_id)!==String(currentUser.id))return[k,[]];
