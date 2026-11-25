@@ -10,7 +10,7 @@ ON public.ammar_pinned_messages
 FOR INSERT TO authenticated
 WITH CHECK (
   pinned_by = (SELECT auth.uid())
-  AND app_private.ammar_is_conversation_member(conversation_id)
+  AND public.ammar_is_conversation_member(conversation_id)
   AND EXISTS (
     SELECT 1
     FROM public.ammar_messages AS m
