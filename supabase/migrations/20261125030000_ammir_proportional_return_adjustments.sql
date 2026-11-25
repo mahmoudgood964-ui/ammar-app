@@ -210,7 +210,7 @@ BEGIN
   END IF;
 
   SELECT ri.received_quantity, ri.receipt_id, ai.unit_rate,
-         coalesce(nullif(ai.currency,''),'SDG')
+         nullif(btrim(ai.currency),'')
     INTO v_received_quantity, v_receipt_id, v_unit_rate, v_currency
   FROM public.ammir_project_delivery_receipt_items ri
   JOIN public.ammir_project_delivery_items di
@@ -226,6 +226,9 @@ BEGIN
   FOR UPDATE OF ri;
   IF NOT FOUND THEN
     RAISE EXCEPTION 'Claim receipt line does not belong to the claimed delivery and project';
+  END IF;
+  IF v_currency IS NULL THEN
+    RAISE EXCEPTION 'Award item currency must be explicitly recorded before accepting a return';
   END IF;
   IF v_received_quantity <= 0 THEN
     RAISE EXCEPTION 'Only accepted-good received quantities can be returned for commission adjustment';
