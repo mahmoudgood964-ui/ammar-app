@@ -283,6 +283,7 @@ The month validator correction and the prior-period adjustment fixture are inclu
 - Added `tests/ammir-admin-operational-alerts.sql` for unrelated-account RPC denial and expected admin-only RFQ/delivery alert rows.
 - Added static assertions for RPC authorization, bounded query wiring, and dashboard rendering.
 - CI run `45588774590` exposed two test-fixture issues: the new SECURITY DEFINER function initially sat before the existing private-RPC migration, and the first fixture bypassed RFQ/award lifecycle transitions. Both were corrected: the function now lives in `app_private` behind an invoker wrapper, and the fixture follows draft → publish/issue → accept transitions with a priced quote line.
-- Exact current branch head at documentation time: `171a921b84fc6b55fbb25c8126ec0ddeccfa1b64`.
-- Validation for the corrected head is pending; the previous run is not counted as a pass.
+- Exact validated branch head: `695d7dd1d5001988483efedf0d7c9417bb77611b`.
+- Push/PR workflow validation [#45589432169](https://github.com/mahmoudgood964-ui/ammar-app/actions/runs/45589432169): SUCCESS. All 40 steps passed, including the new authorization fixture, private-RPC checks, revenue regressions, browser-code/migration wiring, and service-worker tests.
+- An earlier run exposed a static assertion mismatch about the combined `REVOKE ... FROM PUBLIC, anon` statement; the assertion was corrected and the exact final head passed.
 - No production migration, production deployment, PR merge, commission/payment change, or payment milestone modification was performed.
