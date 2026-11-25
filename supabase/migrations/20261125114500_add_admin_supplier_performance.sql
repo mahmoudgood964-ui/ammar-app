@@ -128,7 +128,6 @@ BEGIN
       ids.provider_user_id,
       COALESCE(
         NULLIF(max(ins.snapshot_name), ''),
-        NULLIF(max(pr.full_name), ''),
         NULLIF(max(ms.business_name), ''),
         NULLIF(max(sp.business_name), ''),
         'مقدم خدمة بدون اسم مسجل'
@@ -139,7 +138,6 @@ BEGIN
       ) AS provider_kind
     FROM provider_ids ids
     LEFT JOIN invite_stats ins ON ins.provider_user_id = ids.provider_user_id
-    LEFT JOIN public.profiles pr ON pr.id = ids.provider_user_id
     LEFT JOIN public.ammar_market_suppliers ms ON ms.owner_id = ids.provider_user_id
     LEFT JOIN public.ammar_service_providers sp ON sp.owner_id = ids.provider_user_id
     GROUP BY ids.provider_user_id
