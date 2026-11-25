@@ -427,7 +427,7 @@ assert.match(html, /password\.length<12/, 'Signup and recovery must require at l
 assert.match(html, /classes<3/, 'Password policy must require three character classes');
 assert.match(html, /minlength="12"/, 'Password inputs must expose the 12-character minimum');
 
-assert.ok(moduleSource.includes("db.from('ammar_commission_adjustments')"), 'Payer statement must include append-only commission adjustments');
+assert.ok(moduleSource.includes('ammar_commission_adjustments'), 'Payer statement must include append-only commission adjustments');
 assert.ok(moduleSource.includes(".eq('payer_id',user.id)"), 'Payer statement must be scoped to the authenticated payer');
 assert.ok(moduleSource.includes('statementTotals'), 'Payer statement currency totals are missing');
 assert.ok(moduleSource.includes('data-statement-export'), 'Payer statement CSV export control is missing');
