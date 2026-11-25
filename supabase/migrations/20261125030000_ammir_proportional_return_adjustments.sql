@@ -1,4 +1,6 @@
 -- AMMIR accepted returns and proportional commission adjustment proposals.
+-- Proposals are intentionally separate from public.ammar_commission_adjustments,
+-- the canonical signed-delta ledger created by the revenue-engine migration.
 -- A return is a separate, manager-approved event; accepting a claim alone never reverses commission.
 -- Original commission ledger rows and payment/settlement records are never updated.
 
@@ -31,7 +33,7 @@ CREATE INDEX ammir_delivery_returns_receipt_item_idx
 CREATE INDEX ammir_delivery_returns_claim_idx
   ON public.ammir_project_delivery_returns(claim_id, created_at);
 
-CREATE TABLE public.ammar_commission_adjustments (
+CREATE TABLE public.ammir_commission_adjustment_proposals (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   original_ledger_id uuid NOT NULL REFERENCES public.ammar_commission_ledger(id) ON DELETE RESTRICT,
   return_id uuid NOT NULL REFERENCES public.ammir_project_delivery_returns(id) ON DELETE RESTRICT,
@@ -43,11 +45,11 @@ CREATE TABLE public.ammar_commission_adjustments (
   UNIQUE (return_id, original_ledger_id)
 );
 
-CREATE INDEX ammar_commission_adjustments_ledger_idx
-  ON public.ammar_commission_adjustments(original_ledger_id, created_at);
+CREATE INDEX ammir_commission_adjustment_proposals_ledger_idx
+  ON public.ammir_commission_adjustment_proposals(original_ledger_id, created_at);
 
 ALTER TABLE public.ammir_project_delivery_returns ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.ammar_commission_adjustments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.ammir_commission_adjustment_proposals ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY ammir_delivery_returns_select
 ON public.ammir_project_delivery_returns
@@ -66,15 +68,15 @@ USING (
   )
 );
 
-CREATE POLICY ammar_commission_adjustments_select
-ON public.ammar_commission_adjustments
+CREATE POLICY ammir_commission_adjustment_proposals_select
+ON public.ammir_commission_adjustment_proposals
 FOR SELECT TO authenticated
 USING ((SELECT public.is_admin()));
 
 REVOKE ALL ON public.ammir_project_delivery_returns FROM anon, authenticated;
-REVOKE ALL ON public.ammar_commission_adjustments FROM anon, authenticated;
+REVOKE ALL ON public.ammir_commission_adjustment_proposals FROM anon, authenticated;
 GRANT SELECT ON public.ammir_project_delivery_returns TO authenticated;
-GRANT SELECT ON public.ammar_commission_adjustments TO authenticated;
+GRANT SELECT ON public.ammir_commission_adjustment_proposals TO authenticated;
 
 CREATE OR REPLACE FUNCTION public.ammir_guard_delivery_return_immutable()
 RETURNS trigger
@@ -86,7 +88,7 @@ BEGIN
 END;
 $$;
 
-CREATE OR REPLACE FUNCTION public.ammar_guard_commission_adjustment_immutable()
+CREATE OR REPLACE FUNCTION public.ammir_guard_commission_proposal_immutable()
 RETURNS trigger
 LANGUAGE plpgsql
 SET search_path = public, pg_temp
@@ -100,13 +102,13 @@ CREATE TRIGGER ammir_delivery_return_immutable_trigger
 BEFORE UPDATE OR DELETE ON public.ammir_project_delivery_returns
 FOR EACH ROW EXECUTE FUNCTION public.ammir_guard_delivery_return_immutable();
 
-CREATE TRIGGER ammar_commission_adjustment_immutable_trigger
-BEFORE UPDATE OR DELETE ON public.ammar_commission_adjustments
-FOR EACH ROW EXECUTE FUNCTION public.ammar_guard_commission_adjustment_immutable();
+CREATE TRIGGER ammir_commission_proposal_immutable_trigger
+BEFORE UPDATE OR DELETE ON public.ammir_commission_adjustment_proposals
+FOR EACH ROW EXECUTE FUNCTION public.ammir_guard_commission_proposal_immutable();
 
 REVOKE ALL ON FUNCTION public.ammir_guard_delivery_return_immutable()
   FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public.ammar_guard_commission_adjustment_immutable()
+REVOKE ALL ON FUNCTION public.ammir_guard_commission_proposal_immutable()
   FROM PUBLIC, anon, authenticated;
 
 CREATE OR REPLACE FUNCTION app_private.ammir_record_project_delivery_return(
@@ -274,12 +276,12 @@ BEGIN
 
     SELECT coalesce(sum(a.adjustment_amount),0)
       INTO v_existing_adjustment
-    FROM public.ammar_commission_adjustments a
+    FROM public.ammir_commission_adjustment_proposals a
     WHERE a.original_ledger_id = v_ledger_id;
 
     v_adjustment_delta := round(greatest(v_target_adjustment - v_existing_adjustment, 0), 2);
     IF v_adjustment_delta > 0 THEN
-      INSERT INTO public.ammar_commission_adjustments(
+      INSERT INTO public.ammir_commission_adjustment_proposals(
         original_ledger_id, return_id, currency, adjustment_amount, status
       ) VALUES (
         v_ledger_id, v_return_id, v_currency, v_adjustment_delta, 'pending_review'
