@@ -107,7 +107,6 @@ jobs:
           psql -h 127.0.0.1 -U postgres -d ammar_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261113093000_ammir_workflow_state_guards.sql
           psql -h 127.0.0.1 -U postgres -d ammar_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261113094000_ammir_workflow_fk_indexes.sql
           psql -h 127.0.0.1 -U postgres -d ammar_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261113100000_ammir_execution_state_guards.sql
-          psql -h 127.0.0.1 -U postgres -d ammar_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261125103000_add_admin_operational_alerts.sql
       - name: Run AMMIR project execution workflow integration tests
         env:
           PGPASSWORD: postgres
@@ -134,6 +133,10 @@ jobs:
         env:
           PGPASSWORD: postgres
         run: psql -h 127.0.0.1 -U postgres -d ammar_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261117083000_move_authenticated_definer_rpcs_to_app_private.sql
+      - name: Add bounded AMMIR admin operational alerts RPC
+        env:
+          PGPASSWORD: postgres
+        run: psql -h 127.0.0.1 -U postgres -d ammar_test -v ON_ERROR_STOP=1 -f supabase/migrations/20261125103000_add_admin_operational_alerts.sql
       - name: Verify AMMIR private RPC wrappers and access
         env:
           PGPASSWORD: postgres
