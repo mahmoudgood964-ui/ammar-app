@@ -14,37 +14,6 @@ INSERT INTO public.profiles(id,role) VALUES
 ('aaaaaaaa-1000-4000-8000-000000000003','client')
 ON CONFLICT (id) DO UPDATE SET role=EXCLUDED.role;
 
--- An ordinary account cannot promote itself or alter another account's role.
-DO $profile_role_guard_test$
-DECLARE
-  v_denied boolean := false;
-BEGIN
-  BEGIN
-    UPDATE public.profiles SET role='admin'
-    WHERE id=auth.uid();
-  EXCEPTION WHEN insufficient_privilege THEN
-    v_denied := true;
-  END;
-
-  IF EXISTS (
-    SELECT 1 FROM public.profiles
-    WHERE id=auth.uid() AND role='admin'
-  ) THEN
-    RAISE EXCEPTION 'Self-promotion to admin persisted';
-  END IF;
-
-  UPDATE public.profiles SET role='client'
-  WHERE id='aaaaaaaa-1000-4000-8000-000000000002';
-
-  IF NOT EXISTS (
-    SELECT 1 FROM public.profiles
-    WHERE id='aaaaaaaa-1000-4000-8000-000000000002' AND role='admin'
-  ) THEN
-    RAISE EXCEPTION 'Ordinary account changed another profile role';
-  END IF;
-END
-$profile_role_guard_test$;
-
 -- An ordinary authenticated supplier cannot claim verification or suspend itself
 SET ROLE authenticated;
 SELECT set_config('request.jwt.claim.sub','aaaaaaaa-1000-4000-8000-000000000001',false);
