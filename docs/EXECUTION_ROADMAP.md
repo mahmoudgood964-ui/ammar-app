@@ -37,6 +37,7 @@ Do not add broad feature scope until the critical transaction journey is tested 
 - [x] Adjustment proposals are immutable records with `pending_review` status; no refund, credit, cash movement, commission-ledger mutation, or settlement status change is performed. Finance approval and licensed payment-provider settlement remain separate future work.
 - [ ] Validate the return workflow with authenticated buyer/supplier accounts and a real finance approver before enabling production settlement.
 - [ ] GitHub Actions execution of the new return SQL regression suite is still pending; do not treat static checks or a Vercel rate-limit result as a database test pass.
+- [ ] CI run is triggered from the dedicated feature-branch push; record the actual PostgreSQL test run before marking the return migration validated.
 - [x] Supplier self-service performance view: read-only metrics from the supplier's own latest 500 manager-confirmed `received` deliveries with a recorded receipt timestamp. Visible only to an active, verified supplier account; shows completed delivery count and on-time rate only where a scheduled date exists. Partial, exception, cancelled and quote-only activity is excluded. No composite score or ranking is invented. Uses the existing supplier-only delivery SELECT policy; no admin-wide RLS expansion is required.
 - [ ] Validate supplier metrics against real completed transactions during the pilot; current production has zero delivery, award and commission-ledger rows, so no real supplier performance score can be displayed yet.
 
