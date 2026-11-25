@@ -4,6 +4,8 @@ DO $ammir_adjustment_schema_contract$
 DECLARE
   v_canonical_policy text;
   v_proposal_policy text;
+  v_public_definer boolean;
+  v_private_definer boolean;
 BEGIN
   IF to_regclass('public.ammar_commission_adjustments') IS NULL THEN
     RAISE EXCEPTION 'Canonical commission adjustment ledger is missing';
@@ -35,6 +37,21 @@ BEGIN
      OR position('payer_id' IN v_canonical_policy)=0
      OR position('is_admin' IN v_canonical_policy)=0 THEN
     RAISE EXCEPTION 'Canonical ledger must retain payer/admin read policy';
+  END IF;
+
+  SELECT p.prosecdef INTO v_public_definer
+  FROM pg_proc p
+  WHERE p.oid=to_regprocedure('public.ammar_record_commission_adjustment(uuid,text,numeric,text,text,text,text)');
+  SELECT p.prosecdef INTO v_private_definer
+  FROM pg_proc p
+  WHERE p.oid=to_regprocedure('app_private.ammar_record_commission_adjustment_impl(uuid,text,numeric,text,text,text,text)');
+  IF v_public_definer IS DISTINCT FROM false OR v_private_definer IS DISTINCT FROM true THEN
+    RAISE EXCEPTION 'Commission adjustment RPC must be an invoker wrapper over a private definer implementation';
+  END IF;
+  IF has_function_privilege('anon','public.ammar_record_commission_adjustment(uuid,text,numeric,text,text,text,text)','EXECUTE')
+     OR has_function_privilege('anon','app_private.ammar_record_commission_adjustment_impl(uuid,text,numeric,text,text,text,text)','EXECUTE')
+     OR NOT has_function_privilege('authenticated','public.ammar_record_commission_adjustment(uuid,text,numeric,text,text,text,text)','EXECUTE') THEN
+    RAISE EXCEPTION 'Commission adjustment RPC grants are not correctly restricted';
   END IF;
 
   SELECT qual INTO v_proposal_policy
