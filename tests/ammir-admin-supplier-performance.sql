@@ -12,10 +12,24 @@ BEGIN
   IF NOT has_function_privilege('authenticated','public.ammar_admin_supplier_performance(timestamptz)','EXECUTE') THEN
     RAISE EXCEPTION 'authenticated must be able to invoke guarded RPC';
   END IF;
-  IF has_function_privilege('public','app_private.ammar_admin_supplier_performance(timestamptz)','EXECUTE') THEN
-    RAISE EXCEPTION 'internal privileged function must not be public';
+  IF has_function_privilege('anon','app_private.ammar_admin_supplier_performance(timestamptz)','EXECUTE') THEN
+    RAISE EXCEPTION 'anon must not execute internal privileged function';
   END IF;
 END $$;
+
+-- A signed-in non-admin must be denied by the RPC itself, not merely hidden by UI.
+SET LOCAL ROLE authenticated;
+SELECT set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000099',true);
+DO $
+BEGIN
+  BEGIN
+    PERFORM * FROM public.ammar_admin_supplier_performance(now() - interval '90 days');
+    RAISE EXCEPTION 'non-admin unexpectedly received supplier performance';
+  EXCEPTION WHEN insufficient_privilege THEN
+    NULL;
+  END;
+END $;
+RESET ROLE;
 
 -- The exposed result contract must stay aggregate-only: no project identifiers,
 -- project names, RFQ titles, delivery references, contact details, or prices.
