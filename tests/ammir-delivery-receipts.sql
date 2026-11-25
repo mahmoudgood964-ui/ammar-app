@@ -360,6 +360,20 @@ BEGIN
     WHERE source_type='project_delivery' AND source_id LIKE v_delivery_b::text||':%';
 
     PERFORM set_config('request.jwt.claim.sub',v_owner::text,true);
+    v_failed := false;
+    BEGIN
+      PERFORM public.ammir_submit_delivery_claim(
+        v_delivery_b,
+        (SELECT id FROM public.ammir_project_delivery_receipt_items
+         WHERE delivery_id=v_delivery_b AND delivery_item_id=v_item_b LIMIT 1),
+        'rejected_goods',99,
+        'This deliberately excessive claim quantity must be rejected by the database.'
+      );
+    EXCEPTION WHEN OTHERS THEN
+      v_failed := true;
+    END;
+    IF NOT v_failed THEN RAISE EXCEPTION 'Claim quantity above the recorded rejected quantity was accepted'; END IF;
+
     v_claim_id := public.ammir_submit_delivery_claim(
       v_delivery_b,
       (SELECT id FROM public.ammir_project_delivery_receipt_items
