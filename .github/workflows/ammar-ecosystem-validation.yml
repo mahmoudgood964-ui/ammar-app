@@ -165,3 +165,5 @@ jobs:
         run: bash tests/ammir-revenue-concurrency.sh
       - name: Validate browser code and migration wiring
         run: node tests/check-ammar-app.mjs
+      - name: Test AMMIR service worker lifecycle and cache boundaries
+        run: node tests/ammir-service-worker.test.mjs
