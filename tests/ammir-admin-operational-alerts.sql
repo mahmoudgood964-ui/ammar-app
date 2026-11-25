@@ -43,13 +43,23 @@ INSERT INTO public.ammar_market_suppliers(owner_id,business_name,status,is_verif
 VALUES('aaaaaaaa-2511-4000-8000-000000000003','Operational Alerts Test Supplier','active',true)
 ON CONFLICT DO NOTHING;
 
+INSERT INTO public.ammir_project_rfq_invites(
+ rfq_id,project_id,provider_user_id,provider_type,provider_name_snapshot,status,invited_by,responded_at
+) VALUES (
+ 'cccccccc-2511-4000-8000-000000000001',
+ 'bbbbbbbb-2511-4000-8000-000000000001',
+ 'aaaaaaaa-2511-4000-8000-000000000003',
+ 'supplier','Operational Alerts Test Supplier','accepted',
+ 'aaaaaaaa-2511-4000-8000-000000000002',now()
+) ON CONFLICT DO NOTHING;
+
 INSERT INTO public.ammir_project_rfq_quotes(
  id,rfq_id,project_id,provider_user_id,currency,total_cost,status,submitted_at
 ) VALUES (
  'ffffffff-2511-4000-8000-000000000002',
  'cccccccc-2511-4000-8000-000000000001',
  'bbbbbbbb-2511-4000-8000-000000000001',
- 'aaaaaaaa-2511-4000-8000-000000000003','SDG',1000,'submitted',now()
+ 'aaaaaaaa-2511-4000-8000-000000000003','SDG',0,'draft',NULL
 ) ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO public.ammir_project_rfq_quote_items(
@@ -60,6 +70,10 @@ INSERT INTO public.ammir_project_rfq_quote_items(
  'ffffffff-2511-4000-8000-000000000001',
  'bbbbbbbb-2511-4000-8000-000000000001',10,100
 ) ON CONFLICT (id) DO NOTHING;
+
+UPDATE public.ammir_project_rfq_quotes
+SET status='submitted',submitted_at=now()
+WHERE id='ffffffff-2511-4000-8000-000000000002';
 
 INSERT INTO public.ammir_project_awards(
  id,rfq_id,project_id,supplier_user_id,award_reference,status,created_by,issued_at,accepted_at
