@@ -49,3 +49,12 @@
 The feature-branch migration `20261124230000_protect_paid_commission_ledger_rows.sql` replaces the two delivery/award commission trigger functions so their upserts cannot rewrite a ledger row whose status is `paid`. Paid rows also remain paid when source delivery state changes or delivery records/items are removed. The regression suite verifies the original paid amount, gross basis, currency, rate, payer, and status remain unchanged through those source mutations and through an award-completion retry.
 
 This fix is present only in PR #14's feature branch. It has passed disposable PostgreSQL CI tests but has **not** been applied to production. Once merged and safely migrated, later differences must be captured as append-only adjustment entries and separately reconciled against payment-provider/bank records. The adjustment journal itself does not prove cash was refunded or collected.
+
+
+## Monthly payer statement period-edge regression — 2026-11-25
+
+The feature-branch statement tests now cover an adjustment created during the selected reporting month even when its source commission ledger row was recorded in a previous month. The expected statement includes the adjustment event, preserves source metadata and external reference, does not duplicate the prior month's GMV or original commission, and includes only the signed adjustment delta in current-period net activity.
+
+The month validator was corrected and a regression assertion was added for the accepted `YYYY-MM` format. The exact tested feature-branch head is `3b14d0a542adb308ca8b3734b81648f6adf25021`; [GitHub Actions run #45580772729](https://github.com/mahmoudgood964-ui/ammar-app/actions/runs/45580772729) completed SUCCESS with all 35 workflow steps green. CI uses disposable PostgreSQL and static/browser tests; it does not touch production Supabase.
+
+The statement remains an activity report, not an invoice or proof of cash collection. Real payer/admin account acceptance, physical-device acceptance, exact-head preview, and local accounting/legal review remain open. PR #14 remains open/draft; neither migration is applied to production. No commission rates, payment milestones, production financial rows, or production settings were changed.
