@@ -595,6 +595,15 @@ BEGIN
     END;
     IF NOT v_failed THEN RAISE EXCEPTION 'Cumulative returns across claims exceeded the receipt-line quantity'; END IF;
 
+    IF EXISTS (
+      SELECT 1 FROM public.ammar_commission_adjustments a
+      JOIN public.ammar_commission_ledger l ON l.id=a.original_ledger_id
+      WHERE l.source_type='project_delivery'
+        AND l.source_id LIKE v_delivery_b::text||':%'
+    ) THEN
+      RAISE EXCEPTION 'Rejected-goods claim created a commission adjustment for goods excluded from commission';
+    END IF;
+
     SELECT l.status,l.gross_amount,l.commission_amount
       INTO v_original_status,v_original_gross,v_original_commission
     FROM public.ammar_commission_ledger l
