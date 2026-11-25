@@ -198,7 +198,7 @@ assert.throws(
   /عمود مطلوب مفقود: currency/,
   'Settlement CSV parser must reject files without required currency column'
 );
-assert.ok(moduleSource.includes("id='ecoReconciliationFile'"),'Admin revenue dashboard must expose a settlement CSV input');
+assert.ok(moduleSource.includes('id="ecoReconciliationFile"'),'Admin revenue dashboard must expose a settlement CSV input');
 assert.ok(moduleSource.includes("if(e.target.id==='ecoReconciliationFile'"),'Settlement CSV input must be processed through the change handler');
 assert.ok(moduleSource.includes("eq('payer_id',user.id)")&&moduleSource.includes(".in('ledger_id',chunk)"),'Reconciliation must fetch the ledger and its append-only adjustments by exact IDs');
 assert.ok(moduleSource.includes('لا تُعدّل هذه اللوحة قواعد العمولة أو القيود المالية'),'Reconciliation UI must disclose its read-only financial boundary');
